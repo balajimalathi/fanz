@@ -1,0 +1,53 @@
+---
+title: Google Sheets
+description: How to connect and sync your chat data to Google Sheets.
+---
+
+# Google Sheets Integration
+
+Connect Chat2Base to your Google account to export chat data directly into your spreadsheets.
+
+## Connection Steps
+
+<Steps>
+
+### Sign in with Google
+
+1. Open the Chat2Base extension popup.
+2. Navigate to the **Integrations** tab.
+3. Click on the **Google Sheets** option.
+4. Click the **Sign in with Google** button.
+5. A popup window will appear requesting permission to access your spreadsheets.
+
+### Grant Permissions
+
+Ensure you grant the necessary permissions for Chat2Base to:
+- See and list all your Google Drive files (to list spreadsheets).
+- See, and edit all your Google Sheets spreadsheets (to write data).
+
+### Select Data Destination
+
+Once authenticated:
+1. You will see a list of your available spreadsheets.
+2. Select the **Spreadsheet** you want to use.
+3. Select the specific **Worksheet** (tab) within that file.
+4. (Optional) Toggle "First row is header" if your sheet has headers.
+
+</Steps>
+
+## Features
+
+- **Row Appending**: New chat exports will be appended as new rows in your sheet.
+- **Smart Mapping**: Automatically map chat fields (User, Message, Date) to your sheet columns.
+- **Instant Sync**: Data appears in your Google Sheet immediately after export.
+
+## Troubleshooting
+
+- **Authentication Error**: If the sign-in popup closes immediately or fails, try disabling other extensions that might interfere with popups, or check your browser's third-party cookie settings.
+- **Permission Denied**: If you can't write to a sheet, ensure you have "Editor" access to that specific spreadsheet in Google Drive.
+
+<Callout>
+
+**Privacy Notice:** Chat2Base complies with Google's API Services User Data Policy. We only access the spreadsheets you explicitly select for export.
+
+</Callout>

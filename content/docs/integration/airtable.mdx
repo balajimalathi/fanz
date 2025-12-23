@@ -1,0 +1,58 @@
+---
+title: Airtable
+description: How to connect and sync your chat data to Airtable.
+---
+
+# Airtable Integration
+
+Connect Chat2Base provided by your Airtable account to seamlessly export your chat conversations and data directly into your bases.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+1. An active [Airtable account](https://airtable.com).
+2. The Chat2Base extension installed on your browser.
+
+## Connection Steps
+
+<Steps>
+
+### Get your Personal Access Token (PAT)
+
+1. Go to your [Airtable Builder Hub](https://airtable.com/create/tokens).
+2. Click on **Create new token**.
+3. Give your token a name (e.g., "Chat2Base").
+4. Under **Scopes**, add the following permissions:
+   - `data.records:read`
+   - `data.records:write`
+   - `schema.bases:read`
+5. Under **Access**, select the bases you want to connect (or choose "All current and future bases" for easier management).
+6. Click **Create token** and copy the generated token string.
+
+### Configure Chat2Base
+
+1. Open the Chat2Base extension popup.
+2. Navigate to the **Integrations** tab.
+3. Select **Airtable**.
+4. Paste your **Personal Access Token** into the input field.
+5. Click **Connect**.
+
+### Verify Connection
+
+Once connected, you should see a success message. You can now:
+- Browse your Bases and Tables directly from the extension.
+- Configure field mappings for your exports.
+
+</Steps>
+
+## Troubleshooting
+
+- **Invalid Token**: Ensure you copied the entire token string and that the token hasn't expired or been revoked.
+- **Missing Permissions**: If you can't see your bases or write data, verify that the token has `data.records:write` and `schema.bases:read` scopes.
+- **Base Access**: If a specific base isn't showing up, check if the token was granted access to that specific base.
+
+<Callout>
+
+**Note:** We prioritize your security. Your Personal Access Token is stored locally on your device and is never sent to our servers except to communicate directly with Airtable's API.
+
+</Callout>

@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1765341987062,
+      "tag": "0000_small_toxin",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765991742462,
+      "tag": "0001_marvelous_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765994079577,
+      "tag": "0002_purple_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765994127915,
+      "tag": "0003_nostalgic_shockwave",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765994213143,
+      "tag": "0004_curvy_ben_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765994310086,
+      "tag": "0005_tricky_zarda",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765994352558,
+      "tag": "0006_little_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1765994538904,
+      "tag": "0007_worried_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1765995579472,
+      "tag": "0008_dear_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1765995649836,
+      "tag": "0009_stiff_korath",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://chat2base.com
+
+# Sitemaps
+Sitemap: https://chat2base.com/sitemap.xml

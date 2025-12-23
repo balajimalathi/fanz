@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://chat2base.com/sitemap.xml
