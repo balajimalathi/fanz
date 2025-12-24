@@ -141,6 +141,8 @@ export const postMedia = pgTable("post_media", {
   mediaType: mediaTypeEnum("media_type").notNull(),
   url: text("url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
+  hlsUrl: text("hls_url"),
+  blurThumbnailUrl: text("blur_thumbnail_url"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -182,3 +184,54 @@ export const follower = pgTable("follower", {
 }, (table) => ({
   uniqueFollowerCreator: { unique: { columns: [table.followerId, table.creatorId] } },
 }));
+
+export const customers = pgTable("customers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }),
+  dodoCustomerId: varchar("dodo_customer_id", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "no action" }),
+  planId: varchar("plan_id", { length: 50 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  dodoSubscriptionId: varchar("dodo_subscription_id", { length: 255 }).unique(),
+  licenseKey: varchar("license_key", { length: 255 }),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const postLike = pgTable("post_like", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => post.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniquePostUser: { unique: { columns: [table.postId, table.userId] } },
+}));
+
+export const postComment = pgTable("post_comment", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => post.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  parentCommentId: uuid("parent_comment_id")
+    .references(() => postComment.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

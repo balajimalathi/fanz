@@ -18,6 +18,11 @@ export const env = createEnv({
     CLOUDFLARE_R2_SECRET_ACCESS_KEY: z.string().min(1),
     CLOUDFLARE_R2_BUCKET_NAME: z.string().min(1),
     CLOUDFLARE_R2_PUBLIC_URL: z.string().url(),
+    // Redis for job queue (BullMQ)
+    REDIS_HOST: z.string().min(1).default("localhost"),
+    REDIS_PORT: z.string().regex(/^\d+$/).default("6379"),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_DB: z.string().regex(/^\d+$/).default("0"),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -37,5 +42,9 @@ export const env = createEnv({
     CLOUDFLARE_R2_SECRET_ACCESS_KEY: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
     CLOUDFLARE_R2_BUCKET_NAME: process.env.CLOUDFLARE_R2_BUCKET_NAME,
     CLOUDFLARE_R2_PUBLIC_URL: process.env.CLOUDFLARE_R2_PUBLIC_URL,
+    REDIS_HOST: process.env.REDIS_HOST,
+    REDIS_PORT: process.env.REDIS_PORT,
+    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+    REDIS_DB: process.env.REDIS_DB,
   },
 });

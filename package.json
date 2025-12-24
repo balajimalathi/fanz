@@ -12,7 +12,8 @@
     "db:pull": "drizzle-kit pull",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "worker:video": "tsx scripts/workers/video-processor.ts"
   },
   "dependencies": {
     "@ai-sdk/mistral": "^0.0.24",
@@ -45,6 +46,9 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.0",
     "framer-motion": "^12.23.25",
+    "bullmq": "^5.28.0",
+    "hls.js": "^1.5.12",
+    "ioredis": "^5.4.1",
     "lucide-react": "^0.469.0",
     "mdast-util-toc": "^7.1.0",
     "next": "16.0.7",

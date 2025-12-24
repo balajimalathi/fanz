@@ -42,3 +42,6 @@ next-env.d.ts
 RAILWAY-SETUP.md
 
 .contentlayer
+
+# Temporary video processing files
+/tmp

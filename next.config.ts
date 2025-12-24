@@ -50,6 +50,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    middlewareClientMaxBodySize: "500mb",
   },
   turbopack: {},
   serverExternalPackages: ["sharp"],

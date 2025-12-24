@@ -40,9 +40,8 @@ export const sidebarDataSerializable = {
   navMain: [
     {
       title: "Home",
-      url: "#",
+      url: "/home",
       icon: "Home",
-      isActive: true,
     },
     {
       title: "My App",
@@ -56,7 +55,7 @@ export const sidebarDataSerializable = {
     },
     {
       title: "Feed",
-      url: "#",
+      url: "/home/feed",
       icon: "GalleryVertical",
     },
     {
@@ -95,9 +94,8 @@ export const sidebarData = {
   navMain: [
     {
       title: "Home",
-      url: "#",
+      url: "/home",
       icon: Home,
-      isActive: true,
     },
     {
       title: "My App",
@@ -106,7 +104,7 @@ export const sidebarData = {
     },
     {
       title: "Feed",
-      url: "#",
+      url: "/home/feed",
       icon: GalleryVertical,
     },
     {

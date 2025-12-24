@@ -1,7 +1,10 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { type LucideIcon } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 import { useIsMobileOrTablet } from "@/hooks/use-mobile-tablet"
 import { iconMap } from "@/lib/sidebar-data"
@@ -9,21 +12,17 @@ import { iconMap } from "@/lib/sidebar-data"
 export function BottomNav({
   items,
 }: {
-  items: {
+  items?: {
     title: string
     url: string
     icon: string
-    isActive?: boolean
     badge?: string
-  }[] | undefined
+  }[]
 }) {
   const isMobileOrTablet = useIsMobileOrTablet()
+  const pathname = usePathname()
 
-  if (!isMobileOrTablet || !items || items.length === 0) {
-    return null
-  }
-
-  console.log(items)
+  if (!isMobileOrTablet || !items?.length) return null
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 lg:hidden">
@@ -32,13 +31,16 @@ export function BottomNav({
           const Icon = iconMap[item.icon] as LucideIcon | undefined
           if (!Icon) return null
 
+          const isActive =
+            pathname === item.url
+
           return (
-            <a
+            <Link
               key={item.title}
               href={item.url}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 text-xs transition-colors",
-                item.isActive
+                isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
@@ -52,11 +54,10 @@ export function BottomNav({
                 )}
               </div>
               <span className="text-[10px] font-medium">{item.title}</span>
-            </a>
+            </Link>
           )
         })}
       </div>
     </nav>
   )
 }
-

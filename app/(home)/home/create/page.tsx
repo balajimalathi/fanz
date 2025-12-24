@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
 import { ImageUpload } from "@/components/post/image-upload"
+import { VideoUpload } from "@/components/post/video-upload"
 import { FollowerSelector } from "@/components/post/follower-selector"
 import { cn } from "@/lib/utils"
 
@@ -35,6 +36,14 @@ interface ImageFile {
   id: string
 }
 
+interface VideoFile {
+  file: File
+  preview: string | null
+  id: string
+  uploadStatus?: "pending" | "uploading" | "processing" | "ready" | "error"
+  uploadProgress?: number
+}
+
 export default function CreatePostPage() {
   const router = useRouter()
   const [caption, setCaption] = useState("")
@@ -42,6 +51,7 @@ export default function CreatePostPage() {
   const [selectedMemberships, setSelectedMemberships] = useState<Set<string>>(new Set())
   const [price, setPrice] = useState("")
   const [images, setImages] = useState<ImageFile[]>([])
+  const [videos, setVideos] = useState<VideoFile[]>([])
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -149,6 +159,55 @@ export default function CreatePostPage() {
 
         if (!mediaResponse.ok) {
           throw new Error("Failed to upload images")
+        }
+      }
+
+      // Upload videos if any
+      if (videos.length > 0) {
+        for (const video of videos) {
+          // Update video status to uploading
+          setVideos((prev) =>
+            prev.map((v) =>
+              v.id === video.id
+                ? { ...v, uploadStatus: "uploading", uploadProgress: 0 }
+                : v
+            )
+          )
+
+          try {
+            const formData = new FormData()
+            formData.append("file", video.file)
+
+            const videoResponse = await fetch(`/api/posts/${postId}/video`, {
+              method: "POST",
+              body: formData,
+            })
+
+            if (!videoResponse.ok) {
+              throw new Error("Failed to upload video")
+            }
+
+            const videoData = await videoResponse.json()
+
+            // Update video status to processing
+            setVideos((prev) =>
+              prev.map((v) =>
+                v.id === video.id
+                  ? { ...v, uploadStatus: "processing", uploadProgress: 100 }
+                  : v
+              )
+            )
+
+            // Poll for processing status (optional - you can implement webhook instead)
+            // For now, we'll just mark it as processing
+          } catch (error) {
+            setVideos((prev) =>
+              prev.map((v) =>
+                v.id === video.id ? { ...v, uploadStatus: "error" } : v
+              )
+            )
+            console.error("Error uploading video:", error)
+          }
         }
       }
 
@@ -260,6 +319,20 @@ export default function CreatePostPage() {
               maxImages={10}
               disabled={isPublishing || !!publishedPostId}
             />
+          </div>
+
+          {/* Video Upload */}
+          <div>
+            <Label className="mb-2 block">Videos</Label>
+            <VideoUpload
+              videos={videos}
+              onVideosChange={setVideos}
+              maxVideos={1}
+              disabled={isPublishing || !!publishedPostId}
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Videos will be processed after upload. This may take a few minutes.
+            </p>
           </div>
 
           {/* Caption */}
@@ -375,7 +448,7 @@ export default function CreatePostPage() {
           {!publishedPostId ? (
             <Button
               onClick={handlePublish}
-              disabled={isPublishing || images.length === 0}
+              disabled={isPublishing || (images.length === 0 && videos.length === 0)}
               className="w-full"
             >
               {isPublishing ? (
