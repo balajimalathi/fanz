@@ -51,7 +51,7 @@ export const sidebarDataSerializable = {
     },
     {
       title: "Post",
-      url: "#",
+      url: "/home/create",
       icon: "Plus",
     },
     {
@@ -111,7 +111,7 @@ export const sidebarData = {
     },
     {
       title: "Post",
-      url: "#",
+      url: "/home/create",
       icon: Plus,
     },
     {

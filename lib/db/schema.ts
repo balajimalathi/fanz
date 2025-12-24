@@ -68,6 +68,8 @@ export const verification = pgTable("verification", {
 
 export const creatorTypeEnum = pgEnum("creator_type", ["ai", "human"]);
 export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
+export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive"]);
+export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -117,3 +119,66 @@ export const membership = pgTable("membership", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const post = pgTable("post", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  caption: text("caption"),
+  postType: postTypeEnum("post_type").notNull(),
+  price: integer("price"), // For exclusive posts, stored in paise
+  isPinned: boolean("is_pinned").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const postMedia = pgTable("post_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => post.id, { onDelete: "cascade" }),
+  mediaType: mediaTypeEnum("media_type").notNull(),
+  url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  orderIndex: integer("order_index").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const postMembership = pgTable("post_membership", {
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => post.id, { onDelete: "cascade" }),
+  membershipId: uuid("membership_id")
+    .notNull()
+    .references(() => membership.id, { onDelete: "cascade" }),
+}, (table) => ({
+  pk: { primaryKey: { columns: [table.postId, table.membershipId] } },
+}));
+
+export const notification = pgTable("notification", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  link: text("link"),
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const follower = pgTable("follower", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  followerId: text("follower_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueFollowerCreator: { unique: { columns: [table.followerId, table.creatorId] } },
+}));

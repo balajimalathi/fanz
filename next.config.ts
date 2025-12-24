@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   turbopack: {},
+  serverExternalPackages: ["sharp"],
   images: {
     remotePatterns,
   },

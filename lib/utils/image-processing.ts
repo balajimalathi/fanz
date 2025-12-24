@@ -1,5 +1,6 @@
 /**
  * Image processing utilities for cropping and resizing
+ * Client-side utilities - for server-side thumbnail generation, use image-processing-server.ts
  */
 
 export interface CropArea {
