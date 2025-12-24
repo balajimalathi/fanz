@@ -113,6 +113,33 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect creator dashboard routes
+  if (pathname.startsWith("/creator")) {
+    // Skip auth check for API routes and static files
+    if (
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/favicon.ico")
+    ) {
+      return NextResponse.next();
+    }
+
+    // Check for better-auth session cookie
+    const hasSessionCookie = 
+      request.cookies.has("better-auth.session_token") ||
+      request.cookies.has("better-auth.session") ||
+      request.cookies.has("session_token") ||
+      Array.from(request.cookies.getAll()).some(
+        (cookie) => cookie.name.startsWith("better-auth")
+      );
+
+    // If no session cookie found, redirect to login
+    if (!hasSessionCookie) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 

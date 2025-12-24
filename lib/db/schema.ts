@@ -65,3 +65,25 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+export const creatorTypeEnum = pgEnum("creator_type", ["ai", "human"]);
+export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
+
+export const creator = pgTable("creator", {
+  id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  username: text("username").unique(),
+  displayName: text("display_name").notNull(),
+  country: text("country"),
+  creatorType: creatorTypeEnum("creator_type"),
+  contentType: contentTypeEnum("content_type"),
+  gender: text("gender"),
+  dateOfBirth: timestamp("date_of_birth"),
+  categories: jsonb("categories").$type<string[]>(),
+  onboarded: boolean("onboarded").notNull().default(false),
+  usernameLocked: boolean("username_locked").notNull().default(false),
+  subdomain: text("subdomain").unique(),
+  onboardingStep: integer("onboarding_step").default(0),
+  onboardingData: jsonb("onboarding_data").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
