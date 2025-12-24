@@ -84,6 +84,9 @@ export const creator = pgTable("creator", {
   subdomain: text("subdomain").unique(),
   onboardingStep: integer("onboarding_step").default(0),
   onboardingData: jsonb("onboarding_data").$type<Record<string, unknown>>(),
+  profileImageUrl: text("profile_image_url"),
+  profileCoverUrl: text("profile_cover_url"),
+  bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -110,6 +113,7 @@ export const membership = pgTable("membership", {
   description: text("description").notNull(),
   monthlyRecurringFee: integer("monthly_recurring_fee").notNull().default(0), // Stored in paise (smallest currency unit)
   visible: boolean("visible").notNull().default(true),
+  coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

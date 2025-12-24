@@ -7,13 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { serviceSchema } from "@/lib/validations/service"
 
@@ -27,7 +20,7 @@ interface Service {
   updatedAt?: string
 }
 
-export function ServiceCard({ initialDisplayName, initialBio }: { initialDisplayName: string, initialBio?: string }) {
+export function ServiceCard() {
   const [services, setServices] = useState<Service[]>([])
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
   const [isAddingService, setIsAddingService] = useState(false)

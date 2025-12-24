@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { Edit2, Plus, X, Eye, EyeOff, Save, Trash, Loader2 } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Edit2, Plus, X, Eye, EyeOff, Save, Trash, Loader2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,8 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { ImageCropper } from "@/components/ui/image-cropper"
+import { validateImageFile } from "@/lib/utils/image-processing"
 import { cn } from "@/lib/utils"
 import { membershipSchema } from "@/lib/validations/membership"
+import Image from "next/image"
 
 interface Membership {
   id: string
@@ -21,6 +25,7 @@ interface Membership {
   description: string
   monthlyRecurringFee: number
   visible: boolean
+  coverImageUrl?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -39,7 +44,7 @@ const MONTHLY_FEE_OPTIONS = [
 ]
 
 
-export function MembershipCard({ initialDisplayName, initialBio }: { initialDisplayName: string, initialBio?: string }) {
+export function MembershipCard() {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [editingMembershipId, setEditingMembershipId] = useState<string | null>(null)
   const [isAddingMembership, setIsAddingMembership] = useState(false)
@@ -77,7 +82,7 @@ export function MembershipCard({ initialDisplayName, initialBio }: { initialDisp
     setEditingMembershipId(null)
   }
 
-  const handleSaveMembership = async (membership: Omit<Membership, "id">) => {
+  const handleSaveMembership = async (membership: Omit<Membership, "id">, croppedImageBlob?: Blob) => {
     try {
       // Validate with Zod
       const validationResult = membershipSchema.safeParse(membership)
@@ -126,6 +131,28 @@ export function MembershipCard({ initialDisplayName, initialBio }: { initialDisp
         }
 
         const newMembership = await response.json()
+        
+        // If there's a cropped image, upload it now
+        if (croppedImageBlob && newMembership.id) {
+          try {
+            const formData = new FormData()
+            formData.append("file", croppedImageBlob, "cover.jpg")
+
+            const imageResponse = await fetch(`/api/memberships/${newMembership.id}/images`, {
+              method: "POST",
+              body: formData,
+            })
+
+            if (imageResponse.ok) {
+              const imageData = await imageResponse.json()
+              newMembership.coverImageUrl = imageData.url
+            }
+          } catch (imageError) {
+            console.error("Error uploading cover image:", imageError)
+            // Don't fail the membership creation if image upload fails
+          }
+        }
+        
         setMemberships([...memberships, newMembership])
         setIsAddingMembership(false)
         setMessage({ type: "success", text: "Membership created successfully" })
@@ -296,6 +323,11 @@ function MembershipSection({
   const [title, setTitle] = useState(membership.title)
   const [description, setDescription] = useState(membership.description)
   const [monthlyRecurringFee, setMonthlyRecurringFee] = useState(membership.monthlyRecurringFee.toString())
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(membership.coverImageUrl || null)
+  const [showCropper, setShowCropper] = useState(false)
+  const [cropperImage, setCropperImage] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const coverImageInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
     onSave({
@@ -303,7 +335,54 @@ function MembershipSection({
       description,
       monthlyRecurringFee: parseFloat(monthlyRecurringFee) || 0,
       visible: membership.visible,
+      coverImageUrl: coverImageUrl || undefined,
     })
+  }
+
+  const handleImageSelect = () => {
+    coverImageInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validationError = validateImageFile(file)
+    if (validationError) {
+      alert(validationError)
+      return
+    }
+
+    setCropperImage(file)
+    setShowCropper(true)
+  }
+
+  const handleCropComplete = async (blob: Blob) => {
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", blob, "cover.jpg")
+
+      const response = await fetch(`/api/memberships/${membership.id}/images`, {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to upload image")
+      }
+
+      const data = await response.json()
+      setCoverImageUrl(data.url)
+      setShowCropper(false)
+      setCropperImage(null)
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      alert(error instanceof Error ? error.message : "Failed to upload image")
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const selectedFeeOption = MONTHLY_FEE_OPTIONS.find(opt => opt.value === membership.monthlyRecurringFee)
@@ -408,28 +487,39 @@ function MembershipSection({
   }
 
   return (
-    <Card className={cn(
-      "transition-colors",
-      !membership.visible && "opacity-60"
-    )}>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold">{membership.title}</h3>
-              {!membership.visible && (
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  Hidden
-                </span>
-              )}
+    <>
+      <Card className={cn(
+        "transition-colors",
+        !membership.visible && "opacity-60"
+      )}>
+        <CardContent className="pt-6">
+          {coverImageUrl && (
+            <div className="relative w-full h-40 rounded-lg overflow-hidden mb-4 border-2 border-border">
+              <Image
+                src={coverImageUrl}
+                alt="Cover"
+                fill
+                className="object-cover"
+              />
             </div>
-            {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
-            )}
-            <p className="text-primary font-medium">
-              {selectedFeeOption?.label || `Rs. ${membership.monthlyRecurringFee.toLocaleString("en-IN")}/- per month`}
-            </p>
-          </div>
+          )}
+          <div className="flex items-start justify-between">
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold">{membership.title}</h3>
+                {!membership.visible && (
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                    Hidden
+                  </span>
+                )}
+              </div>
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+              <p className="text-primary font-medium">
+                {selectedFeeOption?.label || `Rs. ${membership.monthlyRecurringFee.toLocaleString("en-IN")}/- per month`}
+              </p>
+            </div>
           <div className="flex items-center gap-2 ml-4">
             <Button
               variant="ghost"
@@ -455,11 +545,34 @@ function MembershipSection({
         </div>
       </CardContent>
     </Card>
+    <Sheet open={showCropper} onOpenChange={setShowCropper}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Crop Cover Image</SheetTitle>
+        </SheetHeader>
+        {cropperImage && (
+          <div className="mt-4">
+            <ImageCropper
+              image={cropperImage}
+              aspectRatio={2}
+              targetWidth={1200}
+              targetHeight={600}
+              onCropComplete={handleCropComplete}
+              onCancel={() => {
+                setShowCropper(false)
+                setCropperImage(null)
+              }}
+            />
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+    </>
   )
 }
 
 interface MembershipFormProps {
-  onSave: (membership: Omit<Membership, "id">) => void
+  onSave: (membership: Omit<Membership, "id">, croppedImageBlob?: Blob) => void
   onCancel: () => void
 }
 
@@ -468,20 +581,63 @@ function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
   const [description, setDescription] = useState("")
   const [monthlyRecurringFee, setMonthlyRecurringFee] = useState("")
   const [visible, setVisible] = useState(true)
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
+  const [showCropper, setShowCropper] = useState(false)
+  const [cropperImage, setCropperImage] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [membershipId, setMembershipId] = useState<string | null>(null)
+  const coverImageInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // If there's a cropped image, convert it to blob
+    let croppedBlob: Blob | undefined
+    if (cropperImage) {
+      croppedBlob = cropperImage
+    }
+    
     onSave({
       title,
       description,
       monthlyRecurringFee: parseFloat(monthlyRecurringFee) || 0,
       visible,
-    })
+      coverImageUrl: coverImageUrl || undefined,
+    }, croppedBlob)
     // Reset form
     setTitle("")
     setDescription("")
     setMonthlyRecurringFee("")
     setVisible(true)
+    setCoverImageUrl(null)
+    setCropperImage(null)
+  }
+
+  const handleImageSelect = () => {
+    coverImageInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validationError = validateImageFile(file)
+    if (validationError) {
+      alert(validationError)
+      return
+    }
+
+    setCropperImage(file)
+    setShowCropper(true)
+  }
+
+  const handleCropComplete = async (blob: Blob) => {
+    // Store the cropped image - it will be uploaded when membership is created
+    const file = new File([blob], "cover.jpg", { type: "image/jpeg" })
+    setCropperImage(file)
+    setShowCropper(false)
+    // Note: The image will need to be uploaded after membership creation
+    // This is handled by the parent component's handleSaveMembership
   }
 
   return (
@@ -528,10 +684,61 @@ function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              Cover Image (Coming soon)
-            </p>
+          <div className="pt-4 border-t space-y-2">
+            <Label>Cover Image (1200×600px)</Label>
+            <div className="flex items-center gap-4">
+              {coverImageUrl ? (
+                <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 border-border">
+                  <Image
+                    src={coverImageUrl}
+                    alt="Cover"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : cropperImage ? (
+                <div className="w-full h-32 rounded-lg bg-muted border-2 border-primary flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                </div>
+              ) : (
+                <div className="w-full h-32 rounded-lg bg-muted border-2 border-dashed border-border flex items-center justify-center">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImageSelect}
+                  disabled={isUploading}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {coverImageUrl || cropperImage ? "Change" : "Upload"}
+                </Button>
+                {(coverImageUrl || cropperImage) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCoverImageUrl(null)
+                      setCropperImage(null)
+                    }}
+                    disabled={isUploading}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={coverImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
           </div>
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">
@@ -555,7 +762,7 @@ function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
               </Button>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm">
+              <Button type="submit" size="sm" disabled={isUploading}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Membership
               </Button>
@@ -571,6 +778,28 @@ function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
           </div>
         </form>
       </CardContent>
+      <Sheet open={showCropper} onOpenChange={setShowCropper}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Crop Cover Image</SheetTitle>
+          </SheetHeader>
+          {cropperImage && (
+            <div className="mt-4">
+              <ImageCropper
+                image={cropperImage}
+                aspectRatio={2}
+                targetWidth={1200}
+                targetHeight={600}
+                onCropComplete={handleCropComplete}
+                onCancel={() => {
+                  setShowCropper(false)
+                  setCropperImage(null)
+                }}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </Card>
   )
 }

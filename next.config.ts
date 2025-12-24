@@ -3,6 +3,48 @@ import { withContentlayer } from "next-contentlayer2";
 
 const wordpressHostname = process.env.WORDPRESS_HOSTNAME;
 const wordpressUrl = process.env.WORDPRESS_URL;
+const r2PublicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
+
+// Extract hostname from R2 public URL
+const r2Hostname = r2PublicUrl ? new URL(r2PublicUrl).hostname : null;
+
+// Build remote patterns array
+const remotePatterns: Array<{
+  protocol: "http" | "https";
+  hostname: string;
+  port?: string;
+  pathname: string;
+}> = [];
+
+if (wordpressHostname) {
+  remotePatterns.push(
+    {
+      protocol: "https",
+      hostname: wordpressHostname,
+      port: "",
+      pathname: "/**",
+    },
+    {
+      protocol: "http",
+      hostname: "65.109.132.224",
+      port: "8081",
+      pathname: "/**",
+    },
+    {
+      protocol: "https",
+      hostname: "images.unsplash.com",
+      pathname: "/**",
+    }
+  );
+}
+
+if (r2Hostname) {
+  remotePatterns.push({
+    protocol: "https",
+    hostname: r2Hostname,
+    pathname: "/**",
+  });
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -11,27 +53,7 @@ const nextConfig: NextConfig = {
   },
   turbopack: {},
   images: {
-    remotePatterns: wordpressHostname
-      ? [
-        {
-          protocol: "https",
-          hostname: wordpressHostname,
-          port: "",
-          pathname: "/**",
-        },
-        {
-          protocol: "http",
-          hostname: "65.109.132.224",
-          port: "8081",
-          pathname: "/**",
-        },
-        {
-          protocol: "https",
-          hostname: "images.unsplash.com",
-          pathname: "/**",
-        },
-      ]
-      : [],
+    remotePatterns,
   },
   async redirects() {
     if (!wordpressUrl) {

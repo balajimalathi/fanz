@@ -40,7 +40,8 @@ export default async function MyAppPage() {
       <CreatorManagementPage 
         creatorId={session.user.id}
         displayName={creatorRecord.displayName}
-        bio={creatorRecord.onboardingData?.bio as string | undefined}
+        username={creatorRecord.username || undefined}
+        bio={creatorRecord.bio || undefined}
       />
     </div>
   )
