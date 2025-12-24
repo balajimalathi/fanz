@@ -6,6 +6,55 @@ import { creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import type { OnboardingStepData } from "@/types/onboarding"
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    })
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    // Check if user has creator role
+    if (session.user.role !== "creator") {
+      return NextResponse.json(
+        { error: "Forbidden: Creator role required" },
+        { status: 403 }
+      )
+    }
+
+    // Get creator record
+    const creatorRecord = await db.query.creator.findFirst({
+      where: (c, { eq: eqOp }) => eqOp(c.id, session.user.id),
+    })
+
+    if (!creatorRecord) {
+      return NextResponse.json({
+        step: 1,
+        data: {},
+      })
+    }
+
+    const onboardingData = (creatorRecord.onboardingData as OnboardingStepData) || {}
+    const currentStep = creatorRecord.onboardingStep || 1
+
+    return NextResponse.json({
+      step: currentStep,
+      data: onboardingData,
+    })
+  } catch (error) {
+    console.error("Error fetching onboarding step:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -79,4 +128,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

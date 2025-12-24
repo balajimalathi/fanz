@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -16,16 +17,6 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
 import { COUNTRIES, parseDateFromInput, isAdult } from "@/lib/onboarding/utils"
 import { validateUsernameClient } from "@/lib/onboarding/validation-client"
  
@@ -78,7 +69,7 @@ export function OnboardingWizard() {
     },
   })
 
-  const { watch, trigger } = form
+  const { watch, setValue, trigger, formState: { errors } } = form
   const watchedUsername = watch("username")
   const watchedCategories = watch("categories")
 
@@ -171,9 +162,9 @@ export function OnboardingWizard() {
   const handleCategoryToggle = (category: string) => {
     const current = watchedCategories || []
     if (current.includes(category)) {
-      form.setValue("categories", current.filter((c) => c !== category))
+      setValue("categories", current.filter((c) => c !== category))
     } else {
-      form.setValue("categories", [...current, category])
+      setValue("categories", [...current, category])
     }
     trigger("categories")
   }
@@ -234,304 +225,202 @@ export function OnboardingWizard() {
     switch (currentStep) {
       case 1:
         return (
-          <FormField
-            control={form.control}
-            name="country"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Country</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your country" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {COUNTRIES.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label htmlFor="country">Country</Label>
+            <Select
+              value={form.watch("country")}
+              onValueChange={(value) => setValue("country", value)}
+            >
+              <SelectTrigger id="country">
+                <SelectValue placeholder="Select your country" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((country) => (
+                  <SelectItem key={country} value={country}>
+                    {country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.country && (
+              <p className="text-sm text-destructive">{errors.country.message}</p>
             )}
-          />
+          </div>
         )
 
       case 2:
         return (
-          <FormField
-            control={form.control}
-            name="creatorType"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Creator Type</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="grid gap-4 grid-cols-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="ai" id="ai" className="sr-only" />
-                      <label
-                        htmlFor="ai"
-                        className={`flex flex-col cursor-pointer ${
-                          field.value === "ai"
-                            ? "border-primary bg-accent"
-                            : "border-border"
-                        }`}
-                      >
-                        <Card
-                          className={`cursor-pointer border-2 transition-all ${
-                            field.value === "ai"
-                              ? "border-primary bg-accent"
-                              : "hover:bg-accent"
-                          }`}
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg">AI Creator</CardTitle>
-                            <CardDescription>
-                              Create content using AI-powered tools and automation
-                            </CardDescription>
-                          </CardHeader>
-                        </Card>
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="human" id="human" className="sr-only" />
-                      <label
-                        htmlFor="human"
-                        className={`flex flex-col cursor-pointer ${
-                          field.value === "human"
-                            ? "border-primary bg-accent"
-                            : "border-border"
-                        }`}
-                      >
-                        <Card
-                          className={`cursor-pointer border-2 transition-all ${
-                            field.value === "human"
-                              ? "border-primary bg-accent"
-                              : "hover:bg-accent"
-                          }`}
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg">Human Creator</CardTitle>
-                            <CardDescription>
-                              Create original content yourself
-                            </CardDescription>
-                          </CardHeader>
-                        </Card>
-                      </label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label>Creator Type</Label>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3 cursor-pointer p-4 border rounded-md hover:bg-accent">
+                <input
+                  type="radio"
+                  value="ai"
+                  checked={form.watch("creatorType") === "ai"}
+                  onChange={() => setValue("creatorType", "ai")}
+                  className="w-4 h-4"
+                />
+                <span>AI Creator</span>
+              </label>
+              <label className="flex items-center space-x-3 cursor-pointer p-4 border rounded-md hover:bg-accent">
+                <input
+                  type="radio"
+                  value="human"
+                  checked={form.watch("creatorType") === "human"}
+                  onChange={() => setValue("creatorType", "human")}
+                  className="w-4 h-4"
+                />
+                <span>Human Creator</span>
+              </label>
+            </div>
+            {errors.creatorType && (
+              <p className="text-sm text-destructive">{errors.creatorType.message}</p>
             )}
-          />
+          </div>
         )
 
       case 3:
         return (
-          <FormField
-            control={form.control}
-            name="contentType"
-            render={({ field }) => (
-              <FormItem className="space-y-8">
-                <FormLabel>Content Type</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="grid gap-4 grid-cols-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="18+" id="18plus" className="sr-only" />
-                      <label
-                        htmlFor="18plus"
-                        className="flex flex-col cursor-pointer"
-                      >
-                        <Card
-                          className={`cursor-pointer border-2 transition-all ${
-                            field.value === "18+"
-                              ? "border-primary bg-accent"
-                              : "hover:bg-accent"
-                          }`}
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg">18+ Content</CardTitle>
-                            <CardDescription>
-                              Content intended for adults only (18 years and older)
-                            </CardDescription>
-                          </CardHeader>
-                        </Card>
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="general" id="general" className="sr-only" />
-                      <label
-                        htmlFor="general"
-                        className="flex flex-col cursor-pointer"
-                      >
-                        <Card
-                          className={`cursor-pointer border-2 transition-all ${
-                            field.value === "general"
-                              ? "border-primary bg-accent"
-                              : "hover:bg-accent"
-                          }`}
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg">General Content</CardTitle>
-                            <CardDescription>
-                              Content suitable for all audiences
-                            </CardDescription>
-                          </CardHeader>
-                        </Card>
-                      </label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label>Content Type</Label>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3 cursor-pointer p-4 border rounded-md hover:bg-accent">
+                <input
+                  type="radio"
+                  value="18+"
+                  checked={form.watch("contentType") === "18+"}
+                  onChange={() => setValue("contentType", "18+")}
+                  className="w-4 h-4"
+                />
+                <span>18+ Content</span>
+              </label>
+              <label className="flex items-center space-x-3 cursor-pointer p-4 border rounded-md hover:bg-accent">
+                <input
+                  type="radio"
+                  value="general"
+                  checked={form.watch("contentType") === "general"}
+                  onChange={() => setValue("contentType", "general")}
+                  className="w-4 h-4"
+                />
+                <span>General Content</span>
+              </label>
+            </div>
+            {errors.contentType && (
+              <p className="text-sm text-destructive">{errors.contentType.message}</p>
             )}
-          />
+          </div>
         )
 
       case 4:
         return (
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      placeholder="your-username"
-                      {...field}
-                    />
-                    {usernameChecking && (
-                      <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                  </div>
-                </FormControl>
-                <FormDescription>
-                  3-30 characters, alphanumeric + hyphens/underscores
-                </FormDescription>
-                {usernameError && (
-                  <p className="text-sm font-medium text-destructive">{usernameError}</p>
-                )}
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label htmlFor="username">Username</Label>
+            <div className="relative">
+              <Input
+                id="username"
+                placeholder="your-username"
+                value={form.watch("username") || ""}
+                onChange={(e) => setValue("username", e.target.value)}
+              />
+              {usernameChecking && (
+                <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+            {usernameError && (
+              <p className="text-sm text-destructive">{usernameError}</p>
             )}
-          />
+            {errors.username && !usernameError && (
+              <p className="text-sm text-destructive">{errors.username.message}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              3-30 characters, alphanumeric + hyphens/underscores
+            </p>
+          </div>
         )
 
       case 5:
         return (
-          <FormField
-            control={form.control}
-            name="displayName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Display Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Your display name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label htmlFor="displayName">Display Name</Label>
+            <Input
+              id="displayName"
+              placeholder="Your display name"
+              value={form.watch("displayName") || ""}
+              onChange={(e) => setValue("displayName", e.target.value)}
+            />
+            {errors.displayName && (
+              <p className="text-sm text-destructive">{errors.displayName.message}</p>
             )}
-          />
+          </div>
         )
 
       case 6:
         return (
-          <FormField
-            control={form.control}
-            name="gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gender</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="non-binary">Non-binary</SelectItem>
-                    <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={form.watch("gender")}
+              onValueChange={(value) => setValue("gender", value as GenderOption)}
+            >
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="non-binary">Non-binary</SelectItem>
+                <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.gender && (
+              <p className="text-sm text-destructive">{errors.gender.message}</p>
             )}
-          />
+          </div>
         )
 
       case 7:
         return (
-          <FormField
-            control={form.control}
-            name="dateOfBirth"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date of Birth</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>You must be at least 18 years old</FormDescription>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Input
+              id="dateOfBirth"
+              type="date"
+              max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+              value={form.watch("dateOfBirth") || ""}
+              onChange={(e) => setValue("dateOfBirth", e.target.value)}
+            />
+            {errors.dateOfBirth && (
+              <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>
             )}
-          />
+            <p className="text-sm text-muted-foreground">You must be at least 18 years old</p>
+          </div>
         )
 
       case 8:
         return (
-          <FormField
-            control={form.control}
-            name="categories"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What defines you best? (Select at least one)</FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((category) => {
-                    const isSelected = watchedCategories?.includes(category)
-                    return (
-                      <Badge
-                        key={category}
-                        variant={isSelected ? "default" : "outline"}
-                        className="cursor-pointer px-4 py-2 text-sm"
-                        onClick={() => {
-                          const current = field.value || []
-                          if (current.includes(category)) {
-                            field.onChange(current.filter((c) => c !== category))
-                          } else {
-                            field.onChange([...current, category])
-                          }
-                        }}
-                      >
-                        {category}
-                      </Badge>
-                    )
-                  })}
-                </div>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-4">
+            <Label>What defines you best? (Select at least one)</Label>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((category) => {
+                const isSelected = watchedCategories?.includes(category)
+                return (
+                  <Badge
+                    key={category}
+                    variant={isSelected ? "default" : "outline"}
+                    className="cursor-pointer px-4 py-2 text-sm"
+                    onClick={() => handleCategoryToggle(category)}
+                  >
+                    {category}
+                  </Badge>
+                )
+              })}
+            </div>
+            {errors.categories && (
+              <p className="text-sm text-destructive">{errors.categories.message}</p>
             )}
-          />
+          </div>
         )
 
       default:
@@ -565,9 +454,8 @@ export function OnboardingWizard() {
         </div>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <div className="min-h-[300px] py-6">{renderStep()}</div>
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div className="min-h-[300px] py-6">{renderStep()}</div>
           <div className="flex justify-between mt-6">
             <Button
               type="button"
@@ -604,8 +492,7 @@ export function OnboardingWizard() {
               </Button>
             )}
           </div>
-          </form>
-        </Form>
+        </form>
       </CardContent>
     </Card>
   )
