@@ -33,3 +33,34 @@ export async function generateThumbnail(
   }
 }
 
+/**
+ * Generate a blurred thumbnail from an image buffer using sharp
+ * @param imageBuffer - The image buffer (can be original or thumbnail)
+ * @param blurSigma - Blur intensity (default: 20)
+ * @param maxWidth - Maximum width for blur thumbnail (default: 400)
+ * @param maxHeight - Maximum height for blur thumbnail (default: 400)
+ * @returns Buffer containing the blurred thumbnail image
+ */
+export async function generateBlurThumbnail(
+  imageBuffer: Buffer,
+  blurSigma: number = 20,
+  maxWidth: number = 400,
+  maxHeight: number = 400
+): Promise<Buffer> {
+  try {
+    const blurThumbnail = await sharp(imageBuffer)
+      .resize(maxWidth, maxHeight, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .blur(blurSigma)
+      .jpeg({ quality: 60 })
+      .toBuffer()
+
+    return blurThumbnail
+  } catch (error) {
+    console.error("Error generating blur thumbnail:", error)
+    throw new Error("Failed to generate blur thumbnail")
+  }
+}
+

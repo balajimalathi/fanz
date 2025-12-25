@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
+import Image from "next/image"
 
 interface HlsVideoPlayerProps {
   video: {
@@ -12,11 +13,13 @@ interface HlsVideoPlayerProps {
     metadata?: Record<string, unknown>
   }
   postId: string
+  hasAccess?: boolean
 }
 
 export function HlsVideoPlayer({
   video,
   postId,
+  hasAccess = true,
 }: HlsVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -239,6 +242,27 @@ export function HlsVideoPlayer({
       }
     }
   }, [video.hlsUrl, video.url, useFallback, activateFallback])
+
+  // If no access, show blur thumbnail (server already filtered URLs)
+  if (!hasAccess) {
+    return (
+      <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+        {video.blurThumbnailUrl ? (
+          <Image
+            src={video.blurThumbnailUrl}
+            alt="Video thumbnail"
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="w-full h-full bg-primary flex items-center justify-center">
+            <p className="text-primary-foreground text-sm">Video</p>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // Show processing message if video is still processing and no HLS URL
   if (!video.hlsUrl && video.url && !useFallback) {

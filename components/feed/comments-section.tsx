@@ -33,6 +33,7 @@ interface CommentsSectionProps {
   postId: string
   initialCount: number
   currentUserId: string | null
+  disabled?: boolean
   onCountChange?: (count: number) => void
 }
 
@@ -40,6 +41,7 @@ export function CommentsSection({
   postId,
   initialCount,
   currentUserId,
+  disabled = false,
   onCountChange,
 }: CommentsSectionProps) {
   const [comments, setComments] = useState<Comment[]>([])
@@ -73,7 +75,7 @@ export function CommentsSection({
   }
 
   const handleSubmitComment = async (parentCommentId?: string) => {
-    if (!newComment.trim() || isSubmitting) return
+    if (!newComment.trim() || isSubmitting || disabled) return
 
     setIsSubmitting(true)
     try {
@@ -267,8 +269,12 @@ export function CommentsSection({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2"
+        onClick={() => !disabled && setIsExpanded(!isExpanded)}
+        disabled={disabled}
+        className={cn(
+          "flex items-center gap-2",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
       >
         <MessageCircle className="h-4 w-4" />
         <span>{initialCount} {initialCount === 1 ? "comment" : "comments"}</span>
@@ -295,32 +301,40 @@ export function CommentsSection({
               </div>
 
               <div className="space-y-2 w-full">
-                <Textarea
-                  ref={textareaRef}
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="min-h-[80px]"
-                  maxLength={50}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      handleSubmitComment()
-                    }
-                  }}
-                />
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">
-                    {newComment.length}/50
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSubmitComment()}
-                    disabled={!newComment.trim() || isSubmitting}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    Comment
-                  </Button>
-                </div>
+                {disabled ? (
+                  <div className="text-center py-4 text-sm text-muted-foreground border rounded-lg">
+                    <p>Membership required to comment</p>
+                  </div>
+                ) : (
+                  <>
+                    <Textarea
+                      ref={textareaRef}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      className="min-h-[80px]"
+                      maxLength={50}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                          handleSubmitComment()
+                        }
+                      }}
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">
+                        {newComment.length}/50
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSubmitComment()}
+                        disabled={!newComment.trim() || isSubmitting}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Comment
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}

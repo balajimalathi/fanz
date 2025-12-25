@@ -13,9 +13,10 @@ interface ImageCarouselProps {
     blurThumbnailUrl?: string | null
   }>
   height?: string
+  hasAccess?: boolean
 }
 
-export function ImageCarousel({ images, height = "600px" }: ImageCarouselProps) {
+export function ImageCarousel({ images, height = "600px", hasAccess = true }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -32,6 +33,7 @@ export function ImageCarousel({ images, height = "600px" }: ImageCarouselProps) 
   }
 
   const openLightbox = (index: number) => {
+    if (!hasAccess) return // Don't open lightbox if no access
     setLightboxIndex(index)
     setIsLightboxOpen(true)
   }
@@ -90,24 +92,35 @@ export function ImageCarousel({ images, height = "600px" }: ImageCarouselProps) 
 
         {/* Main image container */}
         <div className="relative w-full h-full flex items-center justify-center">
-          {images.map((image, index) => (
-            <div
-              key={image.id}
-              className={cn(
-                "absolute inset-0 transition-opacity duration-300 cursor-pointer",
-                index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
-              )}
-              onClick={() => openLightbox(index)}
-            >
-              <Image
-                src={image.url}
-                alt={`Image ${index + 1}`}
-                fill
-                className="object-contain"
-                unoptimized
-              />
-            </div>
-          ))}
+          {images.map((image, index) => {
+            const showImage = hasAccess ? image.url : image.blurThumbnailUrl
+            
+            return (
+              <div
+                key={image.id}
+                className={cn(
+                  "absolute inset-0 transition-opacity duration-300",
+                  index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0",
+                  hasAccess && "cursor-pointer"
+                )}
+                onClick={() => hasAccess && openLightbox(index)}
+              >
+                {showImage ? (
+                  <Image
+                    src={showImage}
+                    alt={`Image ${index + 1}`}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-96 bg-muted flex items-center justify-center">
+                    <p className="text-primary-foreground text-sm">...</p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Navigation arrows */}
@@ -169,7 +182,7 @@ export function ImageCarousel({ images, height = "600px" }: ImageCarouselProps) 
       </div>
 
       {/* Lightbox */}
-      {isLightboxOpen && (
+      {isLightboxOpen && hasAccess && (
         <div
           className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
           onClick={closeLightbox}

@@ -108,13 +108,24 @@ export function FeedPostCard({
         </div> */}
  
         {/* Media */}
-        <div className="w-full">
+        <div className="w-full relative">
           {post.media.length > 0 ? (
-            <PostMediaDisplay
-              media={post.media}
-              postId={post.id}
-              userId={currentUserId}
-            />
+            <>
+              <PostMediaDisplay
+                media={post.media}
+                postId={post.id}
+                userId={currentUserId}
+                hasAccess={post.hasAccess}
+              />
+              {!post.hasAccess && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10 pointer-events-none">
+                  <div className="flex flex-col items-center gap-2 text-white">
+                    <Lock className="h-8 w-8" />
+                    <p className="text-sm font-medium">Membership Required</p>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="aspect-video bg-muted flex items-center justify-center">
               <p className="text-muted-foreground text-sm">No media</p>
@@ -134,6 +145,7 @@ export function FeedPostCard({
               postId={post.id}
               initialLiked={post.isLiked}
               initialCount={post.likeCount}
+              disabled={!post.hasAccess}
               onLikeChange={(liked, count) => {
                 onLikeChange?.(post.id, liked, count)
               }}
@@ -142,6 +154,7 @@ export function FeedPostCard({
               postId={post.id}
               initialCount={commentCount}
               currentUserId={currentUserId}
+              disabled={!post.hasAccess}
               onCountChange={(count) => {
                 setCommentCount(count)
                 onCommentCountChange?.(post.id, count)

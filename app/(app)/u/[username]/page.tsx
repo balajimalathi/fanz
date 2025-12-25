@@ -4,6 +4,7 @@ import { ProfileHeader } from "@/components/creator/profile-header"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { Separator } from "@/components/ui/separator"
+import { FeedSection } from "./feed-section"
 
 async function getCreatorProfile(username: string) {
   try {
@@ -96,6 +97,16 @@ export default async function Page({
 
       {/* Content Sections */}
       <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
+        {/* Feed Section */}
+        <section className="mb-12 sm:mb-16">
+          <FeedSection username={creator.username ?? ""} />
+        </section>
+
+        {/* Separator between feed and other sections */}
+        {(services.length > 0 || memberships.length > 0) && (
+          <Separator className="my-8 sm:my-12" />
+        )}
+
         {/* Services Section */}
         {services.length > 0 && (
           <section className="mb-12 sm:mb-16">
