@@ -8,16 +8,21 @@ import { useWebSocketContext } from "./websocket-provider";
 
 interface MessageInputProps {
   conversationId: string;
+  isEnabled?: boolean;
   onMediaUpload?: (file: File, type: "image" | "audio" | "video") => Promise<string>;
 }
 
-export function MessageInput({ conversationId, onMediaUpload }: MessageInputProps) {
+export function MessageInput({ conversationId, isEnabled = true, onMediaUpload }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { send } = useWebSocketContext();
 
   const handleSend = async () => {
+    if (!isEnabled) {
+      alert("This chat is not enabled yet. Please wait for the creator to enable it.");
+      return;
+    }
     if (!message.trim() && !isSending) return;
 
     const messageContent = message.trim();
@@ -110,7 +115,8 @@ export function MessageInput({ conversationId, onMediaUpload }: MessageInputProp
           }}
           placeholder="Type a message..."
           className="min-h-[60px] max-h-[200px] resize-none"
-          disabled={isSending}
+          disabled={isSending || !isEnabled}
+          placeholder={isEnabled ? "Type a message..." : "Chat is disabled"}
         />
         <Button onClick={handleSend} disabled={isSending || !message.trim()}>
           <Send className="h-4 w-4" />

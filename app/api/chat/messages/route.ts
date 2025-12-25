@@ -63,6 +63,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if conversation is enabled (unless user is creator)
+    if (!conv.isEnabled && conv.creatorId !== session.user.id) {
+      return NextResponse.json(
+        { error: "This conversation is not enabled yet. Please wait for the creator to enable it." },
+        { status: 403 }
+      );
+    }
+
     // Validate message content
     if (messageType === "text" && !content) {
       return NextResponse.json(

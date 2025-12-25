@@ -283,6 +283,7 @@ export const conversation = pgTable("conversation", {
   fanId: text("fan_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  isEnabled: boolean("is_enabled").notNull().default(false), // Only creator can enable chat
   lastMessageAt: timestamp("last_message_at"),
   lastMessagePreview: text("last_message_preview"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

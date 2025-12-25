@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { WebSocketClient } from "@/lib/websocket/client";
+import { SocketIOClient } from "@/lib/socketio/client";
 import { WebSocketMessage } from "@/lib/websocket/types";
 
-export function useWebSocket(url: string | null, token: string | null) {
+export function useSocketIO(url: string | null, token: string | null) {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const clientRef = useRef<WebSocketClient | null>(null);
+  const clientRef = useRef<SocketIOClient | null>(null);
 
   useEffect(() => {
     if (!url || !token) {
       return;
     }
 
-    const client = new WebSocketClient(url, token);
+    const client = new SocketIOClient(url, token);
 
     client.onConnect(() => {
       setIsConnected(true);

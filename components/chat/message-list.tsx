@@ -76,6 +76,29 @@ export function MessageList({
     scrollToBottom();
   }, [messages]);
 
+  // Listen for new messages via custom event (dispatched from chat-window)
+  useEffect(() => {
+    console.log(`[MESSAGE-LIST] Setting up messageReceived listener for conversation ${conversationId}`);
+    const handleMessageReceived = (event: CustomEvent) => {
+      const message = event.detail;
+      console.log(`[MESSAGE-LIST] Received messageReceived event:`, message);
+      if (message.type === "message:send" && message.payload.conversationId === conversationId) {
+        console.log(`[MESSAGE-LIST] Fetching messages for conversation ${conversationId}`);
+        // Fetch the latest messages to get the new message with full details
+        fetchMessages();
+      } else {
+        console.log(`[MESSAGE-LIST] Message ignored - type: ${message.type}, conversationId: ${message.payload?.conversationId}`);
+      }
+    };
+
+    window.addEventListener("messageReceived", handleMessageReceived as EventListener);
+    console.log(`[MESSAGE-LIST] Listener registered`);
+    return () => {
+      window.removeEventListener("messageReceived", handleMessageReceived as EventListener);
+      console.log(`[MESSAGE-LIST] Listener removed`);
+    };
+  }, [conversationId]);
+
   if (isLoading && messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">

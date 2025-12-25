@@ -14,7 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "worker:video": "tsx scripts/workers/video-processor.ts",
-    "websocket:server": "tsx scripts/websocket-server.ts"
+    "socketio:server": "tsx scripts/socketio-server.ts"
   },
   "dependencies": {
     "@ai-sdk/mistral": "^0.0.24",
@@ -79,7 +79,10 @@
     "unist-util-visit": "^5.0.0",
     "use-debounce": "^10.0.6",
     "ws": "^8.18.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "@socket.io/redis-adapter": "^8.3.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",

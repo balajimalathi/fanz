@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useWebSocket } from "@/lib/hooks/use-websocket";
+import { useSocketIO } from "@/lib/hooks/use-socketio";
 import { WebSocketMessage } from "@/lib/websocket/types";
 import { useSession } from "@/lib/auth/auth-client";
 
@@ -17,32 +17,43 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const [wsUrl, setWsUrl] = useState<string | null>(null);
 
-  // Get WebSocket URL from API
+  // Get Socket.IO URL from API
   useEffect(() => {
     fetch("/api/ws")
       .then((res) => res.json())
       .then((data) => {
-        if (data.websocketUrl) {
-          // Extract WebSocket URL (ws:// or wss://)
-          const url = data.websocketUrl.replace(/^https?:\/\//, "").replace(/^/, "ws://");
-          setWsUrl(url);
+        if (data.socketioUrl) {
+          // Use the Socket.IO URL from the API
+          setWsUrl(data.socketioUrl);
+        } else if (data.websocketUrl) {
+          // Fallback to websocket URL if socketioUrl not available
+          setWsUrl(data.websocketUrl);
         }
       })
       .catch((error) => {
-        console.error("Failed to get WebSocket URL:", error);
-        // Fallback to default
-        setWsUrl("ws://localhost:8080");
+        console.error("Failed to get Socket.IO URL:", error);
+        // Fallback to default Socket.IO server
+        const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+        const defaultPort = process.env.NEXT_PUBLIC_SOCKETIO_PORT || "3001";
+        const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+        setWsUrl(isSecure ? `https://${host}:${defaultPort}` : `http://${host}:${defaultPort}`);
       });
   }, []);
 
-  // Get token from session (for now using a placeholder - better-auth uses cookies)
-  // WebSocket server should read cookies from connection
+  // Get token from session (user ID for authentication)
   const token = session?.user?.id || "";
 
-  const { isConnected, send, on } = useWebSocket(
+  const { isConnected, send, on } = useSocketIO(
     wsUrl && token ? wsUrl : null,
     token || null
   );
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[WEBSOCKET-PROVIDER] URL:", wsUrl);
+    console.log("[WEBSOCKET-PROVIDER] Token:", token ? "PRESENT" : "MISSING");
+    console.log("[WEBSOCKET-PROVIDER] Connected:", isConnected);
+  }, [wsUrl, token, isConnected]);
 
   return (
     <WebSocketContext.Provider value={{ isConnected, send, on }}>

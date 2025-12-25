@@ -5,7 +5,7 @@ import { db } from "@/lib/db/client";
 import { call, conversation, creator, user } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCallPermission } from "@/lib/utils/call-permissions";
-import { sendToUser } from "@/lib/websocket/server";
+import { sendToUser } from "@/lib/socketio/server";
 import { sendPushNotificationsToUsers } from "@/lib/push/fcm";
 import { env } from "@/env";
 import { z } from "zod";

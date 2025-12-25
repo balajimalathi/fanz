@@ -96,18 +96,7 @@ export function ProfileHeader({
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <FollowButton creatorId={creatorId} />
-              {(chatContext || onOpenChat) && (
-                    <Button
-                      variant="outline"
-                      onClick={handleOpenChat}
-                      className="flex items-center gap-2"
-                      title="Send message"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="hidden sm:inline">Message</span>
-                    </Button>
-                  )}
+              <FollowButton creatorId={creatorId} /> 
               {isAuthenticated && (
                 <>
                   {(chatContext || onOpenChat) && (

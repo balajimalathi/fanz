@@ -31,7 +31,11 @@ export const env = createEnv({
     LIVEKIT_URL: z.string().url().optional(),
     LIVEKIT_API_KEY: z.string().optional(),
     LIVEKIT_API_SECRET: z.string().optional(),
-    // WebSocket configuration
+    // Socket.IO configuration
+    SOCKETIO_URL: z.string().url().optional(), // Socket.IO server URL
+    SOCKETIO_PORT: z.string().regex(/^\d+$/).default("3001"),
+    // WebSocket configuration (deprecated, kept for backward compatibility)
+    WEBSOCKET_URL: z.string().optional(), // Can be ws:// or wss:// URL
     WEBSOCKET_MAX_CONNECTIONS: z.string().regex(/^\d+$/).default("1000"),
     CHAT_MEDIA_MAX_SIZE: z.string().default("52428800"), // 50MB in bytes
   },
@@ -71,6 +75,9 @@ export const env = createEnv({
     LIVEKIT_URL: process.env.LIVEKIT_URL,
     LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
     LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
+    SOCKETIO_URL: process.env.SOCKETIO_URL,
+    SOCKETIO_PORT: process.env.SOCKETIO_PORT,
+    WEBSOCKET_URL: process.env.WEBSOCKET_URL,
     WEBSOCKET_MAX_CONNECTIONS: process.env.WEBSOCKET_MAX_CONNECTIONS,
     CHAT_MEDIA_MAX_SIZE: process.env.CHAT_MEDIA_MAX_SIZE,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

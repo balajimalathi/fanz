@@ -85,6 +85,42 @@ const nextConfig: NextConfig = {
       connectSrc.push(`https://${r2Hostname}`);
       mediaSrc.push(`https://${r2Hostname}`);
     }
+
+    // Add WebSocket support - allow ws:// and wss:// connections to the same origin
+    // For tunnel URLs, we need to allow both ws and wss to the tunnel domain
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL;
+    if (appUrl) {
+      try {
+        const url = new URL(appUrl);
+        const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+        connectSrc.push(`${wsProtocol}//${url.host}`);
+        // Also allow ws:// for development
+        if (url.protocol === "https:") {
+          connectSrc.push(`ws://${url.host}`);
+        }
+        // Add Socket.IO server URL (same host, different port)
+        const socketioPort = process.env.SOCKETIO_PORT || "3001";
+        // Add both HTTP and WebSocket protocols for Socket.IO
+        const socketioWsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+        connectSrc.push(
+          `${url.protocol}//${url.hostname}:${socketioPort}`,
+          `${socketioWsProtocol}//${url.hostname}:${socketioPort}`
+        );
+      } catch (e) {
+        // Invalid URL, skip
+      }
+    }
+    
+    // Allow localhost WebSocket and Socket.IO for development
+    connectSrc.push("ws://localhost:8080", "wss://localhost:8080");
+    // Add Socket.IO server with both HTTP and WebSocket protocols
+    const devSocketioPort = process.env.SOCKETIO_PORT || "3001";
+    connectSrc.push(
+      `http://localhost:${devSocketioPort}`,
+      `https://localhost:${devSocketioPort}`,
+      `ws://localhost:${devSocketioPort}`,
+      `wss://localhost:${devSocketioPort}`
+    );
     
     const cspValue = [
       "default-src 'self'",

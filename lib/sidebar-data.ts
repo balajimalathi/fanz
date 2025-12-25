@@ -65,9 +65,9 @@ export const sidebarDataSerializable = {
     },
     {
       title: "Inbox",
-      url: "#",
+      url: "/home/inbox",
       icon: "Inbox",
-      badge: "10",
+      // badge: "10",
     },
   ],
 }
@@ -119,7 +119,7 @@ export const sidebarData = {
     },
     {
       title: "Inbox",
-      url: "#",
+      url: "/home/inbox",
       icon: Inbox,
       badge: "10",
     },

@@ -16,6 +16,7 @@ interface Conversation {
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
   unreadCount: number;
+  isEnabled?: boolean;
   createdAt: string;
 }
 
@@ -75,6 +76,7 @@ export function ConversationList({
           lastMessageAt={conversation.lastMessageAt ? new Date(conversation.lastMessageAt) : null}
           lastMessagePreview={conversation.lastMessagePreview}
           unreadCount={conversation.unreadCount}
+          isEnabled={conversation.isEnabled ?? true}
           onClick={() => onSelectConversation(conversation.id)}
           isActive={selectedConversationId === conversation.id}
         />

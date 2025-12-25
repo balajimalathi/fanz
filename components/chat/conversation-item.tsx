@@ -16,6 +16,7 @@ interface ConversationItemProps {
   lastMessageAt: Date | null;
   lastMessagePreview: string | null;
   unreadCount: number;
+  isEnabled?: boolean;
   onClick: () => void;
   isActive?: boolean;
 }
@@ -25,6 +26,7 @@ export function ConversationItem({
   lastMessageAt,
   lastMessagePreview,
   unreadCount,
+  isEnabled = true,
   onClick,
   isActive = false,
 }: ConversationItemProps) {
@@ -61,6 +63,13 @@ export function ConversationItem({
             </span>
           )}
         </div>
+        {!isEnabled && (
+          <div className="mt-1">
+            <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded">
+              Waiting for creator to enable
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -15,12 +15,14 @@ interface ChatWindowProps {
     name: string;
     image?: string | null;
   };
+  isEnabled?: boolean;
 }
 
-export function ChatWindow({ conversationId, otherParticipant }: ChatWindowProps) {
+export function ChatWindow({ conversationId, otherParticipant, isEnabled = true }: ChatWindowProps) {
   const { data: session } = useSession();
   const { send, on } = useWebSocketContext();
   const [senderInfo, setSenderInfo] = useState<Record<string, { name: string; image?: string | null }>>({});
+  const [conversationEnabled, setConversationEnabled] = useState(isEnabled);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -45,18 +47,77 @@ export function ChatWindow({ conversationId, otherParticipant }: ChatWindowProps
   }, [session, otherParticipant]);
 
   useEffect(() => {
-    if (!on) return;
+    if (!on) {
+      console.log("[CHAT-WINDOW] on() is not available");
+      return;
+    }
 
+    console.log(`[CHAT-WINDOW] Setting up listener for conversation ${conversationId}`);
     // Listen for new messages
     const unsubscribe = on("message:send", (message: WebSocketMessage) => {
+      console.log(`[CHAT-WINDOW] Received message:send event:`, message);
+      console.log(`[CHAT-WINDOW] Message conversationId: ${message.payload?.conversationId}, current: ${conversationId}`);
       if (message.type === "message:send" && message.payload.conversationId === conversationId) {
+        console.log(`[CHAT-WINDOW] Dispatching messageReceived event for conversation ${conversationId}`);
         // Refresh message list - could be optimized with local state update
         window.dispatchEvent(new CustomEvent("messageReceived", { detail: message }));
+      } else {
+        console.log(`[CHAT-WINDOW] Message ignored - conversationId mismatch or wrong type`);
       }
     });
 
+    console.log(`[CHAT-WINDOW] Listener registered for conversation ${conversationId}`);
     return unsubscribe;
   }, [on, conversationId]);
+
+  // Fetch conversation status and poll for updates
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const fetchConversationStatus = async () => {
+      try {
+        const response = await fetch(`/api/chat/conversations/${conversationId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const newEnabled = data.isEnabled || false;
+          setConversationEnabled(newEnabled);
+          // If just enabled, trigger refresh
+          if (newEnabled && !conversationEnabled) {
+            window.dispatchEvent(new CustomEvent("conversationEnabled"));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching conversation status:", error);
+      }
+    };
+
+    fetchConversationStatus();
+    
+    // Poll for status updates if disabled (every 5 seconds)
+    if (!conversationEnabled) {
+      const interval = setInterval(() => {
+        fetchConversationStatus();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [conversationId, conversationEnabled]);
+
+  const fetchConversationStatus = async () => {
+    try {
+      const response = await fetch(`/api/chat/conversations/${conversationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const newEnabled = data.isEnabled || false;
+        setConversationEnabled(newEnabled);
+        // If just enabled, trigger refresh
+        if (newEnabled && !conversationEnabled) {
+          window.dispatchEvent(new CustomEvent("conversationEnabled"));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching conversation status:", error);
+    }
+  };
 
   const handleMediaUpload = async (file: File, type: "image" | "audio" | "video"): Promise<string> => {
     const formData = new FormData();
@@ -103,6 +164,7 @@ export function ChatWindow({ conversationId, otherParticipant }: ChatWindowProps
       {/* Input */}
       <MessageInput
         conversationId={conversationId}
+        isEnabled={conversationEnabled}
         onMediaUpload={handleMediaUpload}
       />
     </div>

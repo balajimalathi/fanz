@@ -68,7 +68,10 @@ export async function GET(request: NextRequest) {
     // Fetch user details for each follower
     const followerIds = followers.map((f) => f.followerId)
     const users = followerIds.length > 0
-      ? await db.select().from(user).where(inArray(user.id, followerIds))
+      ? await db
+          .select()
+          .from(user)
+          .where(inArray(user.id, followerIds))
       : []
 
     // Create a map for quick lookup

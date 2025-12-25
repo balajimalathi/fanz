@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { call } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { sendToUser } from "@/lib/websocket/server";
+import { sendToUser } from "@/lib/socketio/server";
 
 // POST - Reject a call
 export async function POST(

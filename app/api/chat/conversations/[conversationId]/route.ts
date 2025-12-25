@@ -79,6 +79,7 @@ export async function GET(
     return NextResponse.json({
       id: conv.id,
       otherParticipant,
+      isEnabled: conv.isEnabled,
       createdAt: conv.createdAt,
       updatedAt: conv.updatedAt,
     });

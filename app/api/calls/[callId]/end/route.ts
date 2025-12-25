@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { call } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { sendToUser } from "@/lib/websocket/server";
+import { sendToUser } from "@/lib/socketio/server";
 import { z } from "zod";
 
 const endCallSchema = z.object({

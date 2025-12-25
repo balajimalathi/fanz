@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         return {
           id: conv.id,
           otherParticipant,
+          isEnabled: conv.isEnabled,
           lastMessageAt: conv.lastMessageAt,
           lastMessagePreview: conv.lastMessagePreview,
           unreadCount: unreadMessages.length,
