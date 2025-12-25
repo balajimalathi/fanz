@@ -7,6 +7,7 @@ import { siteConfig } from "@/site.config";
 import { cn } from "@/lib/utils";
 import { Toaster } from "react-hot-toast";
 import { PushInit } from "@/components/push/push-init";
+import { WebSocketWrapper } from "@/components/providers/websocket-wrapper";
 
 
 
@@ -87,7 +88,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PushInit />
-          {children}
+          <WebSocketWrapper>
+            {children}
+          </WebSocketWrapper>
           <Toaster
             position="bottom-center"
             toastOptions={{

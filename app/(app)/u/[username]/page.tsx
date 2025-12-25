@@ -5,6 +5,8 @@ import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { Separator } from "@/components/ui/separator"
 import { FeedSection } from "./feed-section"
+import { ChatOverlay } from "@/components/chat/chat-overlay"
+import { ChatPageWrapper } from "./chat-wrapper"
 
 async function getCreatorProfile(username: string) {
   try {
@@ -84,92 +86,94 @@ export default async function Page({
   const { creator, services, memberships } = data
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Profile Header */}
-      <ProfileHeader
-        displayName={creator.displayName}
-        username={creator.username ?? "--"}
-        bio={creator.bio}
-        profileImageUrl={creator.profileImageUrl}
-        profileCoverUrl={creator.profileCoverUrl}
-        creatorId={creator.id}
-      />
+    <ChatPageWrapper creatorId={creator.id} creatorName={creator.displayName} creatorImage={creator.profileImageUrl}>
+      <div className="min-h-screen bg-background">
+        {/* Profile Header */}
+        <ProfileHeader
+          displayName={creator.displayName}
+          username={creator.username ?? "--"}
+          bio={creator.bio}
+          profileImageUrl={creator.profileImageUrl}
+          profileCoverUrl={creator.profileCoverUrl}
+          creatorId={creator.id}
+        />
 
-      {/* Content Sections */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
-        {/* Feed Section */}
-        <section className="mb-12 sm:mb-16">
-          <FeedSection username={creator.username ?? ""} />
-        </section>
-
-        {/* Separator between feed and other sections */}
-        {(services.length > 0 || memberships.length > 0) && (
-          <Separator className="my-8 sm:my-12" />
-        )}
-
-        {/* Services Section */}
-        {services.length > 0 && (
+        {/* Content Sections */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
+          {/* Feed Section */}
           <section className="mb-12 sm:mb-16">
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
-                Services
-              </h2>
+            <FeedSection username={creator.username ?? ""} />
+          </section>
+
+          {/* Separator between feed and other sections */}
+          {(services.length > 0 || memberships.length > 0) && (
+            <Separator className="my-8 sm:my-12" />
+          )}
+
+          {/* Services Section */}
+          {services.length > 0 && (
+            <section className="mb-12 sm:mb-16">
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                  Services
+                </h2>
+                <p className="text-muted-foreground text-sm sm:text-base">
+                  Available services from this creator
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {services.map((service: any) => (
+                  <ServiceDisplayCard
+                    key={service.id}
+                    name={service.name}
+                    description={service.description}
+                    price={service.price}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Separator between sections if both exist */}
+          {services.length > 0 && memberships.length > 0 && (
+            <Separator className="my-8 sm:my-12" />
+          )}
+
+          {/* Memberships Section */}
+          {memberships.length > 0 && (
+            <section>
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                  Memberships
+                </h2>
+                <p className="text-muted-foreground text-sm sm:text-base">
+                  Join exclusive memberships to support this creator
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {memberships.map((membership: any) => (
+                  <MembershipDisplayCard
+                    key={membership.id}
+                    title={membership.title}
+                    description={membership.description}
+                    monthlyRecurringFee={membership.monthlyRecurringFee}
+                    coverImageUrl={membership.coverImageUrl}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Empty State */}
+          {services.length === 0 && memberships.length === 0 && (
+            <div className="text-center py-12 sm:py-16">
               <p className="text-muted-foreground text-sm sm:text-base">
-                Available services from this creator
+                No services or memberships available yet.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {services.map((service: any) => (
-                <ServiceDisplayCard
-                  key={service.id}
-                  name={service.name}
-                  description={service.description}
-                  price={service.price}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Separator between sections if both exist */}
-        {services.length > 0 && memberships.length > 0 && (
-          <Separator className="my-8 sm:my-12" />
-        )}
-
-        {/* Memberships Section */}
-        {memberships.length > 0 && (
-          <section>
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
-                Memberships
-              </h2>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Join exclusive memberships to support this creator
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {memberships.map((membership: any) => (
-                <MembershipDisplayCard
-                  key={membership.id}
-                  title={membership.title}
-                  description={membership.description}
-                  monthlyRecurringFee={membership.monthlyRecurringFee}
-                  coverImageUrl={membership.coverImageUrl}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Empty State */}
-        {services.length === 0 && memberships.length === 0 && (
-          <div className="text-center py-12 sm:py-16">
-            <p className="text-muted-foreground text-sm sm:text-base">
-              No services or memberships available yet.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </ChatPageWrapper>
   )
 }

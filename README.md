@@ -48,7 +48,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Your site is now running at `http://localhost:3000`.
+Your site is now running at `https://thahryywpiigweqfxmgkq2uc3a.srv.us`.
 
 ## Prerequisites
 

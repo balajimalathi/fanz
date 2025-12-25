@@ -27,6 +27,13 @@ export const env = createEnv({
     FIREBASE_PROJECT_ID: z.string().min(1).optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
+    // LiveKit for WebRTC calls
+    LIVEKIT_URL: z.string().url().optional(),
+    LIVEKIT_API_KEY: z.string().optional(),
+    LIVEKIT_API_SECRET: z.string().optional(),
+    // WebSocket configuration
+    WEBSOCKET_MAX_CONNECTIONS: z.string().regex(/^\d+$/).default("1000"),
+    CHAT_MEDIA_MAX_SIZE: z.string().default("52428800"), // 50MB in bytes
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -61,6 +68,11 @@ export const env = createEnv({
     FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
     FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
+    LIVEKIT_URL: process.env.LIVEKIT_URL,
+    LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
+    LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
+    WEBSOCKET_MAX_CONNECTIONS: process.env.WEBSOCKET_MAX_CONNECTIONS,
+    CHAT_MEDIA_MAX_SIZE: process.env.CHAT_MEDIA_MAX_SIZE,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
