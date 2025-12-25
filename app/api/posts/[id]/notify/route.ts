@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client"
 import { post, follower, notification, creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { env } from "@/env"
+import { sendPushToFollowers } from "@/lib/push/fcm"
 
 // POST - Send notification to all followers about a post
 export async function POST(
@@ -79,20 +80,39 @@ export async function POST(
 
     // Create notifications for all followers
     const postLink = `${env.NEXT_PUBLIC_APP_URL}/u/${creatorRecord.username || creatorRecord.id}/post/${postId}`
+    const notificationTitle = `New post from ${creatorRecord.displayName}`
+    const notificationMessage = creatorRecord.displayName + " has posted something new!"
+    
     const notifications = followers.map((follower) => ({
       userId: follower.followerId,
       type: "post",
-      title: `New post from ${creatorRecord.displayName}`,
-      message: creatorRecord.displayName + " has posted something new!",
+      title: notificationTitle,
+      message: notificationMessage,
       link: postLink,
       read: false,
     }))
 
     await db.insert(notification).values(notifications)
 
+    // Send push notifications to followers
+    const pushResult = await sendPushToFollowers(session.user.id, {
+      title: notificationTitle,
+      body: notificationMessage,
+      icon: creatorRecord.profileImageUrl || undefined,
+      click_action: postLink,
+      data: {
+        type: "post",
+        postId,
+        creatorId: session.user.id,
+        link: postLink,
+      },
+    })
+
     return NextResponse.json({
       success: true,
       notificationsCreated: notifications.length,
+      pushNotificationsSent: pushResult.sent,
+      pushNotificationsFailed: pushResult.failed,
     })
   } catch (error) {
     console.error("Error sending notifications:", error)

@@ -21,37 +21,62 @@ export const auth = betterAuth({
   databaseHooks: {
     session: {
       create: {
-        after: async (createdSession) => {
-          // Ensure creator record exists for logged-in users
+        after: async (createdSession, context) => {
           try {
             const userId = createdSession.userId;
             if (!userId) return;
 
-            // Check if user has creator role, if not set it
             const userRecord = await db.query.user.findFirst({
               where: (u, { eq: eqOp }) => eqOp(u.id, userId),
             });
 
-            if (userRecord && userRecord.role !== "creator") {
-              await db
-                .update(user)
-                .set({ role: "creator" })
-                .where(eq(user.id, userId));
+            if (!userRecord) return;
+
+            // Check if user already has a role set
+            // If role is "user", keep it (customer sign-in from /u/*)
+            // If role is null or undefined, check the callbackURL to determine
+            // For now, if role is not set, we'll check the referrer or use a default
+            
+            // If user doesn't have a role yet, check if they should be a creator
+            // This happens when signing in from /home paths
+            // We'll use a different approach: check if user is accessing /home after login
+            // For now, if role is "user", don't change it (customer sign-in)
+            // If role is null, we need to determine based on context
+            
+            // Since we can't easily access callbackURL here, we'll use a different strategy:
+            // - Users signing in from /u/* will have role="user" (set in user.create hook)
+            // - Users signing in from /home will need their role updated to "creator"
+            // We'll handle this in a middleware or by checking the path they access after login
+            
+            // For users with role="user", don't create creator record
+            if (userRecord.role === "user") {
+              return; // Customer sign-in, no creator record needed
             }
 
-            // Check if creator record exists
-            const existingCreator = await db.query.creator.findFirst({
-              where: (c, { eq: eqOp }) => eqOp(c.id, userId),
-            });
+            // For users without a role or with role="creator", ensure creator record exists
+            if (!userRecord.role || userRecord.role === "creator") {
+              // Update user role to creator if not set
+              if (!userRecord.role) {
+                await db
+                  .update(user)
+                  .set({ role: "creator" })
+                  .where(eq(user.id, userId));
+              }
 
-            // Create creator record if it doesn't exist
-            if (!existingCreator) {
-              await db.insert(creator).values({
-                id: userId,
-                displayName: userRecord?.name || "",
-                onboardingStep: 0,
-                onboardingData: {},
+              // Check if creator record exists
+              const existingCreator = await db.query.creator.findFirst({
+                where: (c, { eq: eqOp }) => eqOp(c.id, userId),
               });
+
+              // Create creator record if it doesn't exist
+              if (!existingCreator) {
+                await db.insert(creator).values({
+                  id: userId,
+                  displayName: userRecord?.name || "",
+                  onboardingStep: 0,
+                  onboardingData: {},
+                });
+              }
             }
           } catch (error) {
             console.error("Error ensuring creator record:", error);
@@ -61,31 +86,19 @@ export const auth = betterAuth({
     },
     user: {
       create: {
-        after: async (createdUser) => {
-          // Automatically set role to 'creator' and create creator record
+        after: async (createdUser, context) => {
+          // Determine user role based on sign-in source
+          // Default to "user" for customer sign-ins, "creator" for creator sign-ins
+          // We'll check the callbackURL in session hook to determine the role
+          // For now, default to "user" - will be updated in session hook if needed
           try {
-            // Update user role to creator
+            // Set default role to "user" (will be updated in session hook if signing in from /home)
             await db
               .update(user)
-              .set({ role: "creator" })
+              .set({ role: "user" })
               .where(eq(user.id, createdUser.id));
-
-            // Check if creator record already exists
-            const existingCreator = await db.query.creator.findFirst({
-              where: (c, { eq: eqOp }) => eqOp(c.id, createdUser.id),
-            });
-
-            // Create creator record if it doesn't exist
-            if (!existingCreator) {
-              await db.insert(creator).values({
-                id: createdUser.id,
-                displayName: createdUser.name || "",
-                onboardingStep: 0,
-                onboardingData: {},
-              });
-            }
           } catch (error) {
-            console.error("Error creating creator record:", error);
+            console.error("Error setting user role:", error);
           }
         },
       },

@@ -87,10 +87,11 @@ export default async function Page({
       {/* Profile Header */}
       <ProfileHeader
         displayName={creator.displayName}
-        username={creator.username}
+        username={creator.username ?? "--"}
         bio={creator.bio}
         profileImageUrl={creator.profileImageUrl}
         profileCoverUrl={creator.profileCoverUrl}
+        creatorId={creator.id}
       />
 
       {/* Content Sections */}

@@ -1,0 +1,32 @@
+{
+  "name": "DesiFans",
+  "short_name": "DesiFans",
+  "description": "Follow your favorite creators and get notified about new content",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "description": "Go to home page",
+      "url": "/",
+      "icons": [{ "src": "/logo.svg", "sizes": "any" }]
+    }
+  ],
+  "categories": ["entertainment", "social"],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
+

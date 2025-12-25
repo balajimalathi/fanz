@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/lib/utils";
 import { Toaster } from "react-hot-toast";
+import { PushInit } from "@/components/push/push-init";
 
 
 
@@ -49,6 +50,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={cn(gabarito.variable, baskerville.variable)}>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -81,6 +86,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PushInit />
           {children}
           <Toaster
             position="bottom-center"

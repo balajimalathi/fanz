@@ -60,7 +60,7 @@ export const sidebarDataSerializable = {
     },
     {
       title: "Notifications",
-      url: "#",
+      url: "/home/notifications",
       icon: "Bell",
     },
     {
@@ -114,7 +114,7 @@ export const sidebarData = {
     },
     {
       title: "Notifications",
-      url: "#",
+      url: "/home/notifications",
       icon: Bell,
     },
     {

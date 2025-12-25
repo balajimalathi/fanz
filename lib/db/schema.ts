@@ -70,6 +70,7 @@ export const creatorTypeEnum = pgEnum("creator_type", ["ai", "human"]);
 export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
 export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
+export const messageTypeEnum = pgEnum("message_type", ["text", "audio"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -234,4 +235,40 @@ export const postComment = pgTable("post_comment", {
     .references(() => postComment.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const pushSubscription = pgTable("push_subscription", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const notificationPreference = pgTable("notification_preference", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" })
+    .unique(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const broadcastMessage = pgTable("broadcast_message", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  followerIds: jsonb("follower_ids").$type<string[]>().notNull(),
+  messageType: messageTypeEnum("message_type").notNull(),
+  content: text("content"),
+  audioUrl: text("audio_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });

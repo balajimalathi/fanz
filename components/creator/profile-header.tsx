@@ -1,5 +1,15 @@
+"use client"
+
+import { useState } from "react"
 import Image from "next/image"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { FollowButton } from "./follow-button"
+import { CustomerProfileModal } from "./customer-profile-modal"
+import { Button } from "@/components/ui/button"
+import { User } from "lucide-react"
+import { useSession } from "@/lib/auth/auth-client"
+import { NotificationPermission } from "@/components/push/notification-permission"
+import { PWAInstallButton } from "@/components/push/pwa-install-button"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -7,6 +17,7 @@ interface ProfileHeaderProps {
   bio: string | null
   profileImageUrl: string | null
   profileCoverUrl: string | null
+  creatorId: string
 }
 
 export function ProfileHeader({
@@ -15,7 +26,12 @@ export function ProfileHeader({
   bio,
   profileImageUrl,
   profileCoverUrl,
+  creatorId,
 }: ProfileHeaderProps) {
+  const { data: session } = useSession()
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const isAuthenticated = !!session?.user
+
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -57,12 +73,33 @@ export function ProfileHeader({
 
         {/* Name and Username */}
         <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-            {displayName}
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            @{username}
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                {displayName}
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                @{username}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <FollowButton creatorId={creatorId} />
+              {isAuthenticated && (
+                <>
+                  <NotificationPermission />
+                  <PWAInstallButton />
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowProfileModal(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="hidden sm:inline">Profile</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Bio */}
@@ -74,6 +111,10 @@ export function ProfileHeader({
           </div>
         )}
       </div>
+      <CustomerProfileModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+      />
     </div>
   )
 }
