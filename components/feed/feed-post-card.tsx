@@ -114,10 +114,6 @@ export function FeedPostCard({
               media={post.media}
               postId={post.id}
               userId={currentUserId}
-              onSubscribe={() => {
-                // Navigate to subscription page or show modal
-                window.location.href = creatorLink
-              }}
             />
           ) : (
             <div className="aspect-video bg-muted flex items-center justify-center">

@@ -220,6 +220,8 @@ export default function CreatePostPage() {
       }
 
       toast.success("Post published successfully!")
+      router.push(`/home/feed`);
+      router.refresh()
     } catch (error) {
       console.error("Error publishing post:", error)
       toast.error(error instanceof Error ? error.message : "Failed to publish post")

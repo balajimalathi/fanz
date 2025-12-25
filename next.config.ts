@@ -70,6 +70,37 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    // Build CSP with R2 bucket support for HLS video playback
+    const connectSrc = [
+      "'self'",
+      "https://www.google-analytics.com",
+      "https://www.googletagmanager.com",
+      "https://www.clarity.ms",
+      "https://scripts.clarity.ms",
+    ];
+    
+    const mediaSrc = ["'self'", "blob:", "data:"];
+    
+    if (r2Hostname) {
+      connectSrc.push(`https://${r2Hostname}`);
+      mediaSrc.push(`https://${r2Hostname}`);
+    }
+    
+    const cspValue = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "frame-src 'self' https://www.youtube.com",
+      `connect-src ${connectSrc.join(" ")}`,
+      `media-src ${mediaSrc.join(" ")}`,
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
@@ -80,8 +111,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'self' https://www.youtube.com; connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms;",
+            value: cspValue,
           },
           {
             key: "X-Frame-Options",

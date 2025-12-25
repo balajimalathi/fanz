@@ -1,9 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Lock } from "lucide-react"
+import { useEffect, useRef, useState, useCallback } from "react"
 
 interface HlsVideoPlayerProps {
   video: {
@@ -14,24 +11,75 @@ interface HlsVideoPlayerProps {
     url: string
     metadata?: Record<string, unknown>
   }
-  hasAccess: boolean
   postId: string
-  onSubscribe?: () => void
 }
 
 export function HlsVideoPlayer({
   video,
-  hasAccess,
   postId,
-  onSubscribe,
 }: HlsVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [useFallback, setUseFallback] = useState(false)
   const hlsRef = useRef<any>(null)
 
+  // Fallback to original video when HLS fails
+  const activateFallback = useCallback(() => {
+    if (!video.url) {
+      setError("Video is not available")
+      setIsLoading(false)
+      return
+    }
+    console.log("Activating fallback to original video URL:", video.url)
+    setUseFallback(true)
+    setError(null)
+    setIsLoading(true)
+    
+    // Set video source to original URL
+    if (videoRef.current) {
+      videoRef.current.src = video.url
+      videoRef.current.load()
+    }
+  }, [video.url])
+
   useEffect(() => {
-    if (!hasAccess || !video.hlsUrl) {
+    // If already in fallback mode, handle fallback video loading
+    if (useFallback && video.url) {
+      if (!videoRef.current) return
+
+      const handleLoadedMetadata = () => {
+        setIsLoading(false)
+        setError(null)
+      }
+
+      const handleError = () => {
+        setError("Failed to load video")
+        setIsLoading(false)
+      }
+
+      const handleCanPlay = () => {
+        setIsLoading(false)
+      }
+
+      videoRef.current.addEventListener("loadedmetadata", handleLoadedMetadata)
+      videoRef.current.addEventListener("error", handleError)
+      videoRef.current.addEventListener("canplay", handleCanPlay)
+
+      return () => {
+        if (videoRef.current) {
+          videoRef.current.removeEventListener("loadedmetadata", handleLoadedMetadata)
+          videoRef.current.removeEventListener("error", handleError)
+          videoRef.current.removeEventListener("canplay", handleCanPlay)
+        }
+      }
+    }
+
+    if (!video.hlsUrl || useFallback) {
+      if (useFallback) {
+        // Fallback mode is handled above
+        return
+      }
       setIsLoading(false)
       return
     }
@@ -39,12 +87,33 @@ export function HlsVideoPlayer({
     // Dynamically import hls.js only on client side
     const initHls = async () => {
       try {
+        // First, verify the manifest is accessible
+        try {
+          const response = await fetch(video.hlsUrl!, {
+            method: "HEAD",
+            mode: "cors",
+          })
+          if (!response.ok && response.status !== 0) {
+            console.warn(`Manifest check returned status ${response.status}`)
+          }
+        } catch (fetchError) {
+          console.warn("Manifest accessibility check failed (may be CORS):", fetchError)
+          // Continue anyway - might work with HLS.js
+        }
+
         const Hls = (await import("hls.js")).default
 
         if (Hls.isSupported() && videoRef.current) {
+          let retryCount = 0
+          const maxRetries = 2
+
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: false,
+            xhrSetup: (xhr, url) => {
+              // Enable CORS for HLS requests
+              xhr.withCredentials = false
+            },
           })
 
           hls.loadSource(video.hlsUrl!)
@@ -53,49 +122,101 @@ export function HlsVideoPlayer({
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             setIsLoading(false)
             setError(null)
+            retryCount = 0 // Reset retry count on success
           })
 
           hls.on(Hls.Events.ERROR, (event, data) => {
             if (data.fatal) {
               switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
-                  console.error("Fatal network error, trying to recover...")
-                  hls.startLoad()
+                  const errorDetails = data.response
+                    ? `Status: ${data.response.code}, URL: ${data.url || video.hlsUrl}`
+                    : `URL: ${data.url || video.hlsUrl}`
+                  
+                  console.error("Fatal network error:", {
+                    type: data.type,
+                    details: data.details,
+                    url: data.url || video.hlsUrl,
+                    response: data.response,
+                    error: data.error,
+                  })
+
+                  // Retry logic
+                  if (retryCount < maxRetries) {
+                    retryCount++
+                    console.log(`Retrying HLS load (attempt ${retryCount}/${maxRetries})...`)
+                    try {
+                      hls.startLoad()
+                    } catch (e) {
+                      console.error("Failed to retry:", e)
+                      retryCount = maxRetries // Stop retrying
+                    }
+                  } else {
+                    // Max retries reached - fallback to original video
+                    hls.destroy()
+                    activateFallback()
+                  }
                   break
                 case Hls.ErrorTypes.MEDIA_ERROR:
-                  console.error("Fatal media error, trying to recover...")
-                  hls.recoverMediaError()
+                  console.error("Fatal media error:", data)
+                  try {
+                    hls.recoverMediaError()
+                  } catch (e) {
+                    console.error("Failed to recover from media error:", e)
+                    // Media error recovery failed - fallback to original video
+                    hls.destroy()
+                    activateFallback()
+                  }
                   break
                 default:
-                  console.error("Fatal error, destroying HLS instance")
+                  console.error("Fatal error:", data)
+                  // Unknown fatal error - fallback to original video
                   hls.destroy()
-                  setError("Failed to load video")
-                  setIsLoading(false)
+                  activateFallback()
                   break
               }
+            } else {
+              // Non-fatal errors - log but don't stop playback
+              console.warn("Non-fatal HLS error:", data)
             }
           })
 
           hlsRef.current = hls
         } else if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
           // Native HLS support (Safari)
+          // Don't set crossOrigin for native HLS - let Safari handle CORS
           videoRef.current.src = video.hlsUrl!
-          videoRef.current.addEventListener("loadedmetadata", () => {
+          
+          const handleLoadedMetadata = () => {
             setIsLoading(false)
             setError(null)
-          })
-          videoRef.current.addEventListener("error", () => {
-            setError("Failed to load video")
-            setIsLoading(false)
-          })
+          }
+
+          const handleError = (e: Event) => {
+            console.error("Native HLS error:", e)
+            // Native HLS failed - fallback to original video
+            activateFallback()
+          }
+
+          videoRef.current.addEventListener("loadedmetadata", handleLoadedMetadata)
+          videoRef.current.addEventListener("error", handleError)
+          
+          // Cleanup listeners
+          return () => {
+            if (videoRef.current) {
+              videoRef.current.removeEventListener("loadedmetadata", handleLoadedMetadata)
+              videoRef.current.removeEventListener("error", handleError)
+            }
+          }
         } else {
-          setError("HLS is not supported in this browser")
-          setIsLoading(false)
+          // HLS not supported - fallback to original video
+          console.log("HLS not supported, using fallback")
+          activateFallback()
         }
       } catch (err) {
         console.error("Error loading HLS.js:", err)
-        setError("Failed to initialize video player")
-        setIsLoading(false)
+        // HLS.js initialization failed - fallback to original video
+        activateFallback()
       }
     }
 
@@ -106,71 +227,32 @@ export function HlsVideoPlayer({
         hlsRef.current.destroy()
       }
     }
-  }, [hasAccess, video.hlsUrl])
+  }, [video.hlsUrl, video.url, useFallback, activateFallback])
 
-  if (!hasAccess) {
-    return (
-      <div className="relative aspect-video bg-black rounded-lg overflow-hidden group">
-        {video.blurThumbnailUrl ? (
-          <Image
-            src={video.blurThumbnailUrl}
-            alt="Video preview"
-            fill
-            className="object-cover blur-sm brightness-50"
-            unoptimized
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-            <Lock className="h-16 w-16 text-gray-600" />
-          </div>
-        )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
-          <div className="text-center">
-            <Lock className="h-12 w-12 text-white/80 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">
-              Subscribe to Unlock
-            </h3>
-            <p className="text-white/70 mb-4">
-              This video is available for subscribers only
-            </p>
-            {onSubscribe && (
-              <Button
-                onClick={onSubscribe}
-                size="lg"
-                className="bg-primary hover:bg-primary/90"
-              >
-                Subscribe Now
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Handle case when no HLS URL is available - use fallback
+  useEffect(() => {
+    if (!video.hlsUrl && video.url && !useFallback) {
+      const processingStatus = video.metadata?.processingStatus as string | undefined
+      // If processing is complete, failed, or not set, use fallback immediately
+      if (!processingStatus || processingStatus === "ready" || processingStatus === "failed") {
+        activateFallback()
+      }
+    }
+  }, [video.hlsUrl, video.url, useFallback, activateFallback])
 
-  if (!video.hlsUrl) {
+  // Show processing message if video is still processing and no HLS URL
+  if (!video.hlsUrl && video.url && !useFallback) {
     const processingStatus = video.metadata?.processingStatus as string | undefined
-    return (
-      <div className="relative aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
-        {processingStatus === "processing" ? (
+    if (processingStatus === "processing") {
+      return (
+        <div className="relative aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
           <div className="text-center text-white">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
             <p>Processing video...</p>
           </div>
-        ) : processingStatus === "failed" ? (
-          <div className="text-center text-red-400 p-4">
-            <p>Video processing failed</p>
-            {/* {video.metadata?.error && (
-              <p className="text-sm mt-2">{String(video.metadata.error)}</p>
-            )} */}
-          </div>
-        ) : (
-          <div className="text-center text-white">
-            <p>Video is being prepared...</p>
-          </div>
-        )}
-      </div>
-    )
+        </div>
+      )
+    }
   }
 
   return (
@@ -196,6 +278,11 @@ export function HlsVideoPlayer({
         className="w-full h-full"
         poster={video.thumbnailUrl || undefined}
         playsInline
+        src={useFallback ? video.url : undefined}
+        // Note: When using HLS, src is set by HLS.js or native HLS
+        // When using fallback, src is set to video.url
+        // crossOrigin is not set here - HLS.js handles CORS via xhrSetup
+        // Setting crossOrigin="anonymous" can cause CORS issues if R2 bucket doesn't have proper headers
       >
         Your browser does not support the video tag.
       </video>

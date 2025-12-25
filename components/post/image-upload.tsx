@@ -156,12 +156,11 @@ export function ImageUpload({
           {images.map((image) => (
             <div key={image.id} className="relative group">
               <div className="aspect-square relative rounded-lg overflow-hidden border border-border bg-muted">
-                <Image
+                {/* Use regular img tag for blob URLs as Next.js Image doesn't work well with them */}
+                <img
                   src={image.preview}
                   alt="Preview"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                  className="w-full h-full object-cover"
                 />
                 {uploadProgress[image.id] !== undefined && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
