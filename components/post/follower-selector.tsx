@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import toast from "react-hot-toast"
 
 interface Follower {
   id: string
@@ -57,7 +58,7 @@ export function FollowerSelector({
       setFollowers(data)
     } catch (error) {
       console.error("Error fetching followers:", error)
-      alert("Failed to load followers")
+      toast.error("Failed to load followers")
     } finally {
       setIsLoading(false)
     }
@@ -75,7 +76,7 @@ export function FollowerSelector({
 
   const handleSubmit = () => {
     if (selectedIds.size === 0) {
-      alert("Please select at least one follower")
+      toast.error("Please select at least one follower")
       return
     }
     setIsSubmitting(true)

@@ -5,6 +5,7 @@ import { Gabarito, Instrument_Sans, Instrument_Serif, Libre_Baskerville } from "
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/lib/utils";
+import { Toaster } from "react-hot-toast";
 
 
 
@@ -81,6 +82,24 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              duration: 4000,
+              success: {
+                iconTheme: {
+                  primary: "hsl(142.1 76.2% 36.3%)",
+                  secondary: "white",
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: "hsl(0 84.2% 60.2%)",
+                  secondary: "white",
+                },
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react"
 import { Upload, X, Loader2, Video } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import toast from "react-hot-toast"
 
 interface VideoFile {
   file: File
@@ -54,7 +55,7 @@ export function VideoUpload({
         .forEach((file) => {
           const error = validateVideoFile(file)
           if (error) {
-            alert(error)
+            toast.error(error)
             return
           }
 

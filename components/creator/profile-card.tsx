@@ -13,6 +13,7 @@ import { validateImageFile } from "@/lib/utils/image-processing"
 import { validateUsernameFormat, isReservedSubdomain } from "@/lib/onboarding/validation-client"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import toast from "react-hot-toast"
 
 export function ProfileCard({ initialDisplayName, initialBio, initialUsername }: { initialDisplayName: string, initialBio?: string, initialUsername?: string }) {
 
@@ -182,7 +183,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
 
     const validationError = validateImageFile(file)
     if (validationError) {
-      alert(validationError)
+      toast.error(validationError)
       return
     }
 
@@ -221,9 +222,10 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
       setShowCropper(false)
       setCropperImage(null)
       setCropperType(null)
+      toast.success("Image uploaded successfully")
     } catch (error) {
       console.error("Error uploading image:", error)
-      alert(error instanceof Error ? error.message : "Failed to upload image")
+      toast.error(error instanceof Error ? error.message : "Failed to upload image")
     } finally {
       setIsUploading(false)
     }

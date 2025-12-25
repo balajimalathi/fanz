@@ -9,16 +9,20 @@
  * In production, run this as a background service (PM2, systemd, etc.)
  */
 
-import { Worker } from "bullmq"
-import { env } from "@/env"
+// Load environment variables before importing anything that needs them
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+import { Worker } from "bullmq" 
 import { processVideoJob } from "@/lib/workers/video-processor-handler"
 
 // Redis connection configuration
 const connection = {
-  host: env.REDIS_HOST,
-  port: parseInt(env.REDIS_PORT),
-  password: env.REDIS_PASSWORD,
-  db: parseInt(env.REDIS_DB),
+  host: process.env.REDIS_HOST,
+  port: parseInt(process.env.REDIS_PORT || "6379"),
+  password: process.env.REDIS_PASSWORD,
+  db: parseInt(process.env.REDIS_DB || "0"),
 }
 
 // Worker configuration

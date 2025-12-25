@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
+import toast from "react-hot-toast"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -192,7 +193,7 @@ export function OnboardingWizard() {
       router.push("/home")
     } catch (error) {
       console.error("Error completing onboarding:", error)
-      alert(error instanceof Error ? error.message : "Failed to complete onboarding")
+      toast.error(error instanceof Error ? error.message : "Failed to complete onboarding")
     } finally {
       setIsLoading(false)
     }

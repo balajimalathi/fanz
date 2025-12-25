@@ -11,6 +11,7 @@ import {
   Check,
   Copy,
 } from "lucide-react"
+import toast from "react-hot-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -106,12 +107,12 @@ export default function CreatePostPage() {
 
   const handlePublish = async () => {
     if (postType === "subscription" && selectedMemberships.size === 0) {
-      alert("Please select at least one membership for subscription posts")
+      toast.error("Please select at least one membership for subscription posts")
       return
     }
 
     if (postType === "exclusive" && (!price || parseFloat(price) <= 0)) {
-      alert("Please enter a valid price for exclusive posts")
+      toast.error("Please enter a valid price for exclusive posts")
       return
     }
 
@@ -218,10 +219,10 @@ export default function CreatePostPage() {
         setPostLink(linkData.link)
       }
 
-      alert("Post published successfully!")
+      toast.success("Post published successfully!")
     } catch (error) {
       console.error("Error publishing post:", error)
-      alert(error instanceof Error ? error.message : "Failed to publish post")
+      toast.error(error instanceof Error ? error.message : "Failed to publish post")
     } finally {
       setIsPublishing(false)
     }
@@ -240,10 +241,10 @@ export default function CreatePostPage() {
       if (!response.ok) throw new Error("Failed to pin post")
 
       setIsPinned(!isPinned)
-      alert(isPinned ? "Post unpinned" : "Post pinned")
+      toast.success(isPinned ? "Post unpinned" : "Post pinned")
     } catch (error) {
       console.error("Error pinning post:", error)
-      alert("Failed to pin post")
+      toast.error("Failed to pin post")
     }
   }
 
@@ -258,10 +259,10 @@ export default function CreatePostPage() {
       if (!response.ok) throw new Error("Failed to send notifications")
 
       const data = await response.json()
-      alert(`Notifications sent to ${data.notificationsCreated} followers`)
+      toast.success(`Notifications sent to ${data.notificationsCreated} followers`)
     } catch (error) {
       console.error("Error sending notifications:", error)
-      alert("Failed to send notifications")
+      toast.error("Failed to send notifications")
     }
   }
 
@@ -272,9 +273,10 @@ export default function CreatePostPage() {
       await navigator.clipboard.writeText(postLink)
       setLinkCopied(true)
       setTimeout(() => setLinkCopied(false), 2000)
+      toast.success("Link copied to clipboard")
     } catch (error) {
       console.error("Error copying link:", error)
-      alert("Failed to copy link")
+      toast.error("Failed to copy link")
     }
   }
 
@@ -289,14 +291,14 @@ export default function CreatePostPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          alert(`Post broadcasted to ${data.notificationsCreated} followers`)
+          toast.success(`Post broadcasted to ${data.notificationsCreated} followers`)
         } else {
-          alert("Failed to broadcast post")
+          toast.error("Failed to broadcast post")
         }
       })
       .catch((error) => {
         console.error("Error broadcasting post:", error)
-        alert("Failed to broadcast post")
+        toast.error("Failed to broadcast post")
       })
   }
 

@@ -5,6 +5,7 @@ import Cropper from "react-easy-crop"
 import { Button } from "@/components/ui/button"
 import { getCroppedImg } from "@/lib/utils/image-processing"
 import type { Area } from "react-easy-crop"
+import toast from "react-hot-toast"
 
 interface ImageCropperProps {
   image: File | string
@@ -71,7 +72,7 @@ export function ImageCropper({
       onCropComplete(croppedBlob)
     } catch (error) {
       console.error("Error cropping image:", error)
-      alert("Failed to crop image. Please try again.")
+      toast.error("Failed to crop image. Please try again.")
     } finally {
       setIsProcessing(false)
     }

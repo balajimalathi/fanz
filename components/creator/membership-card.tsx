@@ -18,6 +18,7 @@ import { validateImageFile } from "@/lib/utils/image-processing"
 import { cn } from "@/lib/utils"
 import { membershipSchema } from "@/lib/validations/membership"
 import Image from "next/image"
+import toast from "react-hot-toast"
 
 interface Membership {
   id: string
@@ -349,7 +350,7 @@ function MembershipSection({
 
     const validationError = validateImageFile(file)
     if (validationError) {
-      alert(validationError)
+      toast.error(validationError)
       return
     }
 
@@ -377,9 +378,10 @@ function MembershipSection({
       setCoverImageUrl(data.url)
       setShowCropper(false)
       setCropperImage(null)
+      toast.success("Image uploaded successfully")
     } catch (error) {
       console.error("Error uploading image:", error)
-      alert(error instanceof Error ? error.message : "Failed to upload image")
+      toast.error(error instanceof Error ? error.message : "Failed to upload image")
     } finally {
       setIsUploading(false)
     }
@@ -623,7 +625,7 @@ function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
 
     const validationError = validateImageFile(file)
     if (validationError) {
-      alert(validationError)
+      toast.error(validationError)
       return
     }
 

@@ -3,6 +3,9 @@ import postgres from 'postgres';
 import * as schema from './schema';
 import dotenv from 'dotenv';
 
+// Load .env.local first (takes precedence), then .env as fallback
+// dotenv.config() by default doesn't override existing variables
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 if (!process.env.DATABASE_URL) {

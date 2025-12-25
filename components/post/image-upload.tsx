@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { validateImageFile } from "@/lib/utils/image-processing"
 import Image from "next/image"
+import toast from "react-hot-toast"
 
 interface ImageFile {
   file: File
@@ -42,7 +43,7 @@ export function ImageUpload({
         .forEach((file) => {
           const error = validateImageFile(file)
           if (error) {
-            alert(error)
+            toast.error(error)
             return
           }
 

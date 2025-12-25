@@ -2,7 +2,7 @@ import { Job } from "bullmq"
 import { exec } from "child_process"
 import { promisify } from "util"
 import { join } from "path"
-import { mkdir, rm } from "fs/promises"
+import { mkdir, rm, writeFile, rename } from "fs/promises"
 import { db } from "@/lib/db/client"
 import { postMedia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
@@ -10,6 +10,14 @@ import { uploadFileToR2, uploadDirectoryToR2, getR2FileUrl } from "@/lib/storage
 import { VideoProcessingJobData } from "@/lib/queue/video-processing"
 
 const execAsync = promisify(exec)
+
+// Variant definitions: resolution, video bitrate, label
+const variants = [
+  { resolution: "854x480", bitrate: "1000k", label: "480p" },
+  { resolution: "1280x720", bitrate: "2500k", label: "720p" },
+  { resolution: "1920x1080", bitrate: "5000k", label: "1080p" },
+  { resolution: "2560x1440", bitrate: "8000k", label: "1440p" },
+]
 
 /**
  * Process a video job - handles FFmpeg transcoding and R2 upload
@@ -37,57 +45,100 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
     const outputDir = join(process.cwd(), "tmp", "hls", videoId)
     await mkdir(outputDir, { recursive: true })
 
-    // Create subdirectories for each quality
-    const hls480Dir = join(outputDir, "hls_0")  // 480p
-    const hls720Dir = join(outputDir, "hls_1")  // 720p
-    const hls1080Dir = join(outputDir, "hls_2") // 1080p
-    const hls1440Dir = join(outputDir, "hls_3") // 1440p
-    await mkdir(hls480Dir, { recursive: true })
-    await mkdir(hls720Dir, { recursive: true })
-    await mkdir(hls1080Dir, { recursive: true })
-    await mkdir(hls1440Dir, { recursive: true })
+    // Create subdirectories for each quality variant (using numeric indices for FFmpeg)
+    // FFmpeg will use hls_0, hls_1, etc. which we'll rename to label-based names after
+    for (let i = 0; i < variants.length; i++) {
+      const variantDir = join(outputDir, `hls_${i}`)
+      await mkdir(variantDir, { recursive: true })
+    }
 
     await job.updateProgress(30)
 
-    // FFmpeg command to generate HLS with multiple qualities
-    // 480p: 854x480, 800k bitrate
-    // 720p: 1280x720, 2800k bitrate
-    // 1080p: 1920x1080, 6000k bitrate
-    // 1440p: 2560x1440, 15000k bitrate
-    const ffmpegCommand = `
-      ffmpeg -i "${videoPath}" \\
-        -preset veryfast -g 48 -sc_threshold 0 \\
-        -map 0:v:0 -map 0:a:0? \\
-        -s:v:0 854x480 -c:v libx264 -b:v 800k -maxrate 800k -bufsize 1600k \\
-        -s:v:1 1280x720 -c:v libx264 -b:v 2800k -maxrate 2800k -bufsize 5600k \\
-        -s:v:2 1920x1080 -c:v libx264 -b:v 6000k -maxrate 6000k -bufsize 12000k \\
-        -s:v:3 2560x1440 -c:v libx264 -b:v 15000k -maxrate 15000k -bufsize 30000k \\
-        -c:a aac -b:a 128k \\
-        -var_stream_map "v:0,a:0 v:1,a:0 v:2,a:0 v:3,a:0" \\
-        -master_pl_name master.m3u8 \\
-        -f hls -hls_time 4 -hls_list_size 0 \\
-        -hls_segment_filename "${outputDir}/hls_%v/segment_%03d.ts" \\
-        "${outputDir}/hls_%v/playlist.m3u8"
-    `.trim()
+    // Normalize paths to use forward slashes for FFmpeg (works on Windows too)
+    const normalizedOutputDir = outputDir.replace(/\\/g, "/")
+    const normalizedVideoPath = videoPath.replace(/\\/g, "/")
 
+    // Process each variant separately (like the script approach)
+    // This avoids var_stream_map issues and is more reliable
     console.log(`[Job ${job.id}] Starting FFmpeg transcoding for video ${videoId}...`)
-    await execAsync(ffmpegCommand)
-    console.log(`[Job ${job.id}] FFmpeg transcoding completed`)
+    
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i]
+      const variantDir = join(outputDir, `hls_${i}`)
+      const normalizedVariantDir = variantDir.replace(/\\/g, "/")
+      
+      // Build FFmpeg command for this variant
+      // Each variant gets its own separate FFmpeg run
+      const bitrateNum = parseInt(variant.bitrate)
+      const segmentFilename = `${normalizedVariantDir}/segment_%03d.ts`
+      const playlistPath = `${normalizedVariantDir}/playlist.m3u8`
+      
+      const ffmpegCommand = `ffmpeg -i "${normalizedVideoPath}" -preset veryfast -g 48 -sc_threshold 0 -map 0:v:0 -map 0:a:0? -s ${variant.resolution} -c:v libx264 -b:v ${variant.bitrate} -maxrate ${variant.bitrate} -bufsize ${bitrateNum * 2}k -c:a aac -b:a 128k -f hls -hls_time 4 -hls_list_size 0 -hls_segment_filename "${segmentFilename}" "${playlistPath}"`
+      
+      console.log(`[Job ${job.id}] Processing variant ${variant.label} (${variant.resolution}@${variant.bitrate})...`)
+      
+      try {
+        await execAsync(ffmpegCommand)
+        console.log(`[Job ${job.id}] Variant ${variant.label} completed`)
+      } catch (error: any) {
+        console.error(`[Job ${job.id}] FFmpeg command that failed for ${variant.label}:`, ffmpegCommand)
+        console.error(`[Job ${job.id}] FFmpeg stderr:`, error.stderr?.substring(0, 1000))
+        throw error
+      }
+      
+      // Update progress incrementally (30% to 50% across all variants)
+      await job.updateProgress(30 + Math.floor((i + 1) * 20 / variants.length))
+    }
+    
+    console.log(`[Job ${job.id}] FFmpeg transcoding completed for all variants`)
+    await job.updateProgress(50)
+
+    // Rename directories from numeric indices (hls_0, hls_1, etc.) to label-based names (480p, 720p, etc.)
+    console.log(`[Job ${job.id}] Renaming variant directories to label-based names...`)
+    for (let i = 0; i < variants.length; i++) {
+      const oldDir = join(outputDir, `hls_${i}`)
+      const newDir = join(outputDir, variants[i].label)
+      try {
+        await rename(oldDir, newDir)
+      } catch (error) {
+        console.error(`[Job ${job.id}] Error renaming ${oldDir} to ${newDir}:`, error)
+        throw error
+      }
+    }
+    console.log(`[Job ${job.id}] Directory renaming completed`)
+    await job.updateProgress(55)
+
+    // Manually generate master playlist with proper HLS format
+    console.log(`[Job ${job.id}] Generating master playlist...`)
+    const masterPlaylistPath = join(outputDir, "playlist.m3u8")
+    let masterPlaylistContent = "#EXTM3U\n#EXT-X-VERSION:3\n"
+    
+    for (const variant of variants) {
+      // Convert bitrate from "1000k" to bits per second (1000000)
+      const bitrateBps = parseInt(variant.bitrate) * 1000
+      masterPlaylistContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bitrateBps},RESOLUTION=${variant.resolution}\n`
+      masterPlaylistContent += `${variant.label}/playlist.m3u8\n`
+    }
+    
+    await writeFile(masterPlaylistPath, masterPlaylistContent, "utf-8")
+    console.log(`[Job ${job.id}] Master playlist generated`)
     await job.updateProgress(60)
 
     // Extract thumbnail at 1 second
     const thumbPath = join(outputDir, "thumb.jpg")
-    const thumbCommand = `ffmpeg -i "${videoPath}" -ss 00:00:01 -vframes 1 -q:v 2 "${thumbPath}"`
+    const normalizedThumbPath = thumbPath.replace(/\\/g, "/")
+    const thumbCommand = `ffmpeg -i "${normalizedVideoPath}" -ss 00:00:01 -vframes 1 -q:v 2 "${normalizedThumbPath}"`
     await execAsync(thumbCommand)
     console.log(`[Job ${job.id}] Thumbnail extracted`)
     await job.updateProgress(70)
 
     // Create blurred thumbnail
     const blurPath = join(outputDir, "blur.jpg")
-    const blurCommand = `ffmpeg -i "${thumbPath}" -vf "boxblur=20:2" "${blurPath}"`
+    const normalizedBlurPath = blurPath.replace(/\\/g, "/")
+    const blurCommand = `ffmpeg -i "${normalizedThumbPath}" -vf "boxblur=20:2" "${normalizedBlurPath}"`
     await execAsync(blurCommand)
     console.log(`[Job ${job.id}] Blurred thumbnail created`)
-    await job.updateProgress(80)
+    await job.updateProgress(75)
 
     // Upload HLS files to R2
     const hlsBaseKey = `videos/${videoId}/`
@@ -115,8 +166,8 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
       contentType: "image/jpeg",
     })
 
-    // Get master playlist URL
-    const masterPlaylistUrl = getR2FileUrl(`${hlsBaseKey}master.m3u8`)
+    // Get master playlist URL (using playlist.m3u8 to match script approach)
+    const masterPlaylistUrl = getR2FileUrl(`${hlsBaseKey}playlist.m3u8`)
 
     // Update media record with processed URLs
     await db
