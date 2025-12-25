@@ -4,7 +4,7 @@ import { promisify } from "util"
 import { join } from "path"
 import { mkdir, rm, writeFile, rename } from "fs/promises"
 import { db } from "@/lib/db/client"
-import { postMedia } from "@/lib/db/schema"
+import { post, postMedia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { uploadFileToR2, uploadDirectoryToR2, getR2FileUrl } from "@/lib/storage/r2"
 import { VideoProcessingJobData } from "@/lib/queue/video-processing"
@@ -23,9 +23,20 @@ const variants = [
  * Process a video job - handles FFmpeg transcoding and R2 upload
  */
 export async function processVideoJob(job: Job<VideoProcessingJobData>) {
-  const { mediaId, videoPath, videoId } = job.data
+  const { mediaId, videoPath, videoId, postId } = job.data
 
   try {
+    // Get creatorId from postId
+    const postRecord = await db.query.post.findFirst({
+      where: (p, { eq: eqOp }) => eqOp(p.id, postId),
+    })
+
+    if (!postRecord) {
+      throw new Error(`Post not found: ${postId}`)
+    }
+
+    const creatorId = postRecord.creatorId
+
     // Update job progress
     await job.updateProgress(10)
 
@@ -141,7 +152,7 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
     await job.updateProgress(75)
 
     // Upload HLS files to R2
-    const hlsBaseKey = `videos/${videoId}/`
+    const hlsBaseKey = `${creatorId}/posts/${postId}/videos/${videoId}/`
     console.log(`[Job ${job.id}] Uploading HLS files to R2...`)
     const hlsUrls = await uploadDirectoryToR2({
       dirPath: outputDir,
@@ -152,14 +163,14 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
     await job.updateProgress(90)
 
     // Upload thumbnails
-    const thumbKey = `thumbnails/${videoId}/thumb.jpg`
+    const thumbKey = `${creatorId}/posts/${postId}/videos/${videoId}/thumb.jpg`
     const thumbUrl = await uploadFileToR2({
       filePath: thumbPath,
       key: thumbKey,
       contentType: "image/jpeg",
     })
 
-    const blurKey = `thumbnails/${videoId}/blur.jpg`
+    const blurKey = `${creatorId}/posts/${postId}/videos/${videoId}/blur.jpg`
     const blurUrl = await uploadFileToR2({
       filePath: blurPath,
       key: blurKey,
