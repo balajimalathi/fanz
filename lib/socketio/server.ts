@@ -1,15 +1,29 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { createClient } from "ioredis";
+import createClient from "ioredis"
 import { db } from "@/lib/db/client";
-import { conversation, chatMessage } from "@/lib/db/schema";
+import { conversation, chatMessage, user, serviceOrder, service } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { WebSocketMessage, MessageSendMessage } from "@/lib/websocket/types";
+import { WebSocketMessage, MessageSendMessage, ChatStartMessage, ChatAcceptMessage, ChatRejectMessage } from "@/lib/websocket/types";
 import { sendPushNotificationsToUsers } from "@/lib/push/fcm";
 import { env } from "@/env";
+import { isServiceTimeExpired, trackServiceOrderParticipation } from "@/lib/utils/service-orders";
 
 // Store user ID to socket ID mapping (for sending messages to specific users)
 const userSocketMap = new Map<string, Set<string>>();
+
+// Track last activity timestamp per user (for presence tracking)
+const userLastActivityMap = new Map<string, number>();
+
+// Track active chat start requests (serviceOrderId -> { creatorId, fanId, expiresAt, creatorAccepted, fanAccepted })
+const activeChatStarts = new Map<string, {
+  creatorId: string;
+  fanId: string;
+  conversationId: string;
+  expiresAt: number;
+  creatorAccepted: boolean;
+  fanAccepted: boolean;
+}>();
 
 // Global Socket.IO server instance (set by standalone server)
 let globalIO: SocketIOServer | null = null;
@@ -33,7 +47,7 @@ export function getGlobalIO(): SocketIOServer | null {
  */
 export function initializeSocketIOServer(io: SocketIOServer): void {
   // Setup Redis adapter for horizontal scaling (Valkey compatible)
-  const pubClient = createClient({
+  const pubClient = new createClient({
     host: env.REDIS_HOST,
     port: parseInt(env.REDIS_PORT),
     password: env.REDIS_PASSWORD,
@@ -106,14 +120,34 @@ export function initializeSocketIOServer(io: SocketIOServer): void {
   });
 
   // Handle connections
-  io.on("connection", (socket: Socket) => {
+  io.on("connection", async (socket: Socket) => {
     const userId = socket.data.userId as string;
 
     // Track user socket
+    const wasOffline = !userSocketMap.has(userId) || userSocketMap.get(userId)!.size === 0;
     if (!userSocketMap.has(userId)) {
       userSocketMap.set(userId, new Set());
     }
     userSocketMap.get(userId)!.add(socket.id);
+
+    // Update last seen timestamp
+    const now = Date.now();
+    userLastActivityMap.set(userId, now);
+    
+    // Update database lastSeenAt
+    try {
+      await db
+        .update(user)
+        .set({ lastSeenAt: new Date(now) })
+        .where(eq(user.id, userId));
+    } catch (error) {
+      console.error("Error updating lastSeenAt:", error);
+    }
+
+    // If user just came online, broadcast presence:online
+    if (wasOffline) {
+      broadcastPresenceChange(userId, true, io);
+    }
 
     console.log(`[SOCKET.IO] User ${userId} connected (socket: ${socket.id})`);
     console.log(`[SOCKET.IO] Total users connected: ${userSocketMap.size}`);
@@ -125,10 +159,37 @@ export function initializeSocketIOServer(io: SocketIOServer): void {
       timestamp: Date.now(),
     } as WebSocketMessage);
 
+    // Set up heartbeat interval (ping every 30 seconds)
+    const heartbeatInterval = setInterval(async () => {
+      const lastActivity = userLastActivityMap.get(userId) || now;
+      const timeSinceActivity = Date.now() - lastActivity;
+      
+      // If no activity for 60 seconds, consider user offline
+      if (timeSinceActivity > 60000) {
+        socket.emit("message", {
+          type: "ping",
+          timestamp: Date.now(),
+        } as WebSocketMessage);
+      } else {
+        // Update last activity
+        userLastActivityMap.set(userId, Date.now());
+        try {
+          await db.update(user)
+            .set({ lastSeenAt: new Date() })
+            .where(eq(user.id, userId));
+        } catch (error) {
+          console.error("Error updating lastSeenAt in heartbeat:", error);
+        }
+      }
+    }, 30000); // 30 seconds
+
+    // Store interval on socket for cleanup
+    socket.data.heartbeatInterval = heartbeatInterval;
+
     // Handle message:send
     socket.on("message:send", async (message: MessageSendMessage) => {
       console.log(`[SOCKET.IO] Received message:send from user ${userId}:`, message);
-      await handleMessageSend(userId, message, socket);
+      await handleMessageSend(userId, message, socket, io);
     });
 
     // Handle message:read
@@ -148,19 +209,44 @@ export function initializeSocketIOServer(io: SocketIOServer): void {
 
     // Handle ping
     socket.on("ping", () => {
+      // Update last activity on ping
+      userLastActivityMap.set(userId, Date.now());
       socket.emit("message", {
         type: "pong",
         timestamp: Date.now(),
       } as WebSocketMessage);
     });
 
+    // Handle chat:start
+    socket.on("chat:start", async (message: ChatStartMessage) => {
+      await handleChatStart(userId, message, io);
+    });
+
+    // Handle chat:accept
+    socket.on("chat:accept", async (message: ChatAcceptMessage) => {
+      await handleChatAccept(userId, message, io);
+    });
+
+    // Handle chat:reject
+    socket.on("chat:reject", async (message: ChatRejectMessage) => {
+      await handleChatReject(userId, message, io);
+    });
+
     // Handle disconnect
     socket.on("disconnect", () => {
+      // Clear heartbeat interval
+      if (socket.data.heartbeatInterval) {
+        clearInterval(socket.data.heartbeatInterval);
+      }
+
       const userSockets = userSocketMap.get(userId);
       if (userSockets) {
         userSockets.delete(socket.id);
         if (userSockets.size === 0) {
           userSocketMap.delete(userId);
+          userLastActivityMap.delete(userId);
+          // User went offline, broadcast presence:offline
+          broadcastPresenceChange(userId, false, io);
         }
       }
       console.log(`[SOCKET.IO] User ${userId} disconnected (socket: ${socket.id})`);
@@ -180,7 +266,8 @@ export function initializeSocketIOServer(io: SocketIOServer): void {
 async function handleMessageSend(
   senderId: string,
   message: MessageSendMessage,
-  socket: Socket
+  socket: Socket,
+  io: SocketIOServer
 ): Promise<void> {
   try {
     console.log(`[SOCKET.IO] handleMessageSend called for sender ${senderId}`);
@@ -216,8 +303,61 @@ async function handleMessageSend(
       return;
     }
 
-    // Check if conversation is enabled (unless user is creator)
-    if (!conv.isEnabled && conv.creatorId !== senderId) {
+    // Check payment validation: require active service order for both creator and fan
+    let order = null;
+    if (conv.serviceOrderId) {
+      order = await db.query.serviceOrder.findFirst({
+        where: (so, { eq: eqOp }) => eqOp(so.id, conv.serviceOrderId!),
+      });
+    }
+
+    const senderIsCreator = conv.creatorId === senderId;
+
+    // If there's a service order, validate it
+    if (order) {
+      // Check if service order is active
+      if (order.status !== "active") {
+        socket.emit("message", {
+          type: "error",
+          timestamp: Date.now(),
+          payload: {
+            code: "SERVICE_ORDER_NOT_ACTIVE",
+            message: "Service order is not active. Please activate the service order to continue chatting.",
+          },
+        } as WebSocketMessage);
+        return;
+      }
+
+      // Check if service time has expired
+      const expired = await isServiceTimeExpired(order.id);
+      if (expired) {
+        socket.emit("message", {
+          type: "error",
+          timestamp: Date.now(),
+          payload: {
+            code: "SERVICE_TIME_EXPIRED",
+            message: "Service time has expired. The chat session has ended.",
+          },
+        } as WebSocketMessage);
+        return;
+      }
+    } else {
+      // No service order - require conversation to be enabled
+      if (!conv.isEnabled) {
+        socket.emit("message", {
+          type: "error",
+          timestamp: Date.now(),
+          payload: {
+            code: "CONVERSATION_DISABLED",
+            message: "This conversation requires an active service order. Please purchase a service to continue chatting.",
+          },
+        } as WebSocketMessage);
+        return;
+      }
+    }
+
+    // Legacy check: if conversation is enabled (unless user is creator) - kept for backward compatibility
+    if (!conv.isEnabled && !senderIsCreator && !order) {
       socket.emit("message", {
         type: "error",
         timestamp: Date.now(),
@@ -252,6 +392,20 @@ async function handleMessageSend(
       })
       .where(eq(conversation.id, conversationId));
 
+    // Track participation for service order
+    if (conv.serviceOrderId) {
+      try {
+        await trackServiceOrderParticipation(
+          conv.serviceOrderId,
+          senderId,
+          senderIsCreator
+        );
+      } catch (error) {
+        console.error("[SOCKET.IO] Error tracking service order participation:", error);
+        // Don't block message send if participation tracking fails
+      }
+    }
+
     // Create the message object to send
     const messageToSend: WebSocketMessage = {
       type: "message:send",
@@ -276,7 +430,7 @@ async function handleMessageSend(
     console.log(`[SOCKET.IO] Conversation: creator=${conv.creatorId}, fan=${conv.fanId}`);
     console.log(`[SOCKET.IO] Available users in map:`, Array.from(userSocketMap.keys()));
     
-    const sent = sendToUser(receiverId, messageToSend, socket.server);
+    const sent = sendToUser(receiverId, messageToSend, io);
     
     console.log(`[SOCKET.IO] Message sent to receiver ${receiverId}:`, sent ? "SUCCESS" : "FAILED (offline)");
     
@@ -467,5 +621,167 @@ export function sendToUser(
  */
 export function getConnectionCount(): number {
   return userSocketMap.size;
+}
+
+/**
+ * Check if user is online
+ */
+export function isUserOnline(userId: string): boolean {
+  const sockets = userSocketMap.get(userId);
+  return sockets !== undefined && sockets.size > 0;
+}
+
+/**
+ * Broadcast presence change to relevant users
+ */
+function broadcastPresenceChange(userId: string, isOnline: boolean, io: SocketIOServer): void {
+  const message: WebSocketMessage = {
+    type: isOnline ? "presence:online" : "presence:offline",
+    timestamp: Date.now(),
+    payload: {
+      userId,
+      timestamp: Date.now(),
+    },
+  };
+
+  // Broadcast to all connected users (they can filter on client side)
+  io.emit("message", message);
+}
+
+/**
+ * Handle chat start
+ */
+async function handleChatStart(
+  userId: string,
+  message: ChatStartMessage,
+  io: SocketIOServer
+): Promise<void> {
+  try {
+    const { serviceOrderId, conversationId, creatorId, fanId, expiresAt } = message.payload;
+
+    // Verify user is the creator
+    if (userId !== creatorId) {
+      return;
+    }
+
+    // Store active chat start request
+    activeChatStarts.set(serviceOrderId, {
+      creatorId,
+      fanId,
+      conversationId,
+      expiresAt,
+      creatorAccepted: true,
+      fanAccepted: false,
+    });
+
+    // Send chat:start to fan
+    sendToUser(fanId, message, io);
+
+    // Set timeout to handle expiration
+    setTimeout(() => {
+      const chatStart = activeChatStarts.get(serviceOrderId);
+      if (chatStart && !chatStart.fanAccepted) {
+        // Timeout - notify both users
+        activeChatStarts.delete(serviceOrderId);
+        
+        const timeoutMessage: WebSocketMessage = {
+          type: "chat:timeout",
+          timestamp: Date.now(),
+          payload: {
+            serviceOrderId,
+            conversationId,
+          },
+        };
+
+        sendToUser(creatorId, timeoutMessage, io);
+        sendToUser(fanId, timeoutMessage, io);
+      }
+    }, expiresAt - Date.now());
+  } catch (error) {
+    console.error("Error handling chat start:", error);
+  }
+}
+
+/**
+ * Handle chat accept
+ */
+async function handleChatAccept(
+  userId: string,
+  message: ChatAcceptMessage,
+  io: SocketIOServer
+): Promise<void> {
+  try {
+    const { serviceOrderId, conversationId } = message.payload;
+    const chatStart = activeChatStarts.get(serviceOrderId);
+
+    if (!chatStart) {
+      return;
+    }
+
+    // Update acceptance status
+    if (userId === chatStart.creatorId) {
+      chatStart.creatorAccepted = true;
+    } else if (userId === chatStart.fanId) {
+      chatStart.fanAccepted = true;
+    }
+
+    // If both accepted, enable conversation and notify both
+    if (chatStart.creatorAccepted && chatStart.fanAccepted) {
+      activeChatStarts.delete(serviceOrderId);
+
+      // Enable conversation
+      await db
+        .update(conversation)
+        .set({ isEnabled: true, updatedAt: new Date() })
+        .where(eq(conversation.id, conversationId));
+
+      // Notify both users
+      const acceptMessage: WebSocketMessage = {
+        type: "chat:accept",
+        timestamp: Date.now(),
+        payload: {
+          serviceOrderId,
+          conversationId,
+          userId,
+        },
+      };
+
+      sendToUser(chatStart.creatorId, acceptMessage, io);
+      sendToUser(chatStart.fanId, acceptMessage, io);
+    } else {
+      // Send acceptance notification to the other party
+      const otherUserId = userId === chatStart.creatorId ? chatStart.fanId : chatStart.creatorId;
+      sendToUser(otherUserId, message, io);
+    }
+  } catch (error) {
+    console.error("Error handling chat accept:", error);
+  }
+}
+
+/**
+ * Handle chat reject
+ */
+async function handleChatReject(
+  userId: string,
+  message: ChatRejectMessage,
+  io: SocketIOServer
+): Promise<void> {
+  try {
+    const { serviceOrderId, conversationId } = message.payload;
+    const chatStart = activeChatStarts.get(serviceOrderId);
+
+    if (!chatStart) {
+      return;
+    }
+
+    // Remove active chat start
+    activeChatStarts.delete(serviceOrderId);
+
+    // Notify the other party
+    const otherUserId = userId === chatStart.creatorId ? chatStart.fanId : chatStart.creatorId;
+    sendToUser(otherUserId, message, io);
+  } catch (error) {
+    console.error("Error handling chat reject:", error);
+  }
 }
 

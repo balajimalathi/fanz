@@ -78,6 +78,8 @@ export async function GET(
 
     return NextResponse.json({
       id: conv.id,
+      creatorId: conv.creatorId,
+      fanId: conv.fanId,
       otherParticipant,
       isEnabled: conv.isEnabled,
       createdAt: conv.createdAt,

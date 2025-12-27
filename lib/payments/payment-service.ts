@@ -9,12 +9,14 @@ import {
   post,
   service,
   notification,
+  user,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { GatewayService } from "./gateway/gateway-service";
 import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
+import { sendServiceOrderEmail } from "@/lib/email/service";
 
 export type PaymentType = "membership" | "exclusive_post" | "service";
 
@@ -415,13 +417,13 @@ export class PaymentService {
 
       case "service": {
         // Create service order
-        await db.insert(serviceOrder).values({
+        const [newOrder] = await db.insert(serviceOrder).values({
           userId: transaction.userId,
           creatorId: transaction.creatorId,
           serviceId: transaction.entityId,
           transactionId: transaction.id,
           status: "pending",
-        });
+        }).returning();
 
         // Send notification to creator
         const serviceRecord = await db.query.service.findFirst({
@@ -429,17 +431,43 @@ export class PaymentService {
         });
 
         if (serviceRecord) {
-          const user = await db.query.user.findFirst({
+          const fanUser = await db.query.user.findFirst({
             where: (u, { eq: eqOp }) => eqOp(u.id, transaction.userId),
+          });
+
+          const creatorUser = await db.query.user.findFirst({
+            where: (u, { eq: eqOp }) => eqOp(u.id, transaction.creatorId),
+          });
+
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, transaction.creatorId),
           });
 
           await db.insert(notification).values({
             userId: transaction.creatorId,
             type: "service_order",
             title: "New Service Order",
-            message: `${user?.name || "A user"} ordered your service: ${serviceRecord.name}`,
-            link: `/home/orders`,
+            message: `${fanUser?.name || "A user"} ordered your service: ${serviceRecord.name}`,
+            link: `/home/inbox`,
           });
+
+          // Send email notification for chat/audio/video services
+          if (serviceRecord.serviceType === "chat" || 
+              serviceRecord.serviceType === "audio_call" || 
+              serviceRecord.serviceType === "video_call") {
+            if (creatorUser?.email && creatorRecord && newOrder) {
+              await sendServiceOrderEmail({
+                creatorEmail: creatorUser.email,
+                creatorName: creatorRecord.displayName,
+                fanName: fanUser?.name || "A customer",
+                serviceName: serviceRecord.name,
+                serviceType: serviceRecord.serviceType,
+                duration: serviceRecord.duration,
+                orderId: newOrder.id,
+                inboxUrl: `${env.NEXT_PUBLIC_APP_URL}/home/inbox`,
+              });
+            }
+          }
         }
         break;
       }

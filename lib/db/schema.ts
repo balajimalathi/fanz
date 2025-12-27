@@ -23,6 +23,7 @@ export const user = pgTable("user", {
   banned: boolean("banned"),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
+  lastSeenAt: timestamp("last_seen_at"), // For online status tracking
 });
  
 export const session = pgTable("session", {
@@ -120,6 +121,7 @@ export const service = pgTable("service", {
   description: text("description").notNull(),
   price: integer("price").notNull().default(0), // Stored in paise (smallest currency unit)
   serviceType: serviceTypeEnum("service_type").notNull(),
+  duration: integer("duration"), // Duration in minutes (for chat, audio_call, video_call services)
   visible: boolean("visible").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

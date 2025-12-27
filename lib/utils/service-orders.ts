@@ -183,3 +183,51 @@ export async function linkServiceOrderToConversation(
   }
 }
 
+/**
+ * Calculate remaining service time in seconds
+ * @param serviceOrderId - The service order ID
+ * @returns Remaining time in seconds, or null if service hasn't started or duration not set
+ */
+export async function getRemainingServiceTime(
+  serviceOrderId: string
+): Promise<number | null> {
+  try {
+    const order = await db.query.serviceOrder.findFirst({
+      where: (so, { eq: eqOp }) => eqOp(so.id, serviceOrderId),
+    });
+
+    if (!order || !order.utilizedAt) {
+      return null; // Service hasn't started
+    }
+
+    const serviceRecord = await db.query.service.findFirst({
+      where: (s, { eq: eqOp }) => eqOp(s.id, order.serviceId),
+    });
+
+    if (!serviceRecord || !serviceRecord.duration) {
+      return null; // No duration set
+    }
+
+    const durationMs = serviceRecord.duration * 60 * 1000; // Convert minutes to ms
+    const elapsed = Date.now() - new Date(order.utilizedAt).getTime();
+    const remaining = Math.max(0, durationMs - elapsed);
+
+    return Math.floor(remaining / 1000); // Return in seconds
+  } catch (error) {
+    console.error("Error calculating remaining service time:", error);
+    return null;
+  }
+}
+
+/**
+ * Check if service time has expired
+ * @param serviceOrderId - The service order ID
+ * @returns true if service has expired, false otherwise
+ */
+export async function isServiceTimeExpired(
+  serviceOrderId: string
+): Promise<boolean> {
+  const remaining = await getRemainingServiceTime(serviceOrderId);
+  return remaining !== null && remaining <= 0;
+}
+

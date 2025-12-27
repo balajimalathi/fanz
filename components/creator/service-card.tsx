@@ -17,6 +17,7 @@ interface Service {
   description: string
   price: number
   serviceType: "shoutout" | "audio_call" | "video_call" | "chat"
+  duration?: number | null
   visible: boolean
   createdAt?: string
   updatedAt?: string
@@ -280,6 +281,7 @@ function ServiceSection({
   const [description, setDescription] = useState(service.description)
   const [price, setPrice] = useState(service.price.toString())
   const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call" | "chat">(service.serviceType)
+  const [duration, setDuration] = useState(service.duration?.toString() || "")
 
   const handleSave = () => {
     onSave({
@@ -287,9 +289,12 @@ function ServiceSection({
       description,
       price: parseFloat(price) || 0,
       serviceType,
+      duration: ["chat", "audio_call", "video_call"].includes(serviceType) && duration ? parseInt(duration) : undefined,
       visible: service.visible,
     })
   }
+
+  const requiresDuration = ["chat", "audio_call", "video_call"].includes(serviceType)
 
   if (isEditing) {
     return (
@@ -328,7 +333,13 @@ function ServiceSection({
           </div>
           <div className="space-y-2">
             <Label htmlFor={`service-type-${service.id}`}>Service Type</Label>
-            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call" | "chat") => setServiceType(value)}>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call" | "chat") => {
+              setServiceType(value)
+              // Clear duration if switching to shoutout
+              if (value === "shoutout") {
+                setDuration("")
+              }
+            }}>
               <SelectTrigger id={`service-type-${service.id}`}>
                 <SelectValue placeholder="Select service type" />
               </SelectTrigger>
@@ -340,6 +351,25 @@ function ServiceSection({
               </SelectContent>
             </Select>
           </div>
+          {requiresDuration && (
+            <div className="space-y-2">
+              <Label htmlFor={`service-duration-${service.id}`}>Duration (minutes)</Label>
+              <Input
+                id={`service-duration-${service.id}`}
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="e.g., 30"
+                min="1"
+                max="1440"
+                step="1"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Duration in minutes (1-1440 minutes / 24 hours max)
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">
               <Button
@@ -379,6 +409,7 @@ function ServiceSection({
                   setDescription(service.description)
                   setPrice(service.price.toString())
                   setServiceType(service.serviceType)
+                  setDuration(service.duration?.toString() || "")
                 }}
               >
                 Cancel
@@ -416,9 +447,16 @@ function ServiceSection({
             {description && (
               <p className="text-sm text-muted-foreground">{description}</p>
             )}
-            <p className="text-primary font-medium">
-              Rs. {service.price.toLocaleString("en-IN")}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-primary font-medium">
+                Rs. {service.price.toLocaleString("en-IN")}
+              </p>
+              {service.duration && (
+                <p className="text-sm text-muted-foreground">
+                  {service.duration} {service.duration === 1 ? "minute" : "minutes"}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2 ml-4">
             <Button
@@ -458,6 +496,7 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
   const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call" | "chat">("shoutout")
+  const [duration, setDuration] = useState("")
   const [visible, setVisible] = useState(true)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -467,6 +506,7 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
       description,
       price: parseFloat(price) || 0,
       serviceType,
+      duration: ["chat", "audio_call", "video_call"].includes(serviceType) && duration ? parseInt(duration) : undefined,
       visible,
     })
     // Reset form
@@ -474,8 +514,11 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
     setDescription("")
     setPrice("")
     setServiceType("shoutout")
+    setDuration("")
     setVisible(true)
   }
+
+  const requiresDuration = ["chat", "audio_call", "video_call"].includes(serviceType)
 
   return (
     <Card className="border-2 border-primary">
@@ -517,7 +560,13 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-service-type">Service Type</Label>
-            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call" | "chat") => setServiceType(value)}>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call" | "chat") => {
+              setServiceType(value)
+              // Clear duration if switching to shoutout
+              if (value === "shoutout") {
+                setDuration("")
+              }
+            }}>
               <SelectTrigger id="new-service-type">
                 <SelectValue placeholder="Select service type" />
               </SelectTrigger>
@@ -529,6 +578,25 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
               </SelectContent>
             </Select>
           </div>
+          {requiresDuration && (
+            <div className="space-y-2">
+              <Label htmlFor="new-service-duration">Duration (minutes)</Label>
+              <Input
+                id="new-service-duration"
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="e.g., 30"
+                min="1"
+                max="1440"
+                step="1"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Duration in minutes (1-1440 minutes / 24 hours max)
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">
               <Button

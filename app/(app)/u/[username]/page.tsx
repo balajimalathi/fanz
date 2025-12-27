@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { db } from "@/lib/db/client"
+import { inArray } from "drizzle-orm"
 import { ProfileHeader } from "@/components/creator/profile-header"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
@@ -21,10 +22,14 @@ async function getCreatorProfile(username: string) {
       return null
     }
 
-    // Fetch visible services for this creator
+    // Fetch visible services for this creator - only chat, audio_call, and video_call
     const services = await db.query.service.findMany({
-      where: (s, { eq: eqOp, and: andOp }) =>
-        andOp(eqOp(s.creatorId, creatorRecord.id), eqOp(s.visible, true)),
+      where: (s, { eq: eqOp, and: andOp, inArray: inArrayOp }) =>
+        andOp(
+          eqOp(s.creatorId, creatorRecord.id),
+          eqOp(s.visible, true),
+          inArrayOp(s.serviceType, ["chat", "audio_call", "video_call"])
+        ),
       orderBy: (s, { desc }) => [desc(s.createdAt)],
     })
 

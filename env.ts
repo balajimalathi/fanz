@@ -46,6 +46,9 @@ export const env = createEnv({
     PAYMENT_GATEWAY_MERCHANT_ID: z.string().optional(),
     PAYMENT_GATEWAY_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_GATEWAY_MODE: z.enum(["live", "test"]).default("test"),
+    // Resend email service
+    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_FROM_EMAIL: z.string().email().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -95,6 +98,8 @@ export const env = createEnv({
     PAYMENT_GATEWAY_MERCHANT_ID: process.env.PAYMENT_GATEWAY_MERCHANT_ID,
     PAYMENT_GATEWAY_WEBHOOK_SECRET: process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
     PAYMENT_GATEWAY_MODE: process.env.PAYMENT_GATEWAY_MODE,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,

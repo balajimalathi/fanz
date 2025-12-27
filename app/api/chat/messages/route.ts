@@ -75,39 +75,38 @@ export async function POST(request: NextRequest) {
     const senderIsCreator = senderUser?.role === "creator";
     const senderIsFan = !senderIsCreator && conv.fanId === session.user.id;
 
-    // Check if conversation is enabled or if there's an active service order
-    if (!conv.isEnabled && conv.creatorId !== session.user.id) {
-      // Fan trying to send message - check for active service order
-      if (senderIsFan) {
-        const activeServiceOrder = await checkServiceOrderAccess(
-          session.user.id,
-          conv.creatorId,
-          "chat"
-        );
+    // Payment validation: require active service order for both creator and fan
+    let order = null;
+    if (conv.serviceOrderId) {
+      order = await db.query.serviceOrder.findFirst({
+        where: (so, { eq: eqOp }) => eqOp(so.id, conv.serviceOrderId!),
+      });
+    }
 
-        if (!activeServiceOrder) {
-          return NextResponse.json(
-            { error: "This conversation is not enabled. You need an active service order to chat." },
-            { status: 403 }
-          );
-        }
-
-        // Link service order to conversation if not already linked
-        if (!conv.serviceOrderId && activeServiceOrder) {
-          await linkServiceOrderToConversation(activeServiceOrder.id, conversationId);
-          // Enable conversation when service order is linked
-          await db
-            .update(conversation)
-            .set({
-              isEnabled: true,
-              serviceOrderId: activeServiceOrder.id,
-              updatedAt: new Date(),
-            })
-            .where(eq(conversation.id, conversationId));
-        }
-      } else {
+    // If there's a service order, validate it
+    if (order) {
+      // Check if service order is active
+      if (order.status !== "active") {
         return NextResponse.json(
-          { error: "This conversation is not enabled yet. Please wait for the creator to enable it." },
+          { error: "Service order is not active. Please activate the service order to continue chatting." },
+          { status: 403 }
+        );
+      }
+
+      // Check if service time has expired
+      const { isServiceTimeExpired } = await import("@/lib/utils/service-orders");
+      const expired = await isServiceTimeExpired(order.id);
+      if (expired) {
+        return NextResponse.json(
+          { error: "Service time has expired. The chat session has ended." },
+          { status: 403 }
+        );
+      }
+    } else {
+      // No service order - require conversation to be enabled
+      if (!conv.isEnabled) {
+        return NextResponse.json(
+          { error: "This conversation requires an active service order. Please purchase a service to continue chatting." },
           { status: 403 }
         );
       }

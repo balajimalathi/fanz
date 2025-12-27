@@ -12,6 +12,7 @@ import { useSession } from "@/lib/auth/auth-client"
 import { NotificationPermission } from "@/components/push/notification-permission"
 import { PWAInstallButton } from "@/components/push/pwa-install-button"
 import { MessageCircle } from "lucide-react"
+import { OnlineStatusIndicator } from "@/components/chat/online-status-indicator"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -73,15 +74,18 @@ export function ProfileHeader({
       <div className="relative px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
         {/* Profile Image - Overlapping Cover */}
         <div className="relative -mt-12 sm:-mt-16 mb-4 sm:mb-6">
-          <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-32 md:w-32 border-4 border-background shadow-lg">
-            {profileImageUrl ? (
-              <AvatarImage src={profileImageUrl} alt={displayName} />
-            ) : (
-              <AvatarFallback className="text-lg sm:text-xl md:text-2xl font-semibold">
-                {initials}
-              </AvatarFallback>
-            )}
-          </Avatar>
+          <div className="relative inline-block">
+            <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-32 md:w-32 border-4 border-background shadow-lg">
+              {profileImageUrl ? (
+                <AvatarImage src={profileImageUrl} alt={displayName} />
+              ) : (
+                <AvatarFallback className="text-lg sm:text-xl md:text-2xl font-semibold">
+                  {initials}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <OnlineStatusIndicator userId={creatorId} size="md" className="bottom-1 right-1" />
+          </div>
         </div>
 
         {/* Name and Username */}

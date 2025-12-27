@@ -120,6 +120,7 @@ export async function PATCH(
       name?: string
       description?: string
       price?: number
+      duration?: number | null
       visible?: boolean
       updatedAt?: Date
     } = {
@@ -135,6 +136,9 @@ export async function PATCH(
     if (validationResult.data.price !== undefined) {
       // Convert price from rupees to paise
       updateData.price = Math.round(validationResult.data.price * 100)
+    }
+    if (validationResult.data.duration !== undefined) {
+      updateData.duration = validationResult.data.duration ?? null
     }
     if (validationResult.data.visible !== undefined) {
       updateData.visible = validationResult.data.visible

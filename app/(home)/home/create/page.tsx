@@ -308,7 +308,7 @@ export default function CreatePostPage() {
   const maxCaptionLength = 5000
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
+    <div className="container max-w-4xl mx-auto py-8 px-4 pb-20 md:pb-4 lg:pb-4">
       <Card>
         <CardHeader>
           <CardTitle>Create New Post</CardTitle>

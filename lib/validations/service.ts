@@ -1,6 +1,7 @@
 import { z } from "zod"
 
-export const serviceSchema = z.object({
+// Base schema without refinement (for partial operations)
+const baseServiceSchema = z.object({
   name: z
     .string()
     .min(1, "Service name is required")
@@ -16,12 +17,31 @@ export const serviceSchema = z.object({
   serviceType: z.enum(["shoutout", "audio_call", "video_call", "chat"], {
     required_error: "Service type is required",
   }),
+  duration: z
+    .number()
+    .int("Duration must be a whole number")
+    .min(1, "Duration must be at least 1 minute")
+    .max(1440, "Duration cannot exceed 1440 minutes (24 hours)")
+    .optional(),
   visible: z.boolean().default(true),
+})
+
+// Full schema with refinement for create operations
+export const serviceSchema = baseServiceSchema.refine((data) => {
+  // Duration is required for chat, audio_call, and video_call
+  if (["chat", "audio_call", "video_call"].includes(data.serviceType)) {
+    return data.duration !== undefined && data.duration > 0
+  }
+  return true
+}, {
+  message: "Duration is required for chat, audio call, and video call services",
+  path: ["duration"],
 })
 
 export const createServiceSchema = serviceSchema
 
-export const updateServiceSchema = serviceSchema.partial().extend({
+// Update schema: make base schema partial, then extend with id
+export const updateServiceSchema = baseServiceSchema.partial().extend({
   id: z.string().uuid("Invalid service ID"),
 })
 

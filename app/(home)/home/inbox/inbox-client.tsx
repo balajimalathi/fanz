@@ -4,9 +4,14 @@ import { useState, useEffect } from "react";
 import { ChatWindow } from "@/components/chat/chat-window";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { useIsMobileOrTablet } from "@/hooks/use-mobile-tablet";
+import { Button } from "@/components/ui/button";
+import { OnlineStatusIndicator } from "@/components/chat/online-status-indicator";
+import { useWebSocketContext } from "@/components/chat/websocket-provider";
+import { WebSocketMessage } from "@/lib/websocket/types";
 
 interface Follower {
   id: string;
@@ -19,6 +24,12 @@ interface Follower {
   lastMessageAt?: string | null;
   lastMessagePreview?: string | null;
   unreadCount?: number;
+  serviceOrder?: {
+    orderId: string;
+    status: string;
+    duration: number | null;
+    serviceType: string | null;
+  };
 }
 
 interface InboxPageClientProps {
@@ -30,10 +41,65 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
   const [selectedFollowerId, setSelectedFollowerId] = useState<string | null>(null);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [otherUserOnline, setOtherUserOnline] = useState(false);
+  const isMobileOrTablet = useIsMobileOrTablet();
+  const { on } = useWebSocketContext();
 
   useEffect(() => {
     fetchFollowersWithConversations();
   }, [creatorId]);
+
+  // Check online status of selected follower
+  useEffect(() => {
+    if (!selectedFollowerId) {
+      setOtherUserOnline(false);
+      return;
+    }
+
+    // Initial state fetch (one-time)
+    const fetchInitial = async () => {
+      try {
+        const response = await fetch(`/api/users/${selectedFollowerId}/online-status`);
+        if (response.ok) {
+          const data = await response.json();
+          setOtherUserOnline(data.online || false);
+        }
+      } catch (error) {
+        console.error("Error checking online status:", error);
+        setOtherUserOnline(false);
+      }
+    };
+
+    fetchInitial();
+
+    // Listen to real-time Socket.IO events (only if context is available)
+    if (!on) {
+      return;
+    }
+
+    const unsubscribeOnline = on("presence:online", (message: WebSocketMessage) => {
+      if (message.type === "presence:online" && "payload" in message) {
+        const payload = message.payload as { userId: string };
+        if (payload.userId === selectedFollowerId) {
+          setOtherUserOnline(true);
+        }
+      }
+    });
+
+    const unsubscribeOffline = on("presence:offline", (message: WebSocketMessage) => {
+      if (message.type === "presence:offline" && "payload" in message) {
+        const payload = message.payload as { userId: string };
+        if (payload.userId === selectedFollowerId) {
+          setOtherUserOnline(false);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeOnline();
+      unsubscribeOffline();
+    };
+  }, [selectedFollowerId, on]);
 
   const fetchFollowersWithConversations = async () => {
     try {
@@ -49,11 +115,22 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
       const convsData = await convsRes.json();
       const conversations = convsData.conversations || [];
 
-      // Map conversations to followers
+      // Fetch service orders for inbox
+      const serviceOrdersRes = await fetch("/api/creator/inbox/service-orders");
+      const serviceOrdersData = serviceOrdersRes.ok 
+        ? await serviceOrdersRes.json() 
+        : { serviceOrders: [] };
+      const serviceOrders = serviceOrdersData.serviceOrders || [];
+      const serviceOrderMap = new Map(
+        serviceOrders.map((so: any) => [so.followerId, so])
+      );
+
+      // Map conversations and service orders to followers
       const followersWithConvs = followersData.map((follower: any) => {
         const conv = conversations.find(
           (c: any) => c.otherParticipant.id === follower.followerId
         );
+        const serviceOrder = serviceOrderMap.get(follower.followerId);
         return {
           ...follower,
           conversationId: conv?.id,
@@ -61,6 +138,7 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
           lastMessageAt: conv?.lastMessageAt,
           lastMessagePreview: conv?.lastMessagePreview,
           unreadCount: conv?.unreadCount || 0,
+          serviceOrder: serviceOrder || undefined,
         };
       });
 
@@ -142,10 +220,28 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
 
   const selectedFollower = followers.find((f) => f.followerId === selectedFollowerId);
 
+  // On mobile/tablet: show sidebar OR chat, not both
+  const showSidebar = isMobileOrTablet ? !selectedConversationId : true;
+  const showChat = isMobileOrTablet ? !!selectedConversationId : true;
+
+  const handleBackToList = () => {
+    setSelectedFollowerId(null);
+    setSelectedConversationId(null);
+  };
+
   return (
-    <div className="h-screen flex overflow-hidden -p-4">
+    <div className="h-screen flex overflow-hidden">
       {/* Followers Sidebar */}
-      <div className="w-80 border-r bg-background flex flex-col">
+      <div
+        className={cn(
+          "border-r bg-background flex flex-col transition-transform duration-200",
+          isMobileOrTablet
+            ? showSidebar
+              ? "w-full h-screen fixed inset-0 z-10"
+              : "hidden"
+            : "w-80 h-full"
+        )}
+      >
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold">Inbox</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -168,14 +264,21 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-12 w-12 flex-shrink-0">
+                  <Avatar className="h-12 w-12 shrink-0">
                     <AvatarFallback>
                       {follower.followerName.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium truncate">{follower.followerName}</p>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <p className="font-medium truncate">{follower.followerName}</p>
+                        {follower.serviceOrder && follower.serviceOrder.duration && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                            {follower.serviceOrder.duration}m service
+                          </span>
+                        )}
+                      </div>
                       {follower.lastMessageAt && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDistanceToNow(new Date(follower.lastMessageAt), {
@@ -188,8 +291,8 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
                       <p className="text-sm text-muted-foreground truncate">
                         {follower.lastMessagePreview || "No messages yet"}
                       </p>
-                      {follower.unreadCount > 0 && (
-                        <span className="bg-primary text-primary-foreground text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
+                      {follower.unreadCount && follower.unreadCount > 0 && (
+                        <span className="bg-primary text-primary-foreground text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center shrink-0">
                           {follower.unreadCount > 9 ? "9+" : follower.unreadCount}
                         </span>
                       )}
@@ -210,26 +313,50 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1 flex flex-col">
+      <div
+        className={cn(
+          "flex flex-col transition-transform duration-200",
+          isMobileOrTablet
+            ? showChat
+              ? "w-full h-screen fixed inset-0 z-10 bg-background"
+              : "hidden"
+            : "flex-1 h-full"
+        )}
+      >
         {selectedConversationId && selectedFollower ? (
-          <div className="flex flex-col h-full">
-            {/* Header with Enable Button */}
-            <div className="border-b p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback>
-                    {selectedFollower.followerName.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{selectedFollower.followerName}</p>
-                  <p className="text-sm text-muted-foreground">{selectedFollower.followerEmail}</p>
+          <div className="flex flex-col h-full min-h-0">
+            {/* Header with Back Button and Enable Button */}
+            <div className="border-b p-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {isMobileOrTablet && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleBackToList}
+                    className="shrink-0"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                )}
+                <div className="relative inline-block shrink-0">
+                  <Avatar className="shrink-0">
+                    <AvatarFallback>
+                      {selectedFollower.followerName.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <OnlineStatusIndicator userId={selectedFollower.followerId} size="sm" className="bottom-0 right-0" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{selectedFollower.followerName}</p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {otherUserOnline ? "Online" : selectedFollower.followerEmail}
+                  </p>
                 </div>
               </div>
               {!selectedFollower.isEnabled && (
                 <button
                   onClick={() => handleEnableChat(selectedConversationId)}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium shrink-0 ml-2"
                 >
                   Enable Chat
                 </button>

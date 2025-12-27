@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./message-bubble";
+import { TypingIndicator } from "./typing-indicator";
 import { Loader2 } from "lucide-react";
 
 interface Message {
@@ -19,12 +20,16 @@ interface MessageListProps {
   conversationId: string;
   currentUserId: string;
   senderInfo: Record<string, { name: string; image?: string | null }>;
+  isOtherUserTyping?: boolean;
+  otherUserName?: string;
 }
 
 export function MessageList({
   conversationId,
   currentUserId,
   senderInfo,
+  isOtherUserTyping = false,
+  otherUserName = "Someone",
 }: MessageListProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,7 +115,7 @@ export function MessageList({
   return (
     <div
       ref={listRef}
-      className="flex-1 overflow-y-auto p-4"
+      className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4"
       onScroll={(e) => {
         const target = e.target as HTMLDivElement;
         if (target.scrollTop === 0 && hasMore) {
@@ -144,6 +149,7 @@ export function MessageList({
           senderImage={senderInfo[message.senderId]?.image}
         />
       ))}
+      {isOtherUserTyping && <TypingIndicator userName={otherUserName} />}
       <div ref={messagesEndRef} />
     </div>
   );

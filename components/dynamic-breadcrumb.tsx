@@ -10,6 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { useIsMobileOrTablet } from "@/hooks/use-mobile-tablet"
 
 function capitalize(s: string) {
   if (!s) return s
@@ -19,11 +20,27 @@ function capitalize(s: string) {
 export function DynamicBreadcrumb() {
   const pathname = usePathname()
   const segments = pathname.split("/").filter(Boolean)
+  const isMobileOrTablet = useIsMobileOrTablet()
 
   // Remove 'app' from segments if it exists as the first segment, 
   // since we treat /app as the "Home" or root of this view.
   const displaySegments = segments.map((s, i) => (s === 'app' && i === 0) ? null : s).filter(Boolean) as string[]
 
+  // For mobile/tablet: show centered title (last segment)
+  if (isMobileOrTablet && displaySegments.length > 0) {
+    const lastSegment = displaySegments[displaySegments.length - 1]
+    const title = capitalize(decodeURIComponent(lastSegment))
+    
+    return (
+      <div className="flex items-center justify-center w-full">
+        <h1 className="text-lg font-semibold text-center line-clamp-1">
+          {title}
+        </h1>
+      </div>
+    )
+  }
+
+  // For desktop: show full breadcrumb navigation
   return (
     <Breadcrumb>
       <BreadcrumbList>

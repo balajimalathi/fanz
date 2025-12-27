@@ -11,6 +11,12 @@ export type WebSocketMessageType =
   | "call:reject"
   | "call:end"
   | "call:ringing"
+  | "chat:start"
+  | "chat:accept"
+  | "chat:reject"
+  | "chat:timeout"
+  | "presence:online"
+  | "presence:offline"
   | "error"
   | "ping"
   | "pong";
@@ -124,6 +130,60 @@ export interface PongMessage extends BaseWebSocketMessage {
   type: "pong";
 }
 
+export interface ChatStartMessage extends BaseWebSocketMessage {
+  type: "chat:start";
+  payload: {
+    serviceOrderId: string;
+    conversationId: string;
+    creatorId: string;
+    fanId: string;
+    expiresAt: number; // Timestamp when 30-second window expires
+  };
+}
+
+export interface ChatAcceptMessage extends BaseWebSocketMessage {
+  type: "chat:accept";
+  payload: {
+    serviceOrderId: string;
+    conversationId: string;
+    userId: string;
+  };
+}
+
+export interface ChatRejectMessage extends BaseWebSocketMessage {
+  type: "chat:reject";
+  payload: {
+    serviceOrderId: string;
+    conversationId: string;
+    userId: string;
+    reason?: string;
+  };
+}
+
+export interface ChatTimeoutMessage extends BaseWebSocketMessage {
+  type: "chat:timeout";
+  payload: {
+    serviceOrderId: string;
+    conversationId: string;
+  };
+}
+
+export interface PresenceOnlineMessage extends BaseWebSocketMessage {
+  type: "presence:online";
+  payload: {
+    userId: string;
+    timestamp: number;
+  };
+}
+
+export interface PresenceOfflineMessage extends BaseWebSocketMessage {
+  type: "presence:offline";
+  payload: {
+    userId: string;
+    timestamp: number;
+  };
+}
+
 export type WebSocketMessage =
   | MessageSendMessage
   | MessageReceivedMessage
@@ -135,6 +195,12 @@ export type WebSocketMessage =
   | CallRejectMessage
   | CallEndMessage
   | CallRingingMessage
+  | ChatStartMessage
+  | ChatAcceptMessage
+  | ChatRejectMessage
+  | ChatTimeoutMessage
+  | PresenceOnlineMessage
+  | PresenceOfflineMessage
   | ErrorMessage
   | PingMessage
   | PongMessage;
