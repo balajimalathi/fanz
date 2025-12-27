@@ -38,6 +38,14 @@ export const env = createEnv({
     WEBSOCKET_URL: z.string().optional(), // Can be ws:// or wss:// URL
     WEBSOCKET_MAX_CONNECTIONS: z.string().regex(/^\d+$/).default("1000"),
     CHAT_MEDIA_MAX_SIZE: z.string().default("52428800"), // 50MB in bytes
+    // Payment Gateway configuration
+    PAYMENT_GATEWAY_ENABLED: z.string().transform((val) => val === "true").default("false"),
+    PAYMENT_GATEWAY_TYPE: z.enum(["paytm", "ccbill", "epoch", "segpay"]).optional().default("paytm"),
+    PAYMENT_GATEWAY_API_KEY: z.string().optional(),
+    PAYMENT_GATEWAY_SECRET_KEY: z.string().optional(),
+    PAYMENT_GATEWAY_MERCHANT_ID: z.string().optional(),
+    PAYMENT_GATEWAY_WEBHOOK_SECRET: z.string().optional(),
+    PAYMENT_GATEWAY_MODE: z.enum(["live", "test"]).default("test"),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -80,6 +88,13 @@ export const env = createEnv({
     WEBSOCKET_URL: process.env.WEBSOCKET_URL,
     WEBSOCKET_MAX_CONNECTIONS: process.env.WEBSOCKET_MAX_CONNECTIONS,
     CHAT_MEDIA_MAX_SIZE: process.env.CHAT_MEDIA_MAX_SIZE,
+    PAYMENT_GATEWAY_ENABLED: process.env.PAYMENT_GATEWAY_ENABLED,
+    PAYMENT_GATEWAY_TYPE: process.env.PAYMENT_GATEWAY_TYPE,
+    PAYMENT_GATEWAY_API_KEY: process.env.PAYMENT_GATEWAY_API_KEY,
+    PAYMENT_GATEWAY_SECRET_KEY: process.env.PAYMENT_GATEWAY_SECRET_KEY,
+    PAYMENT_GATEWAY_MERCHANT_ID: process.env.PAYMENT_GATEWAY_MERCHANT_ID,
+    PAYMENT_GATEWAY_WEBHOOK_SECRET: process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
+    PAYMENT_GATEWAY_MODE: process.env.PAYMENT_GATEWAY_MODE,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,

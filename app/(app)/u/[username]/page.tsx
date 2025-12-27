@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 import { db } from "@/lib/db/client"
 import { ProfileHeader } from "@/components/creator/profile-header"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
@@ -7,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { FeedSection } from "./feed-section"
 import { ChatOverlay } from "@/components/chat/chat-overlay"
 import { ChatPageWrapper } from "./chat-wrapper"
+import { PaymentStatusHandler } from "./payment-status-handler"
 
 async function getCreatorProfile(username: string) {
   try {
@@ -87,6 +89,9 @@ export default async function Page({
 
   return (
     <ChatPageWrapper creatorId={creator.id} creatorName={creator.displayName} creatorImage={creator.profileImageUrl}>
+      <Suspense fallback={null}>
+        <PaymentStatusHandler />
+      </Suspense>
       <div className="min-h-screen bg-background">
         {/* Profile Header */}
         <ProfileHeader
@@ -102,7 +107,11 @@ export default async function Page({
         <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
           {/* Feed Section */}
           <section className="mb-12 sm:mb-16">
-            <FeedSection username={creator.username ?? ""} />
+            <FeedSection
+              username={creator.username ?? ""}
+              creatorId={creator.id}
+              memberships={memberships}
+            />
           </section>
 
           {/* Separator between feed and other sections */}
@@ -154,10 +163,12 @@ export default async function Page({
                 {memberships.map((membership: any) => (
                   <MembershipDisplayCard
                     key={membership.id}
+                    id={membership.id}
                     title={membership.title}
                     description={membership.description}
                     monthlyRecurringFee={membership.monthlyRecurringFee}
                     coverImageUrl={membership.coverImageUrl}
+                    creatorId={creator.id}
                   />
                 ))}
               </div>

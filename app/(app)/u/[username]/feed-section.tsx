@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Loader2 } from "lucide-react"
 import { FeedPostCard } from "@/components/feed/feed-post-card"
+import { SubscribeButton } from "@/components/payments/subscribe-button"
 
 interface PostMedia {
   id: string
@@ -45,9 +46,17 @@ interface FeedResponse {
 
 interface FeedSectionProps {
   username: string
+  creatorId?: string
+  memberships?: Array<{
+    id: string
+    title: string
+    description: string
+    monthlyRecurringFee: number
+    coverImageUrl?: string | null
+  }>
 }
 
-export function FeedSection({ username }: FeedSectionProps) {
+export function FeedSection({ username, creatorId, memberships = [] }: FeedSectionProps) {
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -195,10 +204,17 @@ export function FeedSection({ username }: FeedSectionProps) {
   return (
     <div className="space-y-6">
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Posts</h2>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          Latest posts from this creator
-        </p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Posts</h2>
+            <p className="text-muted-foreground text-sm sm:text-base mt-1">
+              Latest posts from this creator
+            </p>
+          </div>
+          {/* {creatorId && memberships.length > 0 && (
+            <SubscribeButton creatorId={creatorId} memberships={memberships} />
+          )} */}
+        </div>
       </div>
 
       <div className="flex justify-center">

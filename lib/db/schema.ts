@@ -73,6 +73,10 @@ export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
 export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
 export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
+export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service"]);
+export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
+export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "fulfilled", "cancelled"]);
+export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -92,6 +96,16 @@ export const creator = pgTable("creator", {
   profileImageUrl: text("profile_image_url"),
   profileCoverUrl: text("profile_cover_url"),
   bio: text("bio"),
+  bankAccountDetails: jsonb("bank_account_details").$type<{
+    pan?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    bankName?: string;
+    accountHolderName?: string;
+    branchName?: string;
+    accountType?: "savings" | "current";
+    verified?: boolean;
+  }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -200,16 +214,16 @@ export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   customerId: uuid("customer_id")
     .notNull()
-    .references(() => customers.id, { onDelete: "no action" }),
-  planId: varchar("plan_id", { length: 50 }).notNull(),
-  status: varchar("status", { length: 50 }).notNull(),
-  dodoSubscriptionId: varchar("dodo_subscription_id", { length: 255 }).unique(),
-  licenseKey: varchar("license_key", { length: 255 }),
+    .references(() => customers.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id", { length: 255 }).notNull(), // membershipId as string
+  status: varchar("status", { length: 50 }).notNull().default("active"),
   currentPeriodStart: timestamp("current_period_start"),
   currentPeriodEnd: timestamp("current_period_end"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueCustomerPlan: { unique: { columns: [table.customerId, table.planId] } },
+}));
 
 export const postLike = pgTable("post_like", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -342,3 +356,88 @@ export const callPermission = pgTable("call_permission", {
 }, (table) => ({
   uniqueCreatorFan: { unique: { columns: [table.creatorId, table.fanId] } },
 }));
+
+export const paymentTransaction = pgTable("payment_transaction", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  type: paymentTransactionTypeEnum("type").notNull(),
+  entityId: uuid("entity_id").notNull(), // membershipId, postId, or serviceId
+  amount: integer("amount").notNull(), // Stored in paise
+  platformFee: integer("platform_fee").notNull(), // 10% in paise
+  creatorAmount: integer("creator_amount").notNull(), // 90% in paise
+  status: paymentTransactionStatusEnum("status").notNull().default("pending"),
+  gatewayTransactionId: text("gateway_transaction_id"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const postPurchase = pgTable("post_purchase", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => post.id, { onDelete: "cascade" }),
+  transactionId: uuid("transaction_id")
+    .notNull()
+    .references(() => paymentTransaction.id, { onDelete: "cascade" }),
+  purchasedAt: timestamp("purchased_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueUserPost: { unique: { columns: [table.userId, table.postId] } },
+}));
+
+export const serviceOrder = pgTable("service_order", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  serviceId: uuid("service_id")
+    .notNull()
+    .references(() => service.id, { onDelete: "cascade" }),
+  transactionId: uuid("transaction_id")
+    .notNull()
+    .references(() => paymentTransaction.id, { onDelete: "cascade" }),
+  status: serviceOrderStatusEnum("status").notNull().default("pending"),
+  fulfillmentNotes: text("fulfillment_notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const payout = pgTable("payout", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  totalAmount: integer("total_amount").notNull(), // Sum of all transactions in paise
+  platformFee: integer("platform_fee").notNull(), // Total platform fee in paise
+  netAmount: integer("net_amount").notNull(), // Amount to be paid to creator in paise
+  status: payoutStatusEnum("status").notNull().default("pending"),
+  processedAt: timestamp("processed_at"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const payoutItem = pgTable("payout_item", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  payoutId: uuid("payout_id")
+    .notNull()
+    .references(() => payout.id, { onDelete: "cascade" }),
+  transactionId: uuid("transaction_id")
+    .notNull()
+    .references(() => paymentTransaction.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(), // Creator amount for this transaction in paise
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

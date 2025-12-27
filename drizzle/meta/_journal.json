@@ -134,6 +134,20 @@
       "when": 1766672275206,
       "tag": "0018_natural_true_believers",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1766804134281,
+      "tag": "0019_tidy_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1766804815490,
+      "tag": "0020_slow_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

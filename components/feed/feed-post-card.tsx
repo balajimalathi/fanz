@@ -12,6 +12,7 @@ import { LikeButton } from "@/components/feed/like-button"
 import { CommentsSection } from "@/components/feed/comments-section"
 import { formatPostDate } from "@/lib/utils/feed"
 import { cn } from "@/lib/utils"
+import { ExclusivePostOverlay } from "@/components/payments/exclusive-post-overlay"
 
 interface PostMedia {
   id: string
@@ -117,7 +118,18 @@ export function FeedPostCard({
                 userId={currentUserId}
                 hasAccess={post.hasAccess}
               />
-              {!post.hasAccess && (
+              {!post.hasAccess && post.postType === "exclusive" && post.price && (
+                <ExclusivePostOverlay
+                  postId={post.id}
+                  price={post.price}
+                  caption={post.caption}
+                  onPurchaseComplete={() => {
+                    // Reload page to show unlocked content
+                    window.location.reload()
+                  }}
+                />
+              )}
+              {!post.hasAccess && post.postType === "subscription" && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10 pointer-events-none">
                   <div className="flex flex-col items-center gap-2 text-white">
                     <Lock className="h-8 w-8" />

@@ -210,14 +210,9 @@ export async function GET(
         hasAccess = false
       } else {
         // Logged in: check access
-        if (hasMemberships) {
-          // Post has memberships - check if user has subscription
-          hasAccess = await hasAccessToPost(session.user.id, p.id)
-          // If user doesn't have access, show post with blur thumbnails (hasAccess: false)
-        } else {
-          // Post has no memberships - show blurred for logged-in users without subscription
-          hasAccess = false
-        }
+        // For exclusive posts, check purchase
+        // For subscription posts, check membership
+        hasAccess = await hasAccessToPost(session.user.id, p.id)
       }
 
       const media = mediaMap.get(p.id) || []
