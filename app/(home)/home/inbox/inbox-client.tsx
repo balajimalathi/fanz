@@ -143,7 +143,7 @@ export function InboxPageClient({ creatorId }: InboxPageClientProps) {
   const selectedFollower = followers.find((f) => f.followerId === selectedFollowerId);
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden -p-4">
       {/* Followers Sidebar */}
       <div className="w-80 border-r bg-background flex flex-col">
         <div className="p-4 border-b">

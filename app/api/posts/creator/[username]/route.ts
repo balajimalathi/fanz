@@ -186,7 +186,7 @@ export async function GET(
       media: Array<{
         id: string
         mediaType: "image" | "video"
-        url: string
+        url: string | null
         thumbnailUrl: string | null
         hlsUrl: string | null
         blurThumbnailUrl: string | null
@@ -213,10 +213,7 @@ export async function GET(
         if (hasMemberships) {
           // Post has memberships - check if user has subscription
           hasAccess = await hasAccessToPost(session.user.id, p.id)
-          // If user doesn't have access and post requires membership, don't include it
-          if (!hasAccess) {
-            continue // Filter out this post
-          }
+          // If user doesn't have access, show post with blur thumbnails (hasAccess: false)
         } else {
           // Post has no memberships - show blurred for logged-in users without subscription
           hasAccess = false
@@ -239,7 +236,7 @@ export async function GET(
             thumbnailUrl: m.thumbnailUrl,
             hlsUrl: m.hlsUrl,
             blurThumbnailUrl: m.blurThumbnailUrl,
-            metadata: m.metadata,
+            ...(m.metadata ? { metadata: m.metadata } : {}),
             orderIndex: m.orderIndex,
           }
         } else {
@@ -252,7 +249,7 @@ export async function GET(
               thumbnailUrl: null,
               hlsUrl: null,
               blurThumbnailUrl: m.blurThumbnailUrl || null, // Only blur thumbnail
-              metadata: m.metadata,
+              ...(m.metadata ? { metadata: m.metadata } : {}),
               orderIndex: m.orderIndex,
             }
           } else {
@@ -264,7 +261,7 @@ export async function GET(
               thumbnailUrl: m.blurThumbnailUrl || null, // Only blur thumbnail, no fallback
               hlsUrl: null, // Don't expose HLS URL
               blurThumbnailUrl: m.blurThumbnailUrl || null, // Only blur thumbnail
-              metadata: m.metadata,
+              ...(m.metadata ? { metadata: m.metadata } : {}),
               orderIndex: m.orderIndex,
             }
           }
