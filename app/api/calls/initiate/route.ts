@@ -10,6 +10,11 @@ import { sendPushNotificationsToUsers } from "@/lib/push/fcm";
 import { env } from "@/env";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { 
+  checkServiceOrderAccess, 
+  linkServiceOrderToCall, 
+  trackServiceOrderParticipation 
+} from "@/lib/utils/service-orders";
 
 const initiateCallSchema = z.object({
   receiverId: z.string(),
@@ -70,18 +75,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check permissions: If caller is a fan calling a creator, verify subscription
+    // Check permissions: If caller is a fan calling a creator, verify subscription or service order
     const callerIsCreator = callerUser.role === "creator";
     const receiverIsCreator = receiverUser.role === "creator";
 
+    let activeServiceOrder = null;
     if (!callerIsCreator && receiverIsCreator) {
-      // Fan calling creator - check subscription
-      const permission = await getCallPermission(callerId, receiverId, true);
-      if (!permission.canCall) {
-        return NextResponse.json(
-          { error: "You must be a subscriber to call this creator" },
-          { status: 403 }
-      );
+      // Fan calling creator - check for active service order first
+      const serviceType = callType === "audio" ? "audio_call" : "video_call";
+      activeServiceOrder = await checkServiceOrderAccess(callerId, receiverId, serviceType);
+      
+      // If no active service order, check subscription
+      if (!activeServiceOrder) {
+        const permission = await getCallPermission(callerId, receiverId, true);
+        if (!permission.canCall) {
+          return NextResponse.json(
+            { error: "You must have an active service order or subscription to call this creator" },
+            { status: 403 }
+          );
+        }
       }
     }
 
@@ -135,6 +147,7 @@ export async function POST(request: NextRequest) {
       .insert(call)
       .values({
         conversationId: convId,
+        serviceOrderId: activeServiceOrder?.id || null,
         callerId,
         receiverId,
         callType,
@@ -142,6 +155,15 @@ export async function POST(request: NextRequest) {
         livekitRoomName: roomName,
       })
       .returning();
+
+    // Link service order to call and track customer participation
+    if (activeServiceOrder) {
+      await linkServiceOrderToCall(activeServiceOrder.id, newCall.id);
+      // Track customer participation (caller is the customer when calling creator)
+      if (!callerIsCreator && receiverIsCreator) {
+        await trackServiceOrderParticipation(activeServiceOrder.id, callerId, false);
+      }
+    }
 
     // Send WebSocket notification to receiver
     const sent = sendToUser(receiverId, {

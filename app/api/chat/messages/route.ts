@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
-import { conversation, chatMessage } from "@/lib/db/schema";
+import { conversation, chatMessage, user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { 
+  checkServiceOrderAccess, 
+  linkServiceOrderToConversation, 
+  trackServiceOrderParticipation 
+} from "@/lib/utils/service-orders";
 
 const sendMessageSchema = z.object({
   conversationId: z.string().uuid(),
@@ -63,12 +68,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if conversation is enabled (unless user is creator)
+    // Determine if sender is creator or fan
+    const senderUser = await db.query.user.findFirst({
+      where: (u, { eq: eqOp }) => eqOp(u.id, session.user.id),
+    });
+    const senderIsCreator = senderUser?.role === "creator";
+    const senderIsFan = !senderIsCreator && conv.fanId === session.user.id;
+
+    // Check if conversation is enabled or if there's an active service order
     if (!conv.isEnabled && conv.creatorId !== session.user.id) {
-      return NextResponse.json(
-        { error: "This conversation is not enabled yet. Please wait for the creator to enable it." },
-        { status: 403 }
-      );
+      // Fan trying to send message - check for active service order
+      if (senderIsFan) {
+        const activeServiceOrder = await checkServiceOrderAccess(
+          session.user.id,
+          conv.creatorId,
+          "chat"
+        );
+
+        if (!activeServiceOrder) {
+          return NextResponse.json(
+            { error: "This conversation is not enabled. You need an active service order to chat." },
+            { status: 403 }
+          );
+        }
+
+        // Link service order to conversation if not already linked
+        if (!conv.serviceOrderId && activeServiceOrder) {
+          await linkServiceOrderToConversation(activeServiceOrder.id, conversationId);
+          // Enable conversation when service order is linked
+          await db
+            .update(conversation)
+            .set({
+              isEnabled: true,
+              serviceOrderId: activeServiceOrder.id,
+              updatedAt: new Date(),
+            })
+            .where(eq(conversation.id, conversationId));
+        }
+      } else {
+        return NextResponse.json(
+          { error: "This conversation is not enabled yet. Please wait for the creator to enable it." },
+          { status: 403 }
+        );
+      }
     }
 
     // Validate message content
@@ -114,6 +156,20 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       })
       .where(eq(conversation.id, conversationId));
+
+    // Get updated conversation to check service order
+    const updatedConv = await db.query.conversation.findFirst({
+      where: (c, { eq: eqOp }) => eqOp(c.id, conversationId),
+    });
+
+    // Track participation for service order
+    if (updatedConv?.serviceOrderId) {
+      await trackServiceOrderParticipation(
+        updatedConv.serviceOrderId,
+        session.user.id,
+        senderIsCreator
+      );
+    }
 
     return NextResponse.json({
       success: true,

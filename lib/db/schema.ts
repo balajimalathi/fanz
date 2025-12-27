@@ -75,7 +75,8 @@ export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
 export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
 export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
-export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "fulfilled", "cancelled"]);
+export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
+export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 
 export const creator = pgTable("creator", {
@@ -118,6 +119,7 @@ export const service = pgTable("service", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: integer("price").notNull().default(0), // Stored in paise (smallest currency unit)
+  serviceType: serviceTypeEnum("service_type").notNull(),
   visible: boolean("visible").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -298,6 +300,8 @@ export const conversation = pgTable("conversation", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   isEnabled: boolean("is_enabled").notNull().default(false), // Only creator can enable chat
+  serviceOrderId: uuid("service_order_id")
+    .references(() => serviceOrder.id, { onDelete: "set null" }),
   lastMessageAt: timestamp("last_message_at"),
   lastMessagePreview: text("last_message_preview"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -326,6 +330,8 @@ export const call = pgTable("call", {
   id: uuid("id").primaryKey().defaultRandom(),
   conversationId: uuid("conversation_id")
     .references(() => conversation.id, { onDelete: "set null" }),
+  serviceOrderId: uuid("service_order_id")
+    .references(() => serviceOrder.id, { onDelete: "set null" }),
   callerId: text("caller_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
@@ -409,6 +415,14 @@ export const serviceOrder = pgTable("service_order", {
     .references(() => paymentTransaction.id, { onDelete: "cascade" }),
   status: serviceOrderStatusEnum("status").notNull().default("pending"),
   fulfillmentNotes: text("fulfillment_notes"),
+  activatedAt: timestamp("activated_at"),
+  utilizedAt: timestamp("utilized_at"),
+  callId: uuid("call_id")
+    .references(() => call.id, { onDelete: "set null" }),
+  conversationId: uuid("conversation_id")
+    .references(() => conversation.id, { onDelete: "set null" }),
+  customerJoinedAt: timestamp("customer_joined_at"),
+  creatorJoinedAt: timestamp("creator_joined_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

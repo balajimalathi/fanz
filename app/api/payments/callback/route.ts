@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
           if (duration) {
             redirectUrl.searchParams.set("duration", duration.toString());
           }
+        } else if (transaction.type === "service") {
+          redirectUrl.searchParams.set("serviceId", transaction.entityId);
+          redirectUrl.searchParams.set("transactionId", transaction.id);
         }
         return NextResponse.redirect(redirectUrl);
       }
@@ -81,6 +84,9 @@ export async function GET(request: NextRequest) {
               if (duration) {
                 redirectUrl.searchParams.set("duration", duration.toString());
               }
+            } else if (transaction.type === "service") {
+              redirectUrl.searchParams.set("serviceId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
             }
             return NextResponse.redirect(redirectUrl);
           }
@@ -117,6 +123,9 @@ export async function GET(request: NextRequest) {
             if (duration) {
               redirectUrl.searchParams.set("duration", duration.toString());
             }
+          } else if (transaction.type === "service") {
+            redirectUrl.searchParams.set("serviceId", transaction.entityId);
+            redirectUrl.searchParams.set("transactionId", transaction.id);
           }
           return NextResponse.redirect(redirectUrl);
         }

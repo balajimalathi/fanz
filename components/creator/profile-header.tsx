@@ -65,7 +65,7 @@ export function ProfileHeader({
             priority
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
+          <div className="w-full h-full bg-linear-to-br from-primary/20 to-primary/5" />
         )}
       </div>
 

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
-import { call } from "@/lib/db/schema";
+import { call, user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { sendToUser } from "@/lib/socketio/server";
+import { trackServiceOrderParticipation } from "@/lib/utils/service-orders";
 
 // POST - Accept a call
 export async function POST(
@@ -46,6 +47,17 @@ export async function POST(
       );
     }
 
+    // Determine if receiver is creator
+    const receiverUser = await db.query.user.findFirst({
+      where: (u, { eq: eqOp }) => eqOp(u.id, userId),
+    });
+    const callerUser = await db.query.user.findFirst({
+      where: (u, { eq: eqOp }) => eqOp(u.id, callRecord.callerId),
+    });
+
+    const receiverIsCreator = receiverUser?.role === "creator";
+    const callerIsCreator = callerUser?.role === "creator";
+
     // Update call status
     await db
       .update(call)
@@ -54,6 +66,11 @@ export async function POST(
         startedAt: new Date(),
       })
       .where(eq(call.id, callId));
+
+    // Track creator participation if this is a service order call
+    if (callRecord.serviceOrderId && receiverIsCreator && !callerIsCreator) {
+      await trackServiceOrderParticipation(callRecord.serviceOrderId, userId, true);
+    }
 
     // Notify caller
     sendToUser(callRecord.callerId, {

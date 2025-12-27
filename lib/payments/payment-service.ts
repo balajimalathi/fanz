@@ -162,19 +162,20 @@ export class PaymentService {
       // Calculate split payment
       const split = calculateSplitPayment(amount);
 
-      // Build metadata with duration and originUrl for membership payments
+      // Build metadata with duration and originUrl for all payment types
       const metadata: Record<string, unknown> = {
         type: request.type,
         entityId: request.entityId,
       };
 
-      if (request.type === "membership") {
-        if (request.duration) {
-          metadata.duration = request.duration;
-        }
-        if (request.originUrl) {
-          metadata.originUrl = request.originUrl;
-        }
+      // Store originUrl for all payment types
+      if (request.originUrl) {
+        metadata.originUrl = request.originUrl;
+      }
+
+      // Store duration for membership payments
+      if (request.type === "membership" && request.duration) {
+        metadata.duration = request.duration;
       }
 
       // Create payment transaction

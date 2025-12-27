@@ -5,10 +5,10 @@ import { ProfileHeader } from "@/components/creator/profile-header"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { Separator } from "@/components/ui/separator"
-import { FeedSection } from "./feed-section"
+import { FeedSection } from "./_components/feed-section"
 import { ChatOverlay } from "@/components/chat/chat-overlay"
-import { ChatPageWrapper } from "./chat-wrapper"
-import { PaymentStatusHandler } from "./payment-status-handler"
+import { ChatPageWrapper } from "./_components/chat-wrapper"
+import { PaymentStatusHandler } from "./_components/payment-status-handler"
 
 async function getCreatorProfile(username: string) {
   try {
@@ -41,6 +41,7 @@ async function getCreatorProfile(username: string) {
       name: s.name,
       description: s.description,
       price: s.price / 100, // Convert paise to rupees
+      serviceType: s.serviceType,
     }))
 
     const membershipsWithRupees = memberships.map((m) => ({
@@ -134,9 +135,11 @@ export default async function Page({
                 {services.map((service: any) => (
                   <ServiceDisplayCard
                     key={service.id}
+                    id={service.id}
                     name={service.name}
                     description={service.description}
                     price={service.price}
+                    creatorId={creator.id}
                   />
                 ))}
               </div>
