@@ -6,8 +6,6 @@ import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { Separator } from "@/components/ui/separator"
 import { FeedSection } from "./_components/feed-section"
-import { ChatOverlay } from "@/components/chat/chat-overlay"
-import { ChatPageWrapper } from "./_components/chat-wrapper"
 import { PaymentStatusHandler } from "./_components/payment-status-handler"
 
 async function getCreatorProfile(username: string) {
@@ -89,7 +87,7 @@ export default async function Page({
   const { creator, services, memberships } = data
 
   return (
-    <ChatPageWrapper creatorId={creator.id} creatorName={creator.displayName} creatorImage={creator.profileImageUrl}>
+    <>
       <Suspense fallback={null}>
         <PaymentStatusHandler />
       </Suspense>
@@ -188,6 +186,6 @@ export default async function Page({
           )}
         </div>
       </div>
-    </ChatPageWrapper>
+    </>
   )
 }

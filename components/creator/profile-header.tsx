@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useChatContext } from "@/lib/chat/chat-context"
 import Image from "next/image"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FollowButton } from "./follow-button"
@@ -11,7 +10,6 @@ import { User } from "lucide-react"
 import { useSession } from "@/lib/auth/auth-client"
 import { NotificationPermission } from "@/components/push/notification-permission"
 import { PWAInstallButton } from "@/components/push/pwa-install-button"
-import { MessageCircle } from "lucide-react"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -20,7 +18,6 @@ interface ProfileHeaderProps {
   profileImageUrl: string | null
   profileCoverUrl: string | null
   creatorId: string
-  onOpenChat?: () => void
 }
 
 export function ProfileHeader({
@@ -30,20 +27,10 @@ export function ProfileHeader({
   profileImageUrl,
   profileCoverUrl,
   creatorId,
-  onOpenChat,
 }: ProfileHeaderProps) {
   const { data: session } = useSession()
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const chatContext = useChatContext()
   const isAuthenticated = !!session?.user
-  
-  const handleOpenChat = () => {
-    if (chatContext) {
-      chatContext.openChat()
-    } else if (onOpenChat) {
-      onOpenChat()
-    }
-  }
 
   const initials = displayName
     .split(" ")
@@ -99,17 +86,6 @@ export function ProfileHeader({
               <FollowButton creatorId={creatorId} /> 
               {isAuthenticated && (
                 <>
-                  {(chatContext || onOpenChat) && (
-                    <Button
-                      variant="outline"
-                      onClick={handleOpenChat}
-                      className="flex items-center gap-2"
-                      title="Send message"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="hidden sm:inline">Message</span>
-                    </Button>
-                  )}
                   <NotificationPermission />
                   <PWAInstallButton />
                   <Button

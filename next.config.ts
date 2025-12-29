@@ -98,29 +98,13 @@ const nextConfig: NextConfig = {
         if (url.protocol === "https:") {
           connectSrc.push(`ws://${url.host}`);
         }
-        // Add Socket.IO server URL (same host, different port)
-        const socketioPort = process.env.SOCKETIO_PORT || "3001";
-        // Add both HTTP and WebSocket protocols for Socket.IO
-        const socketioWsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
-        connectSrc.push(
-          `${url.protocol}//${url.hostname}:${socketioPort}`,
-          `${socketioWsProtocol}//${url.hostname}:${socketioPort}`
-        );
       } catch (e) {
         // Invalid URL, skip
       }
     }
     
-    // Allow localhost WebSocket and Socket.IO for development
+    // Allow localhost WebSocket for development
     connectSrc.push("ws://localhost:8080", "wss://localhost:8080");
-    // Add Socket.IO server with both HTTP and WebSocket protocols
-    const devSocketioPort = process.env.SOCKETIO_PORT || "3001";
-    connectSrc.push(
-      `http://localhost:${devSocketioPort}`,
-      `https://localhost:${devSocketioPort}`,
-      `ws://localhost:${devSocketioPort}`,
-      `wss://localhost:${devSocketioPort}`
-    );
     
     const cspValue = [
       "default-src 'self'",

@@ -2,13 +2,13 @@ import { db } from "@/lib/db/client";
 import { serviceOrder, service } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
-export type ServiceType = "shoutout" | "audio_call" | "video_call" | "chat";
+export type ServiceType = "shoutout" | "audio_call" | "video_call";
 
 /**
  * Check if a user has an active service order for a specific creator and service type
  * @param userId - The user's ID (customer)
  * @param creatorId - The creator's ID
- * @param serviceType - The type of service (audio_call, video_call, chat)
+ * @param serviceType - The type of service (audio_call, video_call)
  * @returns The active service order if found, null otherwise
  */
 export async function checkServiceOrderAccess(
@@ -133,52 +133,6 @@ export async function markServiceOrderUtilized(
       .where(eq(serviceOrder.id, serviceOrderId));
   } catch (error) {
     console.error("Error marking service order as utilized:", error);
-    throw error;
-  }
-}
-
-/**
- * Link a service order to a call
- * @param serviceOrderId - The service order ID
- * @param callId - The call ID
- */
-export async function linkServiceOrderToCall(
-  serviceOrderId: string,
-  callId: string
-): Promise<void> {
-  try {
-    await db
-      .update(serviceOrder)
-      .set({
-        callId,
-        updatedAt: new Date(),
-      })
-      .where(eq(serviceOrder.id, serviceOrderId));
-  } catch (error) {
-    console.error("Error linking service order to call:", error);
-    throw error;
-  }
-}
-
-/**
- * Link a service order to a conversation
- * @param serviceOrderId - The service order ID
- * @param conversationId - The conversation ID
- */
-export async function linkServiceOrderToConversation(
-  serviceOrderId: string,
-  conversationId: string
-): Promise<void> {
-  try {
-    await db
-      .update(serviceOrder)
-      .set({
-        conversationId,
-        updatedAt: new Date(),
-      })
-      .where(eq(serviceOrder.id, serviceOrderId));
-  } catch (error) {
-    console.error("Error linking service order to conversation:", error);
     throw error;
   }
 }

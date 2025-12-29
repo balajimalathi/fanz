@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Valkey (Redis-compatible) for Socket.IO adapter and job queue
+  # Valkey (Redis-compatible) for job queue
   valkey:
     image: valkey/valkey:7.2-alpine
     container_name: desifans-valkey
@@ -31,35 +31,10 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=${REDIS_DB:-0}
-      - SOCKETIO_PORT=3001
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     depends_on:
       valkey:
         condition: service_healthy
-    restart: unless-stopped
-
-  # Socket.IO server
-  socketio:
-    build:
-      context: .
-      dockerfile: Dockerfile.socketio
-    container_name: desifans-socketio
-    ports:
-      - "3001:3001"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_HOST=valkey
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - REDIS_DB=${REDIS_DB:-0}
-      - SOCKETIO_PORT=3001
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
-    depends_on:
-      valkey:
-        condition: service_healthy
-      app:
-        condition: service_started
     restart: unless-stopped
 
 volumes:

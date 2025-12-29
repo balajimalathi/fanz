@@ -12,12 +12,47 @@ import { VideoProcessingJobData } from "@/lib/queue/video-processing"
 const execAsync = promisify(exec)
 
 // Variant definitions: resolution, video bitrate, label
-const variants = [
+// Landscape variants (width x height)
+const landscapeVariants = [
   { resolution: "854x480", bitrate: "1000k", label: "480p" },
   { resolution: "1280x720", bitrate: "2500k", label: "720p" },
   { resolution: "1920x1080", bitrate: "5000k", label: "1080p" },
   { resolution: "2560x1440", bitrate: "8000k", label: "1440p" },
 ]
+
+// Portrait variants (width x height) - swapped dimensions
+const portraitVariants = [
+  { resolution: "480x854", bitrate: "1000k", label: "480p" },
+  { resolution: "720x1280", bitrate: "2500k", label: "720p" },
+  { resolution: "1080x1920", bitrate: "5000k", label: "1080p" },
+  { resolution: "1440x2560", bitrate: "8000k", label: "1440p" },
+]
+
+/**
+ * Get video dimensions using ffprobe
+ */
+async function getVideoDimensions(videoPath: string): Promise<{ width: number; height: number }> {
+  const normalizedVideoPath = videoPath.replace(/\\/g, "/")
+  const probeCommand = `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${normalizedVideoPath}"`
+  
+  try {
+    const { stdout } = await execAsync(probeCommand)
+    const probeData = JSON.parse(stdout)
+    const stream = probeData.streams?.[0]
+    
+    if (!stream || !stream.width || !stream.height) {
+      throw new Error("Could not determine video dimensions")
+    }
+    
+    return {
+      width: parseInt(stream.width),
+      height: parseInt(stream.height),
+    }
+  } catch (error: any) {
+    console.error("Error getting video dimensions:", error)
+    throw new Error(`Failed to get video dimensions: ${error.message}`)
+  }
+}
 
 /**
  * Process a video job - handles FFmpeg transcoding and R2 upload
@@ -52,6 +87,15 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
 
     await job.updateProgress(20)
 
+    // Detect video orientation
+    console.log(`[Job ${job.id}] Detecting video orientation...`)
+    const { width, height } = await getVideoDimensions(videoPath)
+    const isPortrait = height > width
+    const variants = isPortrait ? portraitVariants : landscapeVariants
+    
+    console.log(`[Job ${job.id}] Video dimensions: ${width}x${height}, orientation: ${isPortrait ? "portrait" : "landscape"}`)
+    await job.updateProgress(25)
+
     // Create output directory for HLS
     const outputDir = join(process.cwd(), "tmp", "hls", videoId)
     await mkdir(outputDir, { recursive: true })
@@ -84,7 +128,18 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
       const segmentFilename = `${normalizedVariantDir}/segment_%03d.ts`
       const playlistPath = `${normalizedVariantDir}/playlist.m3u8`
       
-      const ffmpegCommand = `ffmpeg -i "${normalizedVideoPath}" -preset veryfast -g 48 -sc_threshold 0 -map 0:v:0 -map 0:a:0? -s ${variant.resolution} -c:v libx264 -b:v ${variant.bitrate} -maxrate ${variant.bitrate} -bufsize ${bitrateNum * 2}k -c:a aac -b:a 128k -f hls -hls_time 4 -hls_list_size 0 -hls_segment_filename "${segmentFilename}" "${playlistPath}"`
+      // Parse target resolution
+      const [targetWidth, targetHeight] = variant.resolution.split('x').map(Number)
+      
+      // Use scale filter that preserves aspect ratio
+      // For landscape: scale by width, let height adjust automatically
+      // For portrait: scale by height, let width adjust automatically
+      // force_original_aspect_ratio=decrease ensures we don't upscale or stretch
+      const scaleFilter = isPortrait
+        ? `scale=-2:${targetHeight}:force_original_aspect_ratio=decrease`
+        : `scale=${targetWidth}:-2:force_original_aspect_ratio=decrease`
+      
+      const ffmpegCommand = `ffmpeg -i "${normalizedVideoPath}" -preset veryfast -g 48 -sc_threshold 0 -map 0:v:0 -map 0:a:0? -vf "${scaleFilter}" -c:v libx264 -b:v ${variant.bitrate} -maxrate ${variant.bitrate} -bufsize ${bitrateNum * 2}k -c:a aac -b:a 128k -f hls -hls_time 4 -hls_list_size 0 -hls_segment_filename "${segmentFilename}" "${playlistPath}"`
       
       console.log(`[Job ${job.id}] Processing variant ${variant.label} (${variant.resolution}@${variant.bitrate})...`)
       

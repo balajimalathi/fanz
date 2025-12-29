@@ -71,11 +71,9 @@ export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
 export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
-export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
-export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
 export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
-export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
+export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 
@@ -291,78 +289,6 @@ export const broadcastMessage = pgTable("broadcast_message", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const conversation = pgTable("conversation", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  creatorId: text("creator_id")
-    .notNull()
-    .references(() => creator.id, { onDelete: "cascade" }),
-  fanId: text("fan_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  isEnabled: boolean("is_enabled").notNull().default(false), // Only creator can enable chat
-  serviceOrderId: uuid("service_order_id")
-    .references(() => serviceOrder.id, { onDelete: "set null" }),
-  lastMessageAt: timestamp("last_message_at"),
-  lastMessagePreview: text("last_message_preview"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-}, (table) => ({
-  uniqueCreatorFan: { unique: { columns: [table.creatorId, table.fanId] } },
-}));
-
-export const chatMessage = pgTable("chat_message", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  conversationId: uuid("conversation_id")
-    .notNull()
-    .references(() => conversation.id, { onDelete: "cascade" }),
-  senderId: text("sender_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  messageType: messageTypeEnum("message_type").notNull(),
-  content: text("content"),
-  mediaUrl: text("media_url"),
-  thumbnailUrl: text("thumbnail_url"),
-  readAt: timestamp("read_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const call = pgTable("call", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  conversationId: uuid("conversation_id")
-    .references(() => conversation.id, { onDelete: "set null" }),
-  serviceOrderId: uuid("service_order_id")
-    .references(() => serviceOrder.id, { onDelete: "set null" }),
-  callerId: text("caller_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  receiverId: text("receiver_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  callType: callTypeEnum("call_type").notNull(),
-  status: callStatusEnum("status").notNull(),
-  livekitRoomName: text("livekit_room_name"),
-  startedAt: timestamp("started_at"),
-  endedAt: timestamp("ended_at"),
-  duration: integer("duration"), // in seconds
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const callPermission = pgTable("call_permission", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  creatorId: text("creator_id")
-    .notNull()
-    .references(() => creator.id, { onDelete: "cascade" }),
-  fanId: text("fan_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  canCall: boolean("can_call").notNull().default(false),
-  lastCheckedAt: timestamp("last_checked_at").notNull().defaultNow(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-}, (table) => ({
-  uniqueCreatorFan: { unique: { columns: [table.creatorId, table.fanId] } },
-}));
-
 export const paymentTransaction = pgTable("payment_transaction", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id")
@@ -417,10 +343,6 @@ export const serviceOrder = pgTable("service_order", {
   fulfillmentNotes: text("fulfillment_notes"),
   activatedAt: timestamp("activated_at"),
   utilizedAt: timestamp("utilized_at"),
-  callId: uuid("call_id")
-    .references(() => call.id, { onDelete: "set null" }),
-  conversationId: uuid("conversation_id")
-    .references(() => conversation.id, { onDelete: "set null" }),
   customerJoinedAt: timestamp("customer_joined_at"),
   creatorJoinedAt: timestamp("creator_joined_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

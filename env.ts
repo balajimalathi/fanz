@@ -27,17 +27,6 @@ export const env = createEnv({
     FIREBASE_PROJECT_ID: z.string().min(1).optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
-    // LiveKit for WebRTC calls
-    LIVEKIT_URL: z.string().url().optional(),
-    LIVEKIT_API_KEY: z.string().optional(),
-    LIVEKIT_API_SECRET: z.string().optional(),
-    // Socket.IO configuration
-    SOCKETIO_URL: z.string().url().optional(), // Socket.IO server URL
-    SOCKETIO_PORT: z.string().regex(/^\d+$/).default("3001"),
-    // WebSocket configuration (deprecated, kept for backward compatibility)
-    WEBSOCKET_URL: z.string().optional(), // Can be ws:// or wss:// URL
-    WEBSOCKET_MAX_CONNECTIONS: z.string().regex(/^\d+$/).default("1000"),
-    CHAT_MEDIA_MAX_SIZE: z.string().default("52428800"), // 50MB in bytes
     // Payment Gateway configuration
     PAYMENT_GATEWAY_ENABLED: z.string().transform((val) => val === "true").default("false"),
     PAYMENT_GATEWAY_TYPE: z.enum(["paytm", "ccbill", "epoch", "segpay"]).optional().default("paytm"),
@@ -80,14 +69,6 @@ export const env = createEnv({
     FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
     FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    LIVEKIT_URL: process.env.LIVEKIT_URL,
-    LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
-    LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
-    SOCKETIO_URL: process.env.SOCKETIO_URL,
-    SOCKETIO_PORT: process.env.SOCKETIO_PORT,
-    WEBSOCKET_URL: process.env.WEBSOCKET_URL,
-    WEBSOCKET_MAX_CONNECTIONS: process.env.WEBSOCKET_MAX_CONNECTIONS,
-    CHAT_MEDIA_MAX_SIZE: process.env.CHAT_MEDIA_MAX_SIZE,
     PAYMENT_GATEWAY_ENABLED: process.env.PAYMENT_GATEWAY_ENABLED,
     PAYMENT_GATEWAY_TYPE: process.env.PAYMENT_GATEWAY_TYPE,
     PAYMENT_GATEWAY_API_KEY: process.env.PAYMENT_GATEWAY_API_KEY,

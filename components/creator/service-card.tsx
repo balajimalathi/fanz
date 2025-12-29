@@ -16,7 +16,7 @@ interface Service {
   name: string
   description: string
   price: number
-  serviceType: "shoutout" | "audio_call" | "video_call" | "chat"
+  serviceType: "shoutout" | "audio_call" | "video_call"
   visible: boolean
   createdAt?: string
   updatedAt?: string
@@ -279,7 +279,7 @@ function ServiceSection({
   const [name, setName] = useState(service.name)
   const [description, setDescription] = useState(service.description)
   const [price, setPrice] = useState(service.price.toString())
-  const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call" | "chat">(service.serviceType)
+  const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call">(service.serviceType)
 
   const handleSave = () => {
     onSave({
@@ -328,7 +328,7 @@ function ServiceSection({
           </div>
           <div className="space-y-2">
             <Label htmlFor={`service-type-${service.id}`}>Service Type</Label>
-            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call" | "chat") => setServiceType(value)}>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call") => setServiceType(value)}>
               <SelectTrigger id={`service-type-${service.id}`}>
                 <SelectValue placeholder="Select service type" />
               </SelectTrigger>
@@ -336,7 +336,6 @@ function ServiceSection({
                 <SelectItem value="shoutout">Shoutout</SelectItem>
                 <SelectItem value="audio_call">Audio Call</SelectItem>
                 <SelectItem value="video_call">Video Call</SelectItem>
-                <SelectItem value="chat">Chat</SelectItem>
               </SelectContent>
             </Select>
           </div>
