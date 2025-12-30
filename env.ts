@@ -35,6 +35,10 @@ export const env = createEnv({
     PAYMENT_GATEWAY_MERCHANT_ID: z.string().optional(),
     PAYMENT_GATEWAY_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_GATEWAY_MODE: z.enum(["live", "test"]).default("test"),
+    // LiveKit configuration
+    LIVEKIT_URL: z.string().url(),
+    LIVEKIT_API_KEY: z.string().min(1),
+    LIVEKIT_API_SECRET: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -46,6 +50,8 @@ export const env = createEnv({
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().min(1).optional(),
     NEXT_PUBLIC_FIREBASE_APP_ID: z.string().min(1).optional(),
     NEXT_PUBLIC_FIREBASE_VAPID_KEY: z.string().min(1).optional(),
+    // LiveKit Client SDK
+    NEXT_PUBLIC_LIVEKIT_URL: z.string().url(),
   },
   // If you're using Next.js < 13.4.4, you'll need to specify the runtimeEnv manually
   runtimeEnv: {
@@ -76,6 +82,9 @@ export const env = createEnv({
     PAYMENT_GATEWAY_MERCHANT_ID: process.env.PAYMENT_GATEWAY_MERCHANT_ID,
     PAYMENT_GATEWAY_WEBHOOK_SECRET: process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
     PAYMENT_GATEWAY_MODE: process.env.PAYMENT_GATEWAY_MODE,
+    LIVEKIT_URL: process.env.LIVEKIT_URL,
+    LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
+    LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -83,5 +92,6 @@ export const env = createEnv({
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+    NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL,
   },
 });

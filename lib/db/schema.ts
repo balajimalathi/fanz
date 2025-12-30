@@ -73,7 +73,7 @@ export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
 export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
-export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call"]);
+export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 
@@ -118,6 +118,7 @@ export const service = pgTable("service", {
   description: text("description").notNull(),
   price: integer("price").notNull().default(0), // Stored in paise (smallest currency unit)
   serviceType: serviceTypeEnum("service_type").notNull(),
+  durationMinutes: integer("duration_minutes").default(30), // Default 30 minutes
   visible: boolean("visible").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -375,5 +376,38 @@ export const payoutItem = pgTable("payout_item", {
     .notNull()
     .references(() => paymentTransaction.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(), // Creator amount for this transaction in paise
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const conversation = pgTable("conversation", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  serviceOrderId: uuid("service_order_id")
+    .notNull()
+    .references(() => serviceOrder.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  fanId: text("fan_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lastMessageAt: timestamp("last_message_at"),
+  unreadCountCreator: integer("unread_count_creator").notNull().default(0),
+  unreadCountFan: integer("unread_count_fan").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueServiceOrder: { unique: { columns: [table.serviceOrderId] } },
+}));
+
+export const message = pgTable("message", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => conversation.id, { onDelete: "cascade" }),
+  senderId: text("sender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  messageType: messageTypeEnum("message_type").notNull(),
+  content: text("content"),
+  mediaUrl: text("media_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

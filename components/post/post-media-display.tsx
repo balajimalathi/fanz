@@ -64,7 +64,7 @@ export function PostMediaDisplay({
           postId={postId}
           hasAccess={hasAccess}
         />
-      ))}
+      ))} 
     </div>
   )
 }

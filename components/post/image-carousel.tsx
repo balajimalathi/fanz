@@ -74,7 +74,7 @@ export function ImageCarousel({ images, height = "600px", hasAccess = true }: Im
     <>
       {/* Carousel */}
       <div
-        className="relative w-full overflow-hidden rounded-lg bg-muted"
+        className="relative w-full overflow-hidden rounded-lg bg-muted z-8"
         style={{ height }}
       >
         {/* Background blur image */}

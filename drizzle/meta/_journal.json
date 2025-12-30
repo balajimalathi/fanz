@@ -162,6 +162,13 @@
       "when": 1767017024748,
       "tag": "0022_cute_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1767025253146,
+      "tag": "0023_left_champions",
+      "breakpoints": true
     }
   ]
 }

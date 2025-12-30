@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { creator, user } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
+import { ServiceOrdersList } from "@/components/home/service-orders-list"
 
 export default async function HomePage() {
   const session = await auth.api.getSession({
@@ -47,7 +48,7 @@ export default async function HomePage() {
 
   return (
     <div className="p-4">
-      <h1>Hello World</h1>
+      <ServiceOrdersList />
     </div>
   )
 }

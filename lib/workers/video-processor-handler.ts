@@ -135,9 +135,10 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
       // For landscape: scale by width, let height adjust automatically
       // For portrait: scale by height, let width adjust automatically
       // force_original_aspect_ratio=decrease ensures we don't upscale or stretch
+      // Then ensure dimensions are divisible by 2 (required by libx264)
       const scaleFilter = isPortrait
-        ? `scale=-2:${targetHeight}:force_original_aspect_ratio=decrease`
-        : `scale=${targetWidth}:-2:force_original_aspect_ratio=decrease`
+        ? `scale=-2:${targetHeight}:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2'`
+        : `scale=${targetWidth}:-2:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2'`
       
       const ffmpegCommand = `ffmpeg -i "${normalizedVideoPath}" -preset veryfast -g 48 -sc_threshold 0 -map 0:v:0 -map 0:a:0? -vf "${scaleFilter}" -c:v libx264 -b:v ${variant.bitrate} -maxrate ${variant.bitrate} -bufsize ${bitrateNum * 2}k -c:a aac -b:a 128k -f hls -hls_time 4 -hls_list_size 0 -hls_segment_filename "${segmentFilename}" "${playlistPath}"`
       
