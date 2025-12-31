@@ -29,7 +29,7 @@ export default async function MyAppPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 p-4 md:pb-4 lg:pb-4">
       <div>
         <h1 className="text-3xl font-bold">My App</h1>
         <p className="text-muted-foreground">

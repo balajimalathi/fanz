@@ -17,6 +17,6 @@ export default async function InboxPage() {
     redirect("/home");
   }
 
-  return <InboxPageClient creatorId={session.user.id} />;
+  return <InboxPageClient creatorId={session.user.id} currentUserId={session.user.id} />;
 }
 

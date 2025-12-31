@@ -61,6 +61,7 @@
     --animate-fade-down: fade-down 0.5s;
     --animate-fade-in: fade-in 0.4s;
     --animate-fade-out: fade-out 0.4s;
+    --animate-typing: typing 1.4s ease-in-out infinite;
 
     @keyframes accordion-down {
         from {
@@ -130,6 +131,17 @@
             opacity: 0.6;
         }
         100% {
+            opacity: 1;
+        }
+    }
+
+    @keyframes typing {
+        0%, 60%, 100% {
+            transform: translateY(0);
+            opacity: 0.4;
+        }
+        30% {
+            transform: translateY(-10px);
             opacity: 1;
         }
     }

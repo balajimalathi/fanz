@@ -377,3 +377,36 @@ export const payoutItem = pgTable("payout_item", {
   amount: integer("amount").notNull(), // Creator amount for this transaction in paise
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const conversation = pgTable("conversation", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  fanId: text("fan_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  lastMessageAt: timestamp("last_message_at"),
+  lastMessagePreview: text("last_message_preview"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueCreatorFan: { unique: { columns: [table.creatorId, table.fanId] } },
+}));
+
+export const chatMessage = pgTable("chat_message", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => conversation.id, { onDelete: "cascade" }),
+  senderId: text("sender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  messageType: messageTypeEnum("message_type").notNull(),
+  content: text("content"),
+  mediaUrl: text("media_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

@@ -208,7 +208,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center pb-20 p-4 md:pb-4 lg:pb-4">
       <div className="max-w-2xl w-full space-y-6 pb-8">
       {posts.map((post) => (
         <FeedPostCard

@@ -41,7 +41,8 @@ export default async function layout({
             <ThemeToggle />
           </div>
         </div>
-        <div className="flex flex-1 flex-col gap-4 p-4 pb-20 md:pb-4 lg:pb-4">
+        <div className="flex flex-1 flex-col gap-4">
+          {/*   pb-20 p-4 md:pb-4 lg:pb-4 */}
           {children}
         </div>
       </SidebarInset>
