@@ -29,8 +29,7 @@ export function PushInit() {
       if (payload.notification) {
         new Notification(payload.notification.title || "New Notification", {
           body: payload.notification.body,
-          icon: payload.notification.icon || "/logo.svg",
-          image: payload.notification.image,
+          icon: payload.notification.icon || "/logo.svg"
         })
       }
     })

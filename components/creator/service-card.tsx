@@ -16,7 +16,7 @@ interface Service {
   name: string
   description: string
   price: number
-  serviceType: "shoutout" | "audio_call" | "video_call"
+  serviceType: "shoutout" | "audio_call" | "video_call" | "chat"
   visible: boolean
   createdAt?: string
   updatedAt?: string
@@ -279,7 +279,7 @@ function ServiceSection({
   const [name, setName] = useState(service.name)
   const [description, setDescription] = useState(service.description)
   const [price, setPrice] = useState(service.price.toString())
-  const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call">(service.serviceType)
+  const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call" | "chat">(service.serviceType)
 
   const handleSave = () => {
     onSave({

@@ -10,11 +10,6 @@ import { join } from "path"
 import { randomUUID } from "crypto"
 import { enqueueVideoProcessing } from "@/lib/queue/video-processing"
 
-// Configure body size limit for large video uploads
-export const config = {
-  maxBodySize: "500mb",
-}
-
 // POST - Upload video file for a post
 export async function POST(
   request: NextRequest,

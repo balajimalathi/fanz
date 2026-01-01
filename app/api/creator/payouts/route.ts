@@ -3,7 +3,7 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { payout } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, desc } from "drizzle-orm"
 import { PayoutService } from "@/lib/payments/payout-service"
 
 export async function GET(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .select()
       .from(payout)
       .where(eq(payout.creatorId, session.user.id))
-      .orderBy((p, { desc }) => [desc(p.createdAt)])
+      .orderBy(desc(payout.createdAt))
 
     const payoutsWithRupees = payouts.map((p) => ({
       id: p.id,

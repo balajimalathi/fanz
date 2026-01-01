@@ -183,6 +183,13 @@
       "when": 1767239239138,
       "tag": "0025_rare_mentor",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1767268804015,
+      "tag": "0026_abandoned_sentinels",
+      "breakpoints": true
     }
   ]
 }
