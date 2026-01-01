@@ -43,6 +43,3 @@ export const CATEGORIES = [
   "Finance",
   "Sports",
 ] as const;
-
-export type Category = typeof CATEGORIES[number];
-

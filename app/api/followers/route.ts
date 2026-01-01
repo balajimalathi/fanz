@@ -5,9 +5,34 @@ import { db } from "@/lib/db/client"
 import { follower, user } from "@/lib/db/schema"
 import { eq, inArray } from "drizzle-orm"
 
-// GET - Fetch followers for a creator
+// GET - Fetch followers for a creator or get follower count
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const creatorId = searchParams.get("creatorId")
+    const countOnly = searchParams.get("count") === "true"
+
+    if (!creatorId) {
+      return NextResponse.json(
+        { error: "creatorId is required" },
+        { status: 400 }
+      )
+    }
+
+    // If count only, return public follower count
+    if (countOnly) {
+      const followers = await db
+        .select()
+        .from(follower)
+        .where(eq(follower.creatorId, creatorId))
+
+      return NextResponse.json({
+        creatorId,
+        followerCount: followers.length,
+      })
+    }
+
+    // Otherwise, require authentication and creator role
     const session = await auth.api.getSession({
       headers: await headers(),
     })
@@ -27,16 +52,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { searchParams } = new URL(request.url)
-    const creatorId = searchParams.get("creatorId")
-
-    if (!creatorId) {
-      return NextResponse.json(
-        { error: "creatorId is required" },
-        { status: 400 }
-      )
-    }
-
     // Verify the creatorId belongs to the authenticated user
     if (creatorId !== session.user.id) {
       return NextResponse.json(
@@ -53,7 +68,10 @@ export async function GET(request: NextRequest) {
     // Fetch user details for each follower
     const followerIds = followers.map((f) => f.followerId)
     const users = followerIds.length > 0
-      ? await db.select().from(user).where(inArray(user.id, followerIds))
+      ? await db
+          .select()
+          .from(user)
+          .where(inArray(user.id, followerIds))
       : []
 
     // Create a map for quick lookup

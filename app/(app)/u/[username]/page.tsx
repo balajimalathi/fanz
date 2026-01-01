@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 import { db } from "@/lib/db/client"
 import { ProfileHeader } from "@/components/creator/profile-header"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { Separator } from "@/components/ui/separator"
+import { FeedSection } from "./_components/feed-section"
+import { PaymentStatusHandler } from "./_components/payment-status-handler"
+import { CreatorPageClient } from "./_components/creator-page-client"
 
 async function getCreatorProfile(username: string) {
   try {
@@ -36,6 +40,7 @@ async function getCreatorProfile(username: string) {
       name: s.name,
       description: s.description,
       price: s.price / 100, // Convert paise to rupees
+      serviceType: s.serviceType,
     }))
 
     const membershipsWithRupees = memberships.map((m) => ({
@@ -82,82 +87,118 @@ export default async function Page({
 
   const { creator, services, memberships } = data
 
+  // Get creator user details for chat window
+  const creatorUser = await db.query.user.findFirst({
+    where: (u, { eq: eqOp }) => eqOp(u.id, creator.id),
+  })
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Profile Header */}
-      <ProfileHeader
-        displayName={creator.displayName}
-        username={creator.username}
-        bio={creator.bio}
-        profileImageUrl={creator.profileImageUrl}
-        profileCoverUrl={creator.profileCoverUrl}
-      />
+    <>
+      <Suspense fallback={null}>
+        <PaymentStatusHandler />
+      </Suspense>
+      <CreatorPageClient
+        creatorId={creator.id}
+        creatorName={creator.displayName}
+        creatorImage={creatorUser?.image || creator.profileImageUrl}
+        username={creator.username ?? ""}
+      >
+        <div className="min-h-screen bg-background">
+          {/* Profile Header */}
+          <ProfileHeader
+            displayName={creator.displayName}
+            username={creator.username ?? "--"}
+            bio={creator.bio}
+            profileImageUrl={creator.profileImageUrl}
+            profileCoverUrl={creator.profileCoverUrl}
+            creatorId={creator.id}
+          />
 
-      {/* Content Sections */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
-        {/* Services Section */}
-        {services.length > 0 && (
-          <section className="mb-12 sm:mb-16">
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
-                Services
-              </h2>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Available services from this creator
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {services.map((service: any) => (
-                <ServiceDisplayCard
-                  key={service.id}
-                  name={service.name}
-                  description={service.description}
-                  price={service.price}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+          {/* Content Sections */}
+          <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
+            {/* Feed Section */}
+            <section className="mb-12 sm:mb-16">
+              <FeedSection
+                username={creator.username ?? ""}
+                creatorId={creator.id}
+                memberships={memberships}
+              />
+            </section>
 
-        {/* Separator between sections if both exist */}
-        {services.length > 0 && memberships.length > 0 && (
-          <Separator className="my-8 sm:my-12" />
-        )}
+            {/* Separator between feed and other sections */}
+            {(services.length > 0 || memberships.length > 0) && (
+              <Separator className="my-8 sm:my-12" />
+            )}
 
-        {/* Memberships Section */}
-        {memberships.length > 0 && (
-          <section>
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
-                Memberships
-              </h2>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Join exclusive memberships to support this creator
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {memberships.map((membership: any) => (
-                <MembershipDisplayCard
-                  key={membership.id}
-                  title={membership.title}
-                  description={membership.description}
-                  monthlyRecurringFee={membership.monthlyRecurringFee}
-                  coverImageUrl={membership.coverImageUrl}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+            {/* Services Section */}
+            {services.length > 0 && (
+              <section className="mb-12 sm:mb-16">
+                <div className="mb-6 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                    Services
+                  </h2>
+                  <p className="text-muted-foreground text-sm sm:text-base">
+                    Available services from this creator
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {services.map((service: any) => (
+                    <ServiceDisplayCard
+                      key={service.id}
+                      id={service.id}
+                      name={service.name}
+                      description={service.description}
+                      price={service.price}
+                      creatorId={creator.id}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* Empty State */}
-        {services.length === 0 && memberships.length === 0 && (
-          <div className="text-center py-12 sm:py-16">
-            <p className="text-muted-foreground text-sm sm:text-base">
-              No services or memberships available yet.
-            </p>
+            {/* Separator between sections if both exist */}
+            {services.length > 0 && memberships.length > 0 && (
+              <Separator className="my-8 sm:my-12" />
+            )}
+
+            {/* Memberships Section */}
+            {memberships.length > 0 && (
+              <section>
+                <div className="mb-6 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                    Memberships
+                  </h2>
+                  <p className="text-muted-foreground text-sm sm:text-base">
+                    Join exclusive memberships to support this creator
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {memberships.map((membership: any) => (
+                    <MembershipDisplayCard
+                      key={membership.id}
+                      id={membership.id}
+                      title={membership.title}
+                      description={membership.description}
+                      monthlyRecurringFee={membership.monthlyRecurringFee}
+                      coverImageUrl={membership.coverImageUrl}
+                      creatorId={creator.id}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Empty State */}
+            {services.length === 0 && memberships.length === 0 && (
+              <div className="text-center py-12 sm:py-16">
+                <p className="text-muted-foreground text-sm sm:text-base">
+                  No services or memberships available yet.
+                </p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </CreatorPageClient>
+    </>
   )
 }

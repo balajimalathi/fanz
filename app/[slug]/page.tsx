@@ -28,7 +28,7 @@ export async function generateMetadata({
   const { title, description } = page;
 
   return constructMetadata({
-    title: `${title} - Chat2Base`,
+    title: `${title} - Falustic`,
     description: description,
   });
 }

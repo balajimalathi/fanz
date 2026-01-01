@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { serviceSchema } from "@/lib/validations/service"
 
@@ -15,6 +16,7 @@ interface Service {
   name: string
   description: string
   price: number
+  serviceType: "shoutout" | "audio_call" | "video_call" | "chat"
   visible: boolean
   createdAt?: string
   updatedAt?: string
@@ -277,12 +279,14 @@ function ServiceSection({
   const [name, setName] = useState(service.name)
   const [description, setDescription] = useState(service.description)
   const [price, setPrice] = useState(service.price.toString())
+  const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call" | "chat">(service.serviceType)
 
   const handleSave = () => {
     onSave({
       name,
       description,
       price: parseFloat(price) || 0,
+      serviceType,
       visible: service.visible,
     })
   }
@@ -322,6 +326,19 @@ function ServiceSection({
               step="0.01"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor={`service-type-${service.id}`}>Service Type</Label>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call") => setServiceType(value)}>
+              <SelectTrigger id={`service-type-${service.id}`}>
+                <SelectValue placeholder="Select service type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="shoutout">Shoutout</SelectItem>
+                <SelectItem value="audio_call">Audio Call</SelectItem>
+                <SelectItem value="video_call">Video Call</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">
               <Button
@@ -360,6 +377,7 @@ function ServiceSection({
                   setName(service.name)
                   setDescription(service.description)
                   setPrice(service.price.toString())
+                  setServiceType(service.serviceType)
                 }}
               >
                 Cancel
@@ -385,6 +403,9 @@ function ServiceSection({
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold">{service.name}</h3>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded capitalize">
+                {service.serviceType.replace("_", " ")}
+              </span>
               {!service.visible && (
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                   Hidden
@@ -435,6 +456,7 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
+  const [serviceType, setServiceType] = useState<"shoutout" | "audio_call" | "video_call" | "chat">("shoutout")
   const [visible, setVisible] = useState(true)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -443,12 +465,14 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
       name,
       description,
       price: parseFloat(price) || 0,
+      serviceType,
       visible,
     })
     // Reset form
     setName("")
     setDescription("")
     setPrice("")
+    setServiceType("shoutout")
     setVisible(true)
   }
 
@@ -489,6 +513,20 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
               step="0.01"
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-service-type">Service Type</Label>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "audio_call" | "video_call" | "chat") => setServiceType(value)}>
+              <SelectTrigger id="new-service-type">
+                <SelectValue placeholder="Select service type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="shoutout">Shoutout</SelectItem>
+                <SelectItem value="audio_call">Audio Call</SelectItem>
+                <SelectItem value="video_call">Video Call</SelectItem>
+                <SelectItem value="chat">Chat</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">

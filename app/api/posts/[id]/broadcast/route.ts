@@ -6,6 +6,7 @@ import { post, follower, notification, creator } from "@/lib/db/schema"
 import { eq, inArray } from "drizzle-orm"
 import { env } from "@/env"
 import { z } from "zod"
+import { sendPushNotificationsToUsers } from "@/lib/push/fcm"
 
 const broadcastSchema = z.object({
   followerIds: z.array(z.string()).min(1, "At least one follower must be selected"),
@@ -104,20 +105,39 @@ export async function POST(
 
     // Create notifications for selected followers
     const postLink = `${env.NEXT_PUBLIC_APP_URL}/u/${creatorRecord.username || creatorRecord.id}/post/${postId}`
+    const notificationTitle = `New post from ${creatorRecord.displayName}`
+    const notificationMessage = creatorRecord.displayName + " has shared a post with you!"
+    
     const notifications = followerIds.map((followerId) => ({
       userId: followerId,
       type: "post",
-      title: `New post from ${creatorRecord.displayName}`,
-      message: creatorRecord.displayName + " has shared a post with you!",
+      title: notificationTitle,
+      message: notificationMessage,
       link: postLink,
       read: false,
     }))
 
     await db.insert(notification).values(notifications)
 
+    // Send push notifications to selected followers
+    const pushResult = await sendPushNotificationsToUsers(followerIds, {
+      title: notificationTitle,
+      body: notificationMessage,
+      icon: creatorRecord.profileImageUrl || undefined,
+      click_action: postLink,
+      data: {
+        type: "post",
+        postId,
+        creatorId: session.user.id,
+        link: postLink,
+      },
+    })
+
     return NextResponse.json({
       success: true,
       notificationsCreated: notifications.length,
+      pushNotificationsSent: pushResult.sent,
+      pushNotificationsFailed: pushResult.failed,
     })
   } catch (error) {
     console.error("Error broadcasting post:", error)

@@ -120,6 +120,90 @@
       "when": 1766591543655,
       "tag": "0016_kind_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1766659740165,
+      "tag": "0017_married_captain_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1766672275206,
+      "tag": "0018_natural_true_believers",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1766804134281,
+      "tag": "0019_tidy_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1766804815490,
+      "tag": "0020_slow_mikhail_rasputin",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1766812254086,
+      "tag": "0021_white_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1767017024748,
+      "tag": "0022_cute_red_wolf",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1767189158584,
+      "tag": "0023_faithful_micromacro",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1767193796098,
+      "tag": "0024_slippery_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1767239239138,
+      "tag": "0025_rare_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1767268804015,
+      "tag": "0026_abandoned_sentinels",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1767274434574,
+      "tag": "0027_wonderful_miracleman",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1767275546792,
+      "tag": "0028_flat_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

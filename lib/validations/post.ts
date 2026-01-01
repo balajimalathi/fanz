@@ -33,7 +33,3 @@ export const uploadMediaSchema = z.object({
       message: "File size must be less than 10MB",
     }),
 })
-
-export type CreatePostInput = z.infer<typeof createPostSchema>
-export type UploadMediaInput = z.infer<typeof uploadMediaSchema>
-

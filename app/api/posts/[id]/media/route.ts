@@ -5,7 +5,7 @@ import { db } from "@/lib/db/client"
 import { post, postMedia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { uploadToR2 } from "@/lib/storage/r2"
-import { generateThumbnail } from "@/lib/utils/image-processing-server"
+import { generateThumbnail, generateBlurThumbnail } from "@/lib/utils/image-processing-server"
 
 // POST - Upload media files for a post
 export async function POST(
@@ -105,12 +105,24 @@ export async function POST(
         // Continue without thumbnail
       }
 
+      // Generate blur thumbnail from the regular thumbnail (or original if thumbnail failed)
+      let blurThumbnailBuffer: Buffer | null = null
+      let blurThumbnailUrl: string | null = null
+      try {
+        const sourceForBlur = thumbnailBuffer || buffer
+        blurThumbnailBuffer = await generateBlurThumbnail(sourceForBlur)
+      } catch (error) {
+        console.error("Error generating blur thumbnail:", error)
+        // Continue without blur thumbnail
+      }
+
       // Generate unique filename
       const timestamp = Date.now()
       const randomStr = Math.random().toString(36).substring(2, 15)
       const extension = file.name.split(".").pop() || "jpg"
       const filename = `${timestamp}-${randomStr}.${extension}`
       const thumbnailFilename = `${timestamp}-${randomStr}-thumb.jpg`
+      const blurThumbnailFilename = `${timestamp}-${randomStr}-blur.jpg`
 
       // Upload full image to R2
       const imageKey = `${session.user.id}/posts/${postId}/${filename}`
@@ -130,6 +142,16 @@ export async function POST(
         })
       }
 
+      // Upload blur thumbnail to R2 if generated
+      if (blurThumbnailBuffer) {
+        const blurThumbnailKey = `${session.user.id}/posts/${postId}/thumbnails/${blurThumbnailFilename}`
+        blurThumbnailUrl = await uploadToR2({
+          file: blurThumbnailBuffer,
+          key: blurThumbnailKey,
+          contentType: "image/jpeg",
+        })
+      }
+
       // Create media record
       const [mediaRecord] = await db
         .insert(postMedia)
@@ -138,6 +160,7 @@ export async function POST(
           mediaType: "image",
           url: imageUrl,
           thumbnailUrl,
+          blurThumbnailUrl,
           metadata: {
             originalName: file.name,
             size: file.size,

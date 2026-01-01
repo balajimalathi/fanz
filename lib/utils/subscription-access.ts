@@ -1,18 +1,37 @@
 import { db } from "@/lib/db/client"
-import { postMembership, subscriptions, customers, user } from "@/lib/db/schema"
+import { postMembership, subscriptions, customers, user, post, postPurchase } from "@/lib/db/schema"
 import { eq, and, gt, or, inArray } from "drizzle-orm"
 
 /**
- * Check if a user has access to a post based on their subscription status
+ * Check if a user has access to a post based on their subscription status or purchase
  * @param userId - The user ID to check
  * @param postId - The post ID to check access for
- * @returns true if user has active subscription to any linked membership, false otherwise
+ * @returns true if user has active subscription to any linked membership or has purchased exclusive post, false otherwise
  */
 export async function hasAccessToPost(
   userId: string,
   postId: string
 ): Promise<boolean> {
   try {
+    // Get the post to check its type
+    const postRecord = await db.query.post.findFirst({
+      where: (p, { eq: eqOp }) => eqOp(p.id, postId),
+    })
+
+    if (!postRecord) {
+      return false
+    }
+
+    // For exclusive posts, check if user has purchased it
+    if (postRecord.postType === "exclusive") {
+      const purchase = await db.query.postPurchase.findFirst({
+        where: (pp, { eq: eqOp, and: andOp }) =>
+          andOp(eqOp(pp.userId, userId), eqOp(pp.postId, postId)),
+      })
+      return !!purchase
+    }
+
+    // For subscription posts, check membership access
     // Get the user's email
     const userRecord = await db.query.user.findFirst({
       where: (u, { eq: eqOp }) => eqOp(u.id, userId),

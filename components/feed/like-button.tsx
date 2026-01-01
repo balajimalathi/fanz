@@ -9,6 +9,7 @@ interface LikeButtonProps {
   postId: string
   initialLiked: boolean
   initialCount: number
+  disabled?: boolean
   onLikeChange?: (liked: boolean, count: number) => void
 }
 
@@ -16,6 +17,7 @@ export function LikeButton({
   postId,
   initialLiked,
   initialCount,
+  disabled = false,
   onLikeChange,
 }: LikeButtonProps) {
   const [liked, setLiked] = useState(initialLiked)
@@ -23,7 +25,7 @@ export function LikeButton({
   const [isLoading, setIsLoading] = useState(false)
 
   const handleLike = async () => {
-    if (isLoading) return
+    if (isLoading || disabled) return
 
     // Optimistic update
     const newLiked = !liked
@@ -61,10 +63,11 @@ export function LikeButton({
       variant="ghost"
       size="sm"
       onClick={handleLike}
-      disabled={isLoading}
+      disabled={isLoading || disabled}
       className={cn(
         "flex items-center gap-2",
-        liked && "text-red-500 hover:text-red-600"
+        liked && "text-red-500 hover:text-red-600",
+        disabled && "opacity-50 cursor-not-allowed"
       )}
     >
       <Heart

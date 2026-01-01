@@ -1,75 +1,71 @@
+"use client";
+
 import { Container } from "@/components/craft";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Check, Zap } from "lucide-react";
-import ImagesReveal from "../animata/images-reveal";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { AnimatedSection, fadeIn } from "./animations";
+import { motion } from "framer-motion";
 
 export const HeroSection = () => {
   return (
-    <section id="hero" className="relative pt-32 pb-20 md:pt-32 md:pb-32">
-      {/* Background gradient */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[128px] opacity-50" />
-
+    <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 min-h-[90vh] flex items-center">
       <Container>
-        <div className="text-center max-w-4xl mx-auto">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
-            <Zap className="w-4 h-4 text-primary" />
-            <span>Now available on Chrome</span>
-          </div>
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Main Headline */}
+          <AnimatedSection variant={fadeIn} className="mb-8">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight mb-6 leading-tight">
+              The platform for{" "}
+              <span className="text-primary">Creators</span>
+              <br />
+              and global audiences
+            </h1>
+          </AnimatedSection>
 
-          {/* Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 font-heading">
-            From AI Assistants <ImagesReveal /> <br />
-            <span className="text-primary bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              to Live Database Records<ImagesReveal type="integration" />
-            </span>{" "}<br />
-            in One Click
-          </h1>
-
-          {/* Tagline */}
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 font-body leading-relaxed">
-            Extract structured data from AI Assistant → Push to Airtable, Google Sheets,
-            Notion, Monday.com & more. No copy-paste. No setup. Just results.
-          </p>
+          {/* Subheading */}
+          <AnimatedSection className="mb-12">
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Monetize your content, connect with fans, and build your creator
+              business on a platform designed for you.
+            </p>
+          </AnimatedSection>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="lg" className="rounded-full px-8 text-base gap-2 group" asChild>
-              <Link href="/#pricing">
-                Start your free trial
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 text-base gap-2" asChild>
-              <Link href="/#demo">
-                <Play className="w-4 h-4" />
-                Watch Demo (2 min)
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-          </div>
+          <AnimatedSection className="mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                className="rounded-lg px-8 py-6 text-base h-auto font-medium"
+                asChild
+              >
+                <Link href="/signup">
+                  Start Creating
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-lg px-8 py-6 text-base h-auto font-medium"
+                asChild
+              >
+                <Link href="/home">
+                  Explore Creators
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+          </AnimatedSection>
 
-          {/* Value Props */}
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              Unlimited exports/month
+          {/* Hero Video/Image Placeholder */}
+          <AnimatedSection variant={fadeIn} className="mt-20">
+            <div className="relative w-full rounded-2xl overflow-hidden border bg-muted/30 aspect-video flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
+              <p className="text-muted-foreground text-lg z-10">
+                Hero Video Placeholder
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              Privacy-first (client-side only)
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              Minimum Setup
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              {`2 Integrations & more on the way`}
-            </div>
-          </div>
+          </AnimatedSection>
         </div>
       </Container>
     </section>

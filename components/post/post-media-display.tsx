@@ -19,12 +19,14 @@ interface PostMediaDisplayProps {
   media: PostMedia[]
   postId: string
   userId: string | null
+  hasAccess?: boolean
 }
 
 export function PostMediaDisplay({
   media,
   postId,
   userId,
+  hasAccess = true,
 }: PostMediaDisplayProps) {
   // Sort media by orderIndex
   const sortedMedia = [...media].sort((a, b) => a.orderIndex - b.orderIndex)
@@ -43,6 +45,7 @@ export function PostMediaDisplay({
             url: img.url,
             blurThumbnailUrl: img.blurThumbnailUrl,
           }))}
+          hasAccess={hasAccess}
         />
       )}
 
@@ -59,6 +62,7 @@ export function PostMediaDisplay({
             metadata: item.metadata,
           }}
           postId={postId}
+          hasAccess={hasAccess}
         />
       ))}
     </div>

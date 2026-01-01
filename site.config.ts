@@ -6,9 +6,9 @@ type SiteConfig = {
 };
 
 export const siteConfig: SiteConfig = {
-  site_name: "Veda",
+  site_name: "Falustic",
   site_description:
-    "AI-powered study workspace for organising materials, mind maps, previous year questions, and quizzes — everything you need to prepare smarter in one place.",
-  site_domain: "https://veda.study",
-  site_ogImage: "https://veda.study/opengraph-image.png",
+    "A creator-first platform for creators and global audiences. Monetize your content with subscriptions, tips, and exclusive content sharing.",
+  site_domain: "https://fancopy.com",
+  site_ogImage: "https://fancopy.com/opengraph-image.png",
 };

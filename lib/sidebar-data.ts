@@ -60,14 +60,14 @@ export const sidebarDataSerializable = {
     },
     {
       title: "Notifications",
-      url: "#",
+      url: "/home/notifications",
       icon: "Bell",
     },
     {
       title: "Inbox",
-      url: "#",
+      url: "/home/inbox",
       icon: "Inbox",
-      badge: "10",
+      // badge: "10",
     },
   ],
 }
@@ -114,12 +114,12 @@ export const sidebarData = {
     },
     {
       title: "Notifications",
-      url: "#",
+      url: "/home/notifications",
       icon: Bell,
     },
     {
       title: "Inbox",
-      url: "#",
+      url: "/home/inbox",
       icon: Inbox,
       badge: "10",
     },
@@ -132,7 +132,7 @@ export const sidebarData = {
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/home/settings",
       icon: Settings2,
     },
     {

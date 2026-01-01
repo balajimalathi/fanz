@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, description, price, visible } = validationResult.data
+    const { name, description, price, serviceType, visible } = validationResult.data
 
     // Convert price from rupees to paise (store in smallest currency unit)
     const priceInPaise = Math.round(price * 100)
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         price: priceInPaise,
+        serviceType,
         visible: visible ?? true,
       })
       .returning()

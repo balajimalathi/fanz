@@ -3,12 +3,27 @@ import type { NextRequest } from "next/server";
 
 /**
  * Extract subdomain from hostname
- * Handles both production (subdomain.example.com) and localhost (subdomain.localhost:3000)
+ * Handles both production (subdomain.example.com), localhost (subdomain.localhost:3000),
+ * and tunnel URLs (subdomain.tunnel-domain.srv.us)
  */
 function extractSubdomain(host: string): string | null {
   // Remove port if present
   const hostWithoutPort = host.split(":")[0];
   const parts = hostWithoutPort.split(".");
+  
+  // Handle tunnel URL: thahryywpiigweqfxmgkq2uc3a.srv.us
+  // Format: subdomain.thahryywpiigweqfxmgkq2uc3a.srv.us
+  if (hostWithoutPort.includes("thahryywpiigweqfxmgkq2uc3a.srv.us")) {
+    // If it's just the tunnel domain without subdomain
+    if (hostWithoutPort === "thahryywpiigweqfxmgkq2uc3a.srv.us") {
+      return null;
+    }
+    // If format is "subdomain.thahryywpiigweqfxmgkq2uc3a.srv.us", extract subdomain
+    if (parts.length >= 4 && parts[parts.length - 3] === "thahryywpiigweqfxmgkq2uc3a") {
+      return parts[0];
+    }
+    return null;
+  }
   
   // Handle localhost cases: subdomain.localhost or subdomain.127.0.0.1
   if (hostWithoutPort.includes("localhost")) {
@@ -77,6 +92,12 @@ export async function middleware(request: NextRequest) {
     url.pathname = rewritePath;
     
     return NextResponse.rewrite(url);
+  }
+
+  // Allow /u/* paths to be public (creator profile pages)
+  // These paths are accessible without authentication
+  if (pathname.startsWith("/u/")) {
+    return NextResponse.next();
   }
 
   // Protect routes starting with /home

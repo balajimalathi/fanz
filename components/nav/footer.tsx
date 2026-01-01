@@ -18,7 +18,7 @@ const Footer = () => {
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src={Logo}
-                alt="Chat2Base"
+                alt="Falustic"
                 className="dark:invert"
                 width={32}
                 height={20}
@@ -74,7 +74,7 @@ const Footer = () => {
         </Container>
         <Container className="border-t not-prose flex flex-col md:flex-row md:gap-2 gap-6 justify-between md:items-center pt-8">
           <p className="text-sm text-muted-foreground">
-            © 2025 Chat2Base. All rights reserved.
+            © 2025 Falustic. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <a

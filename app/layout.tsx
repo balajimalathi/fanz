@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/lib/utils";
 import { Toaster } from "react-hot-toast";
+import { PushInit } from "@/components/push/push-init";
 
 
 
@@ -26,15 +27,15 @@ const baskerville = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Chat2Base - AI Assistant to Database in One Click",
+  title: "Falustic - The platform for creators and global audiences",
   description: siteConfig.site_description,
   metadataBase: new URL(siteConfig.site_domain),
   alternates: {
     canonical: "/",
   },
-  keywords: ["AI Assistant", "data extraction", "Airtable", "Google Sheets", "Notion", "productivity", "browser extension"],
+  keywords: ["Falustic", "platform for creators", "global audiences", "monetize your content", "subscriptions", "tips", "exclusive content sharing"],
   openGraph: {
-    title: "Chat2Base - AI Assistant to Database in One Click",
+    title: "Falustic - The platform for creators and global audiences",
     description: siteConfig.site_description,
     url: siteConfig.site_domain,
     type: "website",
@@ -47,15 +48,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn(gabarito.variable, baskerville.variable)}>
+    <html lang="en" className={cn(gabarito.variable, baskerville.variable)} suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "Chat2Base",
+              name: "Falustic",
               applicationCategory: "Productivity",
               operatingSystem: "Browser Extension",
               offers: {
@@ -65,8 +70,8 @@ export default function RootLayout({
               },
               author: {
                 "@type": "Organization",
-                name: "Chat2Base",
-                url: "https://chat2base.com",
+                name: "Falustic",
+                url: "https://fancopy.com",
               },
             }),
           }}
@@ -81,6 +86,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PushInit />
           {children}
           <Toaster
             position="bottom-center"
