@@ -6,9 +6,10 @@ import { Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ChatInterface } from "@/components/livekit/chat-interface";
 import { Button } from "@/components/ui/button";
-import { Phone, Video } from "lucide-react";
+import { Phone, Video, Radio } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCallState } from "@/components/livekit/call-state-provider";
+import { StartLiveModal } from "@/components/livekit/start-live-modal";
 
 interface Follower {
   id: string;
@@ -43,6 +44,7 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
   const [isLoading, setIsLoading] = useState(true);
   const [conversationMap, setConversationMap] = useState<Map<string, Conversation>>(new Map());
   const { activeCall, setActiveCall, isCalling } = useCallState();
+  const [showStartLiveModal, setShowStartLiveModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -155,8 +157,19 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
       {/* Left sidebar - Followers list */}
       <div className="w-1/3 border-r flex flex-col bg-muted/30 min-w-0">
         <div className="p-4 border-b bg-background shrink-0">
-          <h1 className="text-xl font-bold">Inbox</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-xl font-bold">Inbox</h1>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowStartLiveModal(true)}
+              className="gap-2"
+            >
+              <Radio className="h-4 w-4" />
+              Go Live
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
             {followers.length} {followers.length === 1 ? "follower" : "followers"}
           </p>
         </div>
@@ -405,6 +418,12 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
           </div>
         )}
       </div>
+
+      {/* Start Live Modal */}
+      <StartLiveModal
+        open={showStartLiveModal}
+        onOpenChange={setShowStartLiveModal}
+      />
     </div>
   );
 }

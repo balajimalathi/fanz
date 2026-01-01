@@ -71,13 +71,15 @@ export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
 export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
-export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service"]);
+export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
 export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
 export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
+export const liveStreamTypeEnum = pgEnum("live_stream_type", ["free", "follower_only", "paid"]);
+export const liveStreamStatusEnum = pgEnum("live_stream_status", ["active", "ended"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -431,3 +433,33 @@ export const call = pgTable("call", {
   duration: integer("duration"), // Duration in seconds
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const liveStream = pgTable("live_stream", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  livekitRoomName: text("livekit_room_name").notNull().unique(),
+  streamType: liveStreamTypeEnum("stream_type").notNull(),
+  price: integer("price"), // In paise, nullable (only for paid streams)
+  status: liveStreamStatusEnum("status").notNull().default("active"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const liveStreamPurchase = pgTable("live_stream_purchase", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  liveStreamId: uuid("live_stream_id")
+    .notNull()
+    .references(() => liveStream.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  paymentTransactionId: uuid("payment_transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueUserStream: { unique: { columns: [table.userId, table.liveStreamId] } },
+}));

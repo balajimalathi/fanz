@@ -10,6 +10,8 @@ import { User } from "lucide-react"
 import { useSession } from "@/lib/auth/auth-client"
 import { NotificationPermission } from "@/components/push/notification-permission"
 import { PWAInstallButton } from "@/components/push/pwa-install-button"
+import { LiveIndicator } from "@/components/livekit/live-indicator"
+import { useLiveHandler } from "@/app/(app)/u/[username]/_components/live-handler-context"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -31,6 +33,7 @@ export function ProfileHeader({
   const { data: session } = useSession()
   const [showProfileModal, setShowProfileModal] = useState(false)
   const isAuthenticated = !!session?.user
+  const liveHandler = useLiveHandler()
 
   const initials = displayName
     .split(" ")
@@ -74,13 +77,18 @@ export function ProfileHeader({
         {/* Name and Username */}
         <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-                {displayName}
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                @{username}
-              </p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                  {displayName}
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  @{username}
+                </p>
+              </div>
+              {liveHandler && (
+                <LiveIndicator creatorId={creatorId} onClick={liveHandler.onLiveClick} />
+              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <FollowButton creatorId={creatorId} /> 

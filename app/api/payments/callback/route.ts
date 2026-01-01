@@ -87,6 +87,9 @@ export async function GET(request: NextRequest) {
             } else if (transaction.type === "service") {
               redirectUrl.searchParams.set("serviceId", transaction.entityId);
               redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (transaction.type === "live_stream") {
+              redirectUrl.searchParams.set("streamId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
             }
             return NextResponse.redirect(redirectUrl);
           }

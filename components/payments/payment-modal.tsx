@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation"
 interface PaymentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  type: "membership" | "exclusive_post" | "service"
+  type: "membership" | "exclusive_post" | "service" | "live_stream"
   entityId: string
   amount: number // Amount in rupees
   title: string

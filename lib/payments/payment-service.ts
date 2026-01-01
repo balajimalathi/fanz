@@ -9,6 +9,8 @@ import {
   post,
   service,
   notification,
+  liveStream,
+  liveStreamPurchase,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { GatewayService } from "./gateway/gateway-service";
@@ -16,7 +18,7 @@ import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
 
-export type PaymentType = "membership" | "exclusive_post" | "service";
+export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream";
 
 export interface InitiatePaymentRequest {
   userId: string;
@@ -149,6 +151,48 @@ export class PaymentService {
           amount = serviceRecord.price;
           creatorId = serviceRecord.creatorId;
           orderId = `service_${request.entityId}_${Date.now()}`;
+          break;
+        }
+
+        case "live_stream": {
+          const streamRecord = await db.query.liveStream.findFirst({
+            where: (ls, { eq: eqOp }) => eqOp(ls.id, request.entityId),
+          });
+
+          if (!streamRecord || !streamRecord.price || streamRecord.streamType !== "paid") {
+            return {
+              success: false,
+              error: "Stream not found or not available for purchase",
+            };
+          }
+
+          // Check if user already purchased this stream
+          const existingPurchase = await db.query.liveStreamPurchase.findFirst({
+            where: (lsp, { eq: eqOp, and: andOp }) =>
+              andOp(
+                eqOp(lsp.userId, request.userId),
+                eqOp(lsp.liveStreamId, request.entityId)
+              ),
+          });
+
+          if (existingPurchase) {
+            return {
+              success: false,
+              error: "You have already purchased access to this stream",
+            };
+          }
+
+          // Check if stream is active
+          if (streamRecord.status !== "active") {
+            return {
+              success: false,
+              error: "Stream is not active",
+            };
+          }
+
+          amount = streamRecord.price;
+          creatorId = streamRecord.creatorId;
+          orderId = `live_stream_${request.entityId}_${Date.now()}`;
           break;
         }
 
@@ -439,6 +483,35 @@ export class PaymentService {
             title: "New Service Order",
             message: `${user?.name || "A user"} ordered your service: ${serviceRecord.name}`,
             link: `/home/orders`,
+          });
+        }
+        break;
+      }
+
+      case "live_stream": {
+        // Create live stream purchase record
+        await db.insert(liveStreamPurchase).values({
+          userId: transaction.userId,
+          liveStreamId: transaction.entityId,
+          paymentTransactionId: transaction.id,
+        });
+
+        // Send notification to creator
+        const streamRecord = await db.query.liveStream.findFirst({
+          where: (ls, { eq: eqOp }) => eqOp(ls.id, transaction.entityId),
+        });
+
+        if (streamRecord) {
+          const user = await db.query.user.findFirst({
+            where: (u, { eq: eqOp }) => eqOp(u.id, transaction.userId),
+          });
+
+          await db.insert(notification).values({
+            userId: transaction.creatorId,
+            type: "live_stream_purchase",
+            title: "Live Stream Purchase",
+            message: `${user?.name || "A user"} purchased access to your live stream`,
+            link: `/home/live`,
           });
         }
         break;

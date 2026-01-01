@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useSession } from "@/lib/auth/auth-client";
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper";
+import { LiveViewerModal } from "@/components/livekit/live-viewer-modal";
+import { LiveHandlerProvider } from "./live-handler-context";
 
 interface CreatorPageClientProps {
   creatorId: string;
@@ -23,14 +25,26 @@ export function CreatorPageClient({
   children,
 }: CreatorPageClientProps) {
   const [showChat, setShowChat] = useState(false);
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [liveStreamData, setLiveStreamData] = useState<{
+    streamId: string;
+    streamType: "free" | "follower_only" | "paid";
+    price?: number | null;
+  } | null>(null);
   const { data: session } = useSession();
 
   // Don't show chat button if user is the creator themselves
   const isCreator = session?.user?.id === creatorId;
 
+  const handleLiveClick = (streamId: string, streamType: "free" | "follower_only" | "paid", price?: number | null) => {
+    setLiveStreamData({ streamId, streamType, price });
+    setShowLiveModal(true);
+  };
+
   return (
-    <CallGlobalWrapper>
-      {children}
+    <LiveHandlerProvider onLiveClick={handleLiveClick}>
+      <CallGlobalWrapper>
+        {children}
       
       {/* Floating Chat Button */}
       {!isCreator && (
@@ -55,7 +69,20 @@ export function CreatorPageClient({
           onClose={() => setShowChat(false)}
         />
       )}
-    </CallGlobalWrapper>
+
+      {/* Live Viewer Modal */}
+      {showLiveModal && liveStreamData && (
+        <LiveViewerModal
+          open={showLiveModal}
+          onOpenChange={setShowLiveModal}
+          streamId={liveStreamData.streamId}
+          creatorId={creatorId}
+          streamType={liveStreamData.streamType}
+          price={liveStreamData.price}
+        />
+      )}
+      </CallGlobalWrapper>
+    </LiveHandlerProvider>
   );
 }
 

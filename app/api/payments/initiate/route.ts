@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["membership", "exclusive_post", "service"].includes(type)) {
+    if (!["membership", "exclusive_post", "service", "live_stream"].includes(type)) {
       return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
     }
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     const result = await PaymentService.initiatePayment({
       userId: session.user.id,
-      type: type as "membership" | "exclusive_post" | "service",
+      type: type as "membership" | "exclusive_post" | "service" | "live_stream",
       entityId,
       returnUrl,
       duration,
