@@ -8,7 +8,7 @@ export const FeaturesSection = () => {
         <div className="text-center mb-16">
           <p className="text-primary font-medium mb-4 uppercase tracking-wider text-sm">Features</p>
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 font-heading">
-            Why Chat2Base Wins
+            Why Falustic Wins
           </h2>
         </div>
 

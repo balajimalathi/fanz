@@ -64,7 +64,7 @@ export const features = [
   {
     icon: Zap,
     title: "Speed",
-    description: "Copy-paste: 15-20 min. Chat2Base: 10 seconds. Save 2-3 hours per week.",
+    description: "Copy-paste: 15-20 min. Falustic: 10 seconds. Save 2-3 hours per week.",
   },
   {
     icon: Link2,

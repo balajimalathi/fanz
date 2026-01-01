@@ -22,11 +22,11 @@ export const CTASection = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button size="lg" variant="secondary" className="cursor-pointer rounded-full px-8 text-base gap-2 group" onClick={() => window.open("https://insigh.to/b/chat2base", "_blank")}>
+              <Button size="lg" variant="secondary" className="cursor-pointer rounded-full px-8 text-base gap-2 group" onClick={() => window.open("https://insigh.to/b/fancopy", "_blank")}>
                 🚀 Start exporting today
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button size="lg" variant="default" className="cursor-pointer border border-muted-foreground rounded-full px-8 text-base gap-2 group" onClick={() => window.open("https://insigh.to/b/chat2base", "_blank")}>
+              <Button size="lg" variant="default" className="cursor-pointer border border-muted-foreground rounded-full px-8 text-base gap-2 group" onClick={() => window.open("https://insigh.to/b/fancopy", "_blank")}>
                 💬 You have suggestions?
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>

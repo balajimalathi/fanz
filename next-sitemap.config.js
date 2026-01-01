@@ -1,4 +1,4 @@
 module.exports = {
-  siteUrl: 'https://chat2base.com',
+  siteUrl: 'https://fancopy.com',
   generateRobotsTxt: true,
 }
