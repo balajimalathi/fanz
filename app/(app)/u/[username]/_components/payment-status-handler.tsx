@@ -13,6 +13,7 @@ export function PaymentStatusHandler() {
     const status = searchParams.get("status")
     const membershipId = searchParams.get("membershipId")
     const serviceId = searchParams.get("serviceId")
+    const postId = searchParams.get("postId")
     const duration = searchParams.get("duration")
 
     if (status === "success") {
@@ -59,6 +60,25 @@ export function PaymentStatusHandler() {
             icon: null,
           }
         )
+      } else if (postId) {
+        // Exclusive post payment success
+        toast.success(
+          (t) => (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <div>
+                <p className="font-semibold">Payment Successful!</p>
+                <p className="text-sm text-muted-foreground">
+                  You now have access to this exclusive post
+                </p>
+              </div>
+            </div>
+          ),
+          {
+            duration: 5000,
+            icon: null,
+          }
+        )
       } else {
         // Generic success (fallback)
         toast.success(
@@ -82,6 +102,7 @@ export function PaymentStatusHandler() {
       url.searchParams.delete("status")
       url.searchParams.delete("membershipId")
       url.searchParams.delete("serviceId")
+      url.searchParams.delete("postId")
       url.searchParams.delete("duration")
       url.searchParams.delete("transactionId")
       router.replace(url.pathname + url.search, { scroll: false })
@@ -109,6 +130,7 @@ export function PaymentStatusHandler() {
       url.searchParams.delete("status")
       url.searchParams.delete("membershipId")
       url.searchParams.delete("serviceId")
+      url.searchParams.delete("postId")
       url.searchParams.delete("duration")
       url.searchParams.delete("transactionId")
       router.replace(url.pathname + url.search, { scroll: false })

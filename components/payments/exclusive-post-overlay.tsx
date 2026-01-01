@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PaymentModal } from "./payment-modal"
@@ -19,6 +20,7 @@ export function ExclusivePostOverlay({
   onPurchaseComplete,
 }: ExclusivePostOverlayProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const pathname = usePathname()
 
   return (
     <>
@@ -50,6 +52,7 @@ export function ExclusivePostOverlay({
         amount={price}
         title="Purchase Exclusive Post"
         description="Unlock this exclusive content by purchasing it"
+        originUrl={pathname || undefined}
         onSuccess={() => {
           setShowPaymentModal(false)
           onPurchaseComplete?.()

@@ -4,8 +4,9 @@ import {
   payoutItem,
   paymentTransaction,
   creator,
+  user,
 } from "@/lib/db/schema"
-import { eq, and, gte, lte, and as andOp } from "drizzle-orm"
+import { eq, and, gte, lte, desc, inArray } from "drizzle-orm"
 
 export interface CreatePayoutRequest {
   creatorId: string
@@ -232,6 +233,126 @@ export class PayoutService {
     } catch (error) {
       console.error("Error updating bank details:", error)
       return false
+    }
+  }
+
+  /**
+   * Request a payout for all pending transactions
+   * Creates a payout from the last completed payout date (or account creation) to now
+   */
+  static async requestPayout(creatorId: string): Promise<PayoutResult> {
+    try {
+      // Get last completed payout to determine period start
+      const lastCompletedPayout = await db
+        .select()
+        .from(payout)
+        .where(
+          and(
+            eq(payout.creatorId, creatorId),
+            eq(payout.status, "completed")
+          )
+        )
+        .orderBy(desc(payout.processedAt))
+        .limit(1)
+
+      // Get user creation date as fallback
+      const userRecord = await db.query.user.findFirst({
+        where: (u, { eq: eqOp }) => eqOp(u.id, creatorId),
+      })
+
+      const periodStart = lastCompletedPayout.length > 0
+        ? lastCompletedPayout[0].periodEnd
+        : userRecord?.createdAt || new Date()
+
+      const periodEnd = new Date()
+
+      // Get all completed transactions in this period
+      const allCompletedTransactions = await db
+        .select()
+        .from(paymentTransaction)
+        .where(
+          and(
+            eq(paymentTransaction.creatorId, creatorId),
+            eq(paymentTransaction.status, "completed"),
+            gte(paymentTransaction.createdAt, periodStart),
+            lte(paymentTransaction.createdAt, periodEnd)
+          )
+        )
+
+      // Get all transactions already in pending/processing payouts
+      const pendingPayouts = await db
+        .select()
+        .from(payout)
+        .where(
+          and(
+            eq(payout.creatorId, creatorId),
+            inArray(payout.status, ["pending", "processing"])
+          )
+        )
+
+      const pendingPayoutIds = pendingPayouts.map((p) => p.id)
+      const usedTransactionIds = new Set<string>()
+
+      if (pendingPayoutIds.length > 0) {
+        for (const payoutId of pendingPayoutIds) {
+          const items = await db
+            .select()
+            .from(payoutItem)
+            .where(eq(payoutItem.payoutId, payoutId))
+          items.forEach((item) => usedTransactionIds.add(item.transactionId))
+        }
+      }
+
+      // Filter out transactions already in pending/processing payouts
+      const availableTransactions = allCompletedTransactions.filter(
+        (t) => !usedTransactionIds.has(t.id)
+      )
+
+      if (availableTransactions.length === 0) {
+        return {
+          success: false,
+          error: "No available transactions to include in payout",
+        }
+      }
+
+      // Calculate totals
+      const totalAmount = availableTransactions.reduce((sum, t) => sum + t.amount, 0)
+      const totalPlatformFee = availableTransactions.reduce((sum, t) => sum + t.platformFee, 0)
+      const netAmount = availableTransactions.reduce((sum, t) => sum + t.creatorAmount, 0)
+
+      // Create payout record
+      const [newPayout] = await db
+        .insert(payout)
+        .values({
+          creatorId,
+          periodStart,
+          periodEnd,
+          totalAmount,
+          platformFee: totalPlatformFee,
+          netAmount,
+          status: "pending",
+        })
+        .returning()
+
+      // Create payout items
+      await db.insert(payoutItem).values(
+        availableTransactions.map((t) => ({
+          payoutId: newPayout.id,
+          transactionId: t.id,
+          amount: t.creatorAmount,
+        }))
+      )
+
+      return {
+        success: true,
+        payoutId: newPayout.id,
+      }
+    } catch (error) {
+      console.error("Error requesting payout:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to request payout",
+      }
     }
   }
 }

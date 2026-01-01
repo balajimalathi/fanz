@@ -30,7 +30,3 @@ export const updateMembershipSchema = membershipSchema.partial().extend({
   id: z.string().uuid("Invalid membership ID"),
 })
 
-export type MembershipInput = z.infer<typeof membershipSchema>
-export type CreateMembershipInput = z.infer<typeof createMembershipSchema>
-export type UpdateMembershipInput = z.infer<typeof updateMembershipSchema>
-

@@ -109,6 +109,10 @@ export const creator = pgTable("creator", {
     accountType?: "savings" | "current";
     verified?: boolean;
   }>(),
+  payoutSettings: jsonb("payout_settings").$type<{
+    minimumThreshold?: number;
+    automaticPayout?: boolean;
+  }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -280,6 +284,19 @@ export const notificationPreference = pgTable("notification_preference", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const notificationChannelPreference = pgTable("notification_channel_preference", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  channel: text("channel").notNull(), // 'payout', 'follow', 'comment', 'message', 'security', 'platform'
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueUserChannel: { unique: { columns: [table.userId, table.channel] } },
+}));
 
 export const broadcastMessage = pgTable("broadcast_message", {
   id: uuid("id").primaryKey().defaultRandom(),

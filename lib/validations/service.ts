@@ -25,7 +25,3 @@ export const updateServiceSchema = serviceSchema.partial().extend({
   id: z.string().uuid("Invalid service ID"),
 })
 
-export type ServiceInput = z.infer<typeof serviceSchema>
-export type CreateServiceInput = z.infer<typeof createServiceSchema>
-export type UpdateServiceInput = z.infer<typeof updateServiceSchema>
-

@@ -132,7 +132,7 @@ export const sidebarData = {
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/home/settings",
       icon: Settings2,
     },
     {
