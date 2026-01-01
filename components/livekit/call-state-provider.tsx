@@ -325,7 +325,13 @@ export function CallStateProvider({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to end call");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[CallStateProvider] Failed to end call", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
+        throw new Error(errorData.error || "Failed to end call");
       }
 
       // Clear active call immediately

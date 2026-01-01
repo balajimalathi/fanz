@@ -46,7 +46,8 @@ export async function POST(
     }
 
     // Check if call is in a valid state to be ended
-    if (callRecord.status !== "accepted" && callRecord.status !== "ringing") {
+    // Allow ending calls in initiated, ringing, or accepted status
+    if (callRecord.status !== "accepted" && callRecord.status !== "ringing" && callRecord.status !== "initiated") {
       return NextResponse.json(
         { error: `Call cannot be ended. Current status: ${callRecord.status}` },
         { status: 400 }
