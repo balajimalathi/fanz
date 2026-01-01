@@ -5,6 +5,7 @@ import { CreatorChatWindow } from "./creator-chat-window";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useSession } from "@/lib/auth/auth-client";
+import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper";
 
 interface CreatorPageClientProps {
   creatorId: string;
@@ -28,7 +29,7 @@ export function CreatorPageClient({
   const isCreator = session?.user?.id === creatorId;
 
   return (
-    <>
+    <CallGlobalWrapper>
       {children}
       
       {/* Floating Chat Button */}
@@ -54,7 +55,7 @@ export function CreatorPageClient({
           onClose={() => setShowChat(false)}
         />
       )}
-    </>
+    </CallGlobalWrapper>
   );
 }
 

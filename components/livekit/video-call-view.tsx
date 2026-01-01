@@ -1,77 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Room, Track, RemoteParticipant, LocalTrackPublication } from "livekit-client";
-import { useRoom } from "./room-provider";
-import { VideoTrack } from "./video-track";
-import { AudioTrack } from "./audio-track";
+import { useEffect, useRef } from "react";
+import { useRoomContext, useLocalParticipant, useRemoteParticipants, RoomAudioRenderer } from "@livekit/components-react";
+import { Track } from "livekit-client";
 
 export function VideoCallView() {
-  const { room, isConnected } = useRoom();
-  const [remoteVideoTracks, setRemoteVideoTracks] = useState<Track[]>([]);
-  const [remoteAudioTracks, setRemoteAudioTracks] = useState<Track[]>([]);
-  const [localVideoTrack, setLocalVideoTrack] = useState<Track | null>(null);
-  const [localAudioTrack, setLocalAudioTrack] = useState<Track | null>(null);
+  const room = useRoomContext();
+  const { localParticipant } = useLocalParticipant();
+  const remoteParticipants = useRemoteParticipants();
+  
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
+  // Handle local video track
   useEffect(() => {
-    if (!room || !isConnected) return;
+    if (!localParticipant || !localVideoRef.current) return;
 
-    const updateTracks = () => {
-      // Get local participant tracks
-      const localVideoPub = Array.from(room.localParticipant.videoTrackPublications.values())[0];
-      const localAudioPub = Array.from(room.localParticipant.audioTrackPublications.values())[0];
-      
-      if (localVideoPub?.track) {
-        setLocalVideoTrack(localVideoPub.track);
+    const videoPub = Array.from(localParticipant.videoTrackPublications.values())[0];
+    const videoTrack = videoPub?.track;
+    
+    if (videoTrack) {
+      videoTrack.attach(localVideoRef.current);
+      return () => {
+        if (localVideoRef.current) {
+          videoTrack.detach(localVideoRef.current);
+        }
+      };
+    }
+  }, [localParticipant]);
+
+  // Handle remote video track
+  useEffect(() => {
+    if (remoteParticipants.length === 0 || !remoteVideoRef.current) return;
+
+    const remoteParticipant = remoteParticipants[0];
+    const videoPub = Array.from(remoteParticipant.videoTrackPublications.values())[0];
+    const videoTrack = videoPub?.track;
+    
+    if (videoTrack) {
+      // Ensure track is subscribed
+      if (videoPub && !videoPub.isSubscribed) {
+        videoPub.setSubscribed(true);
       }
-      if (localAudioPub?.track) {
-        setLocalAudioTrack(localAudioPub.track);
-      }
-
-      // Get remote participant tracks
-      const videoTracks: Track[] = [];
-      const audioTracks: Track[] = [];
       
-      room.remoteParticipants.forEach((participant: RemoteParticipant) => {
-        participant.videoTrackPublications.forEach((pub) => {
-          if (pub.track) {
-            videoTracks.push(pub.track);
-          }
-        });
-        participant.audioTrackPublications.forEach((pub) => {
-          if (pub.track) {
-            audioTracks.push(pub.track);
-          }
-        });
-      });
-      
-      setRemoteVideoTracks(videoTracks);
-      setRemoteAudioTracks(audioTracks);
-    };
+      videoTrack.attach(remoteVideoRef.current);
+      return () => {
+        if (remoteVideoRef.current) {
+          videoTrack.detach(remoteVideoRef.current);
+        }
+      };
+    }
+  }, [remoteParticipants]);
 
-    // Initial update
-    updateTracks();
-
-    // Subscribe to track events using room event system
-    const handleTrackSubscribed = () => updateTracks();
-    const handleTrackUnsubscribed = () => updateTracks();
-    const handleParticipantConnected = () => updateTracks();
-    const handleParticipantDisconnected = () => updateTracks();
-
-    room.on("trackSubscribed", handleTrackSubscribed);
-    room.on("trackUnsubscribed", handleTrackUnsubscribed);
-    room.on("participantConnected", handleParticipantConnected);
-    room.on("participantDisconnected", handleParticipantDisconnected);
-
-    return () => {
-      room.off("trackSubscribed", handleTrackSubscribed);
-      room.off("trackUnsubscribed", handleTrackUnsubscribed);
-      room.off("participantConnected", handleParticipantConnected);
-      room.off("participantDisconnected", handleParticipantDisconnected);
-    };
-  }, [room, isConnected]);
-
-  if (!isConnected || !room) {
+  if (!room || room.state !== "connected") {
     return (
       <div className="flex items-center justify-center h-full bg-black text-white">
         Connecting...
@@ -79,16 +60,20 @@ export function VideoCallView() {
     );
   }
 
+  const hasRemoteVideo = remoteParticipants.length > 0 && 
+    Array.from(remoteParticipants[0].videoTrackPublications.values())[0]?.track;
+
   return (
     <div className="h-full bg-black relative">
-      {/* Remote video tracks */}
-      {remoteVideoTracks.length > 0 ? (
+      {/* Remote video track */}
+      {hasRemoteVideo ? (
         <div className="h-full w-full">
-          {remoteVideoTracks.map((track, index) => (
-            <div key={index} className="absolute inset-0">
-              <VideoTrack track={track} className="w-full h-full object-cover" />
-            </div>
-          ))}
+          <video
+            ref={remoteVideoRef}
+            className="w-full h-full object-cover"
+            autoPlay
+            playsInline
+          />
         </div>
       ) : (
         <div className="flex items-center justify-center h-full text-white">
@@ -97,17 +82,20 @@ export function VideoCallView() {
       )}
 
       {/* Local video (small preview in corner) */}
-      {localVideoTrack && (
+      {localParticipant && Array.from(localParticipant.videoTrackPublications.values())[0]?.track && (
         <div className="absolute bottom-4 right-4 w-48 h-36 rounded-lg overflow-hidden border-2 border-white bg-black">
-          <VideoTrack track={localVideoTrack} className="w-full h-full object-cover" />
+          <video
+            ref={localVideoRef}
+            className="w-full h-full object-cover"
+            autoPlay
+            playsInline
+            muted
+          />
         </div>
       )}
 
-      {/* Audio tracks (hidden) */}
-      {localAudioTrack && <AudioTrack track={localAudioTrack} />}
-      {remoteAudioTracks.map((track, index) => (
-        <AudioTrack key={index} track={track} />
-      ))}
+      {/* Audio tracks rendered automatically by RoomAudioRenderer */}
+      <RoomAudioRenderer />
     </div>
   );
 }

@@ -86,6 +86,20 @@ const nextConfig: NextConfig = {
       mediaSrc.push(`https://${r2Hostname}`);
     }
 
+    // Add LiveKit support - allow HTTPS and WebSocket connections to LiveKit
+    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    if (livekitUrl) {
+      try {
+        const url = new URL(livekitUrl);
+        // Add HTTPS connection
+        connectSrc.push(`https://${url.host}`);
+        // Add WebSocket support (LiveKit uses wss://)
+        connectSrc.push(`wss://${url.host}`);
+      } catch (e) {
+        // Invalid URL, skip
+      }
+    }
+
     // Add WebSocket support - allow ws:// and wss:// connections to the same origin
     // For tunnel URLs, we need to allow both ws and wss to the tunnel domain
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL;

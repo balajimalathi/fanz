@@ -191,3 +191,81 @@ export async function unsubscribeFromTypingEvents(
   }
 }
 
+export interface CallEvent {
+  type: "incoming_call" | "call_accepted" | "call_rejected" | "call_ended" | "call_missed";
+  callId: string;
+  conversationId?: string;
+  callerId: string;
+  receiverId: string;
+  callType: "audio" | "video";
+  status: string;
+  timestamp: number;
+}
+
+/**
+ * Publish a call event to Redis
+ * @param userId - The user ID to publish the event for (for user-specific channels)
+ * @param event - The call event object to publish
+ */
+export async function publishCallEvent(
+  userId: string,
+  event: CallEvent
+): Promise<void> {
+  try {
+    const publisher = getPublisherClient();
+    const channel = `call:${userId}`;
+    await publisher.publish(channel, JSON.stringify(event));
+  } catch (error) {
+    console.error("Error publishing call event to Redis:", error);
+    // Don't throw - graceful degradation
+  }
+}
+
+/**
+ * Subscribe to call events for a user
+ * @param subscriber - Redis subscriber client
+ * @param userId - The user ID to subscribe to call events for
+ * @param callback - Callback function to handle received call events
+ */
+export async function subscribeToCallEvents(
+  subscriber: Redis,
+  userId: string,
+  callback: (event: CallEvent) => void
+): Promise<void> {
+  try {
+    const channel = `call:${userId}`;
+    await subscriber.subscribe(channel);
+    
+    subscriber.on("message", (receivedChannel, message) => {
+      if (receivedChannel === channel) {
+        try {
+          const parsedEvent = JSON.parse(message) as CallEvent;
+          callback(parsedEvent);
+        } catch (error) {
+          console.error("Error parsing Redis call event:", error);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error subscribing to call events:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unsubscribe from call events for a user
+ * @param subscriber - Redis subscriber client
+ * @param userId - The user ID to unsubscribe from
+ */
+export async function unsubscribeFromCallEvents(
+  subscriber: Redis,
+  userId: string
+): Promise<void> {
+  try {
+    const channel = `call:${userId}`;
+    await subscriber.unsubscribe(channel);
+  } catch (error) {
+    console.error("Error unsubscribing from call events:", error);
+  }
+}
+

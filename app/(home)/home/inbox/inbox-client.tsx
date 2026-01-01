@@ -8,6 +8,7 @@ import { ChatInterface } from "@/components/livekit/chat-interface";
 import { Button } from "@/components/ui/button";
 import { Phone, Video } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCallState } from "@/components/livekit/call-state-provider";
 
 interface Follower {
   id: string;
@@ -41,6 +42,7 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
   const [selectedFollower, setSelectedFollower] = useState<Follower | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [conversationMap, setConversationMap] = useState<Map<string, Conversation>>(new Map());
+  const { activeCall, setActiveCall, isCalling } = useCallState();
 
   useEffect(() => {
     fetchData();
@@ -234,10 +236,75 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    // TODO: Start audio call
-                    console.log("Audio call clicked");
+                  onClick={async () => {
+                    if (!selectedConversationId || !selectedConversation) {
+                      console.log("[Inbox Client] Cannot initiate call - missing conversation", {
+                        selectedConversationId,
+                        selectedConversation: !!selectedConversation,
+                      });
+                      return;
+                    }
+                    
+                    console.log("[Inbox Client] Initiating call", {
+                      conversationId: selectedConversationId,
+                      callType: "audio",
+                    });
+
+                    try {
+                      const response = await fetch("/api/calls/initiate", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          conversationId: selectedConversationId,
+                          callType: "audio",
+                        }),
+                      });
+
+                      console.log("[Inbox Client] Call initiate response", {
+                        ok: response.ok,
+                        status: response.status,
+                        statusText: response.statusText,
+                      });
+
+                      if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error("[Inbox Client] Failed to initiate call", {
+                          status: response.status,
+                          error: errorData,
+                        });
+                        throw new Error(errorData.error || "Failed to initiate call");
+                      }
+
+                      const data = await response.json();
+                      console.log("[Inbox Client] Call initiated successfully", {
+                        callId: data.call.id,
+                        roomName: data.roomName,
+                        tokenType: typeof data.token,
+                        isString: typeof data.token === "string",
+                      });
+                      
+                      // Ensure token is a string
+                      const tokenString = typeof data.token === "string" ? data.token : String(data.token);
+                      
+                      // Set active call for caller (they join immediately)
+                      setActiveCall({
+                        callId: data.call.id,
+                        conversationId: data.call.conversationId,
+                        otherParticipantId: selectedConversation.otherUserId,
+                        otherParticipantName: selectedConversation.otherUserName,
+                        otherParticipantImage: selectedConversation.otherUserImage,
+                        callType: "audio",
+                        token: tokenString,
+                        url: data.url,
+                        roomName: data.roomName,
+                      });
+                    } catch (error) {
+                      console.error("[Inbox Client] Error initiating call:", error);
+                    }
                   }}
+                  disabled={isCalling || !!activeCall}
                 >
                   <Phone className="h-4 w-4" />
                 </Button>
@@ -248,13 +315,14 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
                     // TODO: Start video call
                     console.log("Video call clicked");
                   }}
+                  disabled={isCalling || !!activeCall}
                 >
                   <Video className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Chat interface - Takes remaining space, input is sticky at bottom */}
+            {/* Chat interface - call view is handled globally by ActiveCallView */}
             <div className="flex-1 min-h-0 overflow-hidden">
               <ChatInterface
                 conversationId={selectedConversationId}

@@ -1,35 +1,43 @@
 "use client";
 
-"use client";
-
-import { ReactNode, useEffect, useState, createContext, useContext } from "react";
-import { Room, RoomEvent, RemoteParticipant } from "livekit-client";
-
-interface RoomContextType {
-  room: Room | null;
-  isConnected: boolean;
-  error: Error | null;
-}
-
-const RoomContext = createContext<RoomContextType>({
-  room: null,
-  isConnected: false,
-  error: null,
-});
-
-export function useRoom() {
-  return useContext(RoomContext);
-}
+import React, { ReactNode, useEffect } from "react";
+import { LiveKitRoom, useRoomContext } from "@livekit/components-react";
 
 interface RoomProviderProps {
   children: ReactNode;
   token: string;
   url: string;
   roomName: string;
-  onConnected?: (room: Room) => void;
+  onConnected?: (room: any) => void;
   onDisconnected?: () => void;
-  onParticipantConnected?: (participant: RemoteParticipant) => void;
-  onParticipantDisconnected?: (participant: RemoteParticipant) => void;
+  onParticipantConnected?: (participant: any) => void;
+  onParticipantDisconnected?: (participant: any) => void;
+}
+
+// Internal component to handle onConnected with room access
+function RoomProviderContent({
+  children,
+  onConnected,
+}: {
+  children: ReactNode;
+  onConnected?: (room: any) => void;
+}) {
+  const room = useRoomContext();
+  const hasCalledRef = React.useRef(false);
+  
+  useEffect(() => {
+    // Call onConnected when room is connected (only once)
+    if (room && room.state === "connected" && onConnected && !hasCalledRef.current) {
+      hasCalledRef.current = true;
+      onConnected(room);
+    }
+    // Reset when room disconnects
+    if (room && room.state === "disconnected") {
+      hasCalledRef.current = false;
+    }
+  }, [room, onConnected]);
+
+  return <>{children}</>;
 }
 
 export function RoomProvider({
@@ -42,63 +50,24 @@ export function RoomProvider({
   onParticipantConnected,
   onParticipantDisconnected,
 }: RoomProviderProps) {
-  const [room, setRoom] = useState<Room | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    if (!token || !url || !roomName) {
-      return;
-    }
-
-    const connectRoom = async () => {
-      try {
-        const newRoom = new Room();
-        
-        // Set up event listeners
-        newRoom.on(RoomEvent.Connected, () => {
-          setIsConnected(true);
-          onConnected?.(newRoom);
-        });
-
-        newRoom.on(RoomEvent.Disconnected, () => {
-          setIsConnected(false);
-          onDisconnected?.();
-        });
-
-        newRoom.on(RoomEvent.ParticipantConnected, (participant) => {
-          if (participant instanceof RemoteParticipant) {
-            onParticipantConnected?.(participant);
-          }
-        });
-
-        newRoom.on(RoomEvent.ParticipantDisconnected, (participant) => {
-          if (participant instanceof RemoteParticipant) {
-            onParticipantDisconnected?.(participant);
-          }
-        });
-
-        // Connect to room
-        await newRoom.connect(url, token);
-        setRoom(newRoom);
-      } catch (err) {
-        console.error("Error connecting to room:", err);
-        setError(err as Error);
-      }
-    };
-
-    connectRoom();
-
-    return () => {
-      if (room) {
-        room.disconnect();
-      }
-    };
-  }, [token, url, roomName]);
+  // Ensure token is a string
+  const tokenString = typeof token === "string" ? token : String(token);
 
   return (
-    <RoomContext.Provider value={{ room, isConnected, error }}>
-      {children}
-    </RoomContext.Provider>
+    <LiveKitRoom
+      serverUrl={url}
+      token={tokenString}
+      connect={true}
+      audio={true}
+      video={true}
+      onDisconnected={onDisconnected}
+    >
+      <RoomProviderContent onConnected={onConnected}>
+        {children}
+      </RoomProviderContent>
+    </LiveKitRoom>
   );
 }
+
+// Export useRoomContext hook from @livekit/components-react for backward compatibility
+export { useRoomContext as useRoom } from "@livekit/components-react";

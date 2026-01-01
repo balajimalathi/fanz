@@ -76,6 +76,8 @@ export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status",
 export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
+export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
+export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -408,5 +410,24 @@ export const chatMessage = pgTable("chat_message", {
   mediaUrl: text("media_url"),
   thumbnailUrl: text("thumbnail_url"),
   readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const call = pgTable("call", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id")
+    .references(() => conversation.id, { onDelete: "set null" }),
+  callerId: text("caller_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  receiverId: text("receiver_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  callType: callTypeEnum("call_type").notNull(),
+  status: callStatusEnum("status").notNull(),
+  livekitRoomName: text("livekit_room_name"),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  duration: integer("duration"), // Duration in seconds
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

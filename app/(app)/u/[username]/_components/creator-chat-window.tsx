@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RoomProvider } from "@/components/livekit/room-provider";
 import { ChatInterface } from "@/components/livekit/chat-interface";
-import { CallControls } from "@/components/livekit/call-controls";
-import { VideoCallView } from "@/components/livekit/video-call-view";
+import { useCallState } from "@/components/livekit/call-state-provider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Phone, Video, ArrowLeft, X } from "lucide-react";
@@ -28,12 +26,10 @@ export function CreatorChatWindow({
 }: CreatorChatWindowProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const { activeCall, setActiveCall } = useCallState();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
-  const [isInCall, setIsInCall] = useState(false);
-  const [callType, setCallType] = useState<"audio" | "video" | null>(null);
 
   // Check authentication and get/create conversation
   useEffect(() => {
@@ -75,32 +71,53 @@ export function CreatorChatWindow({
   }, [creatorId, session]);
 
   const startCall = async (type: "audio" | "video") => {
-    if (!conversationId) return;
+    if (!conversationId || !currentUserId) return;
 
     try {
-      const response = await fetch("/api/livekit/token", {
+      const response = await fetch("/api/calls/initiate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ conversationId }),
+        body: JSON.stringify({
+          conversationId,
+          callType: type,
+        }),
       });
-
-      if (!response.ok) throw new Error("Failed to get token");
+ 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to initiate call");
+      }
 
       const data = await response.json();
-      setToken(data.token);
-      setCallType(type);
-      setIsInCall(true);
+       
+      console.log("[Creator Chat] API Response:", {
+        token: data.token,
+        tokenType: typeof data.token,
+        isString: typeof data.token === "string",
+        url: data.url,
+        roomName: data.roomName,
+      });
+
+      // Ensure token is a string
+      const tokenString = typeof data.token === "string" ? data.token : String(data.token);
+      
+      // Set active call for caller (they join immediately)
+      setActiveCall({
+        callId: data.call.id,
+        conversationId: data.call.conversationId,
+        otherParticipantId: creatorId,
+        otherParticipantName: creatorName,
+        otherParticipantImage: creatorImage || null,
+        callType: type,
+        token: tokenString,
+        url: data.url,
+        roomName: data.roomName,
+      });
     } catch (error) {
       console.error("Error starting call:", error);
     }
-  };
-
-  const endCall = () => {
-    setIsInCall(false);
-    setCallType(null);
-    setToken(null);
   };
 
   const handleLogin = () => {
@@ -146,48 +163,8 @@ export function CreatorChatWindow({
     );
   }
 
-  if (isInCall && token && conversationId) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <RoomProvider
-          token={token}
-          url={process.env.NEXT_PUBLIC_LIVEKIT_URL!}
-          roomName={conversationId}
-          onDisconnected={endCall}
-        >
-          <div className="h-screen flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={endCall}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <Avatar>
-                  <AvatarImage src={creatorImage || undefined} />
-                  <AvatarFallback>
-                    {creatorName.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{creatorName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {callType === "audio" ? "Audio call" : "Video call"}
-                  </p>
-                </div>
-              </div>
-              <CallControls onLeave={endCall} />
-            </div>
-            <div className="flex-1">
-              <VideoCallView />
-            </div>
-          </div>
-        </RoomProvider>
-      </div>
-    );
-  }
+  // Note: Active calls are now handled globally by ActiveCallView component
+  // This component only shows the chat interface
 
   if (!conversationId || !currentUserId) {
     return (
@@ -238,6 +215,7 @@ export function CreatorChatWindow({
             variant="ghost"
             size="icon"
             onClick={() => startCall("audio")}
+            disabled={!!activeCall}
           >
             <Phone className="h-4 w-4" />
           </Button>
@@ -245,6 +223,7 @@ export function CreatorChatWindow({
             variant="ghost"
             size="icon"
             onClick={() => startCall("video")}
+            disabled={!!activeCall}
           >
             <Video className="h-4 w-4" />
           </Button>

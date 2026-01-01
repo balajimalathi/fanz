@@ -13,7 +13,7 @@ export interface GenerateTokenOptions {
 /**
  * Generate a LiveKit access token for a participant
  */
-export function generateAccessToken(options: GenerateTokenOptions): string {
+export async function generateAccessToken(options: GenerateTokenOptions): Promise<string> {
   const {
     roomName,
     participantIdentity,
@@ -36,6 +36,6 @@ export function generateAccessToken(options: GenerateTokenOptions): string {
     canPublishData,
   });
 
-  return at.toJwt();
+  return await at.toJwt();
 }
 

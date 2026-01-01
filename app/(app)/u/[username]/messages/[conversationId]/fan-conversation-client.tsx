@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { RoomProvider } from "@/components/livekit/room-provider";
+import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { ChatInterface } from "@/components/livekit/chat-interface";
 import { CallControls } from "@/components/livekit/call-controls";
 import { VideoCallView } from "@/components/livekit/video-call-view";
@@ -60,13 +60,19 @@ export function FanConversationPageClient({
   };
 
   if (isInCall && token) {
+    const tokenString = typeof token === "string" ? token : String(token);
+    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || "";
+
     return (
-      <RoomProvider
-        token={token}
-        url={process.env.NEXT_PUBLIC_LIVEKIT_URL!}
-        roomName={conversationId}
+      <LiveKitRoom
+        serverUrl={livekitUrl}
+        token={tokenString}
+        connect={true}
+        audio={true}
+        video={callType === "video"}
         onDisconnected={endCall}
       >
+        <RoomAudioRenderer />
         <div className="h-screen flex flex-col">
           <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -83,13 +89,13 @@ export function FanConversationPageClient({
                 </p>
               </div>
             </div>
-            <CallControls onLeave={endCall} />
+            <CallControls onLeave={endCall} callType={callType || "video"} />
           </div>
           <div className="flex-1">
-            <VideoCallView />
+            {callType === "video" ? <VideoCallView /> : null}
           </div>
         </div>
-      </RoomProvider>
+      </LiveKitRoom>
     );
   }
 

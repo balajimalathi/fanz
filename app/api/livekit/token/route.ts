@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const participantName = userRecord?.name || session.user.email || "Unknown";
 
     // Generate token
-    const token = generateAccessToken({
+    const token = await generateAccessToken({
       roomName: conversationId, // Use conversation ID as room name
       participantIdentity: session.user.id,
       participantName,
