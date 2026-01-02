@@ -396,7 +396,13 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
                           domain = window.location.hostname
                         }
                       } else {
-                        domain = "localhost:3000" // Fallback for SSR
+                        // Fallback for SSR - extract from NEXT_PUBLIC_APP_URL
+                        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+                        try {
+                          domain = new URL(appUrl).hostname
+                        } catch {
+                          domain = "localhost:3000"
+                        }
                       }
                       const shareLink = `${username}.${domain}`
                       
