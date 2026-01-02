@@ -7,6 +7,16 @@ import { eq } from "drizzle-orm"
 import { createMembershipSchema } from "@/lib/validations/membership"
 
 // GET - Fetch all memberships for the authenticated creator
+/**
+ * @summary Get memberships
+ * @description Retrieves all membership tiers created by the authenticated creator.
+ * @tags Memberships
+ * @security BearerAuth
+ * @returns {object} 200 - List of memberships
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 500 - Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -51,6 +61,22 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create a new membership
+/**
+ * @summary Create membership
+ * @description Creates a new membership tier.
+ * @tags Memberships
+ * @security BearerAuth
+ * @param {object} request.body.required - Membership creation data
+ * @property {string} title - Membership title
+ * @property {string} description - Membership description
+ * @property {number} monthlyRecurringFee - Monthly fee in rupees (valid values: 99, 199, 299, 499, 999, 1499, 1999, 2999, 4999)
+ * @property {boolean} [visible] - Visibility status
+ * @returns {object} 201 - Created membership
+ * @returns {object} 400 - Validation failed
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 500 - Internal server error
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -78,7 +104,7 @@ export async function POST(request: NextRequest) {
     const validationResult = createMembershipSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
+        {
           error: "Validation failed",
           details: validationResult.error.errors,
         },

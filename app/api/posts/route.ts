@@ -7,6 +7,22 @@ import { eq, inArray } from "drizzle-orm"
 import { createPostSchema } from "@/lib/validations/post"
 
 // POST - Create a new post
+/**
+ * @summary Create a new post
+ * @description Creates a new post for the authenticated creator.
+ * @tags Posts
+ * @security BearerAuth
+ * @param {object} request.body.required - The post creation data
+ * @property {string} [caption] - The caption of the post
+ * @property {string} postType - The type of post (subscription/exclusive)
+ * @property {number} [price] - The price for exclusive posts
+ * @property {string[]} [membershipIds] - IDs of memberships for subscription posts
+ * @returns {object} 201 - The created post
+ * @returns {object} 400 - Validation failed or invalid logic
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 500 - Internal server error
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({

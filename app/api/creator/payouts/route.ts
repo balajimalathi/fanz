@@ -6,6 +6,16 @@ import { payout } from "@/lib/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { PayoutService } from "@/lib/payments/payout-service"
 
+// GET - Fetch all payouts for the authenticated creator
+/**
+ * @summary Get payouts
+ * @description Retrieves the payout history and pending amount for the authenticated creator.
+ * @tags Creator, Payments
+ * @security BearerAuth
+ * @returns {object} 200 - Payout history and pending amount
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 500 - Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({

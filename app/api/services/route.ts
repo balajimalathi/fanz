@@ -7,6 +7,16 @@ import { eq, and } from "drizzle-orm"
 import { createServiceSchema, updateServiceSchema } from "@/lib/validations/service"
 
 // GET - Fetch all services for the authenticated creator
+/**
+ * @summary Get services
+ * @description Retrieves all services created by the authenticated creator.
+ * @tags Services
+ * @security BearerAuth
+ * @returns {object} 200 - List of services
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 500 - Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -51,6 +61,23 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create a new service
+/**
+ * @summary Create service
+ * @description Creates a new service offering for the creator.
+ * @tags Services
+ * @security BearerAuth
+ * @param {object} request.body.required - Service creation data
+ * @property {string} name - Service name
+ * @property {string} description - Service description
+ * @property {number} price - Price in rupees
+ * @property {string} serviceType - Type of service (shoutout, audio_call, video_call, chat)
+ * @property {boolean} [visible] - Visibility status
+ * @returns {object} 201 - Created service
+ * @returns {object} 400 - Validation failed
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 500 - Internal server error
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -78,7 +105,7 @@ export async function POST(request: NextRequest) {
     const validationResult = createServiceSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
+        {
           error: "Validation failed",
           details: validationResult.error.errors,
         },

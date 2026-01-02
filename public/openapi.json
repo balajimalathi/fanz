@@ -1,0 +1,1916 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Documentation",
+    "version": "1.0.0",
+    "description": "This is the OpenAPI specification for your project."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Local development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {},
+    "responses": {
+      "400": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Invalid request parameters"
+                },
+                "code": {
+                  "type": "string",
+                  "example": "400"
+                }
+              }
+            }
+          }
+        }
+      },
+      "401": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Authentication required"
+                },
+                "code": {
+                  "type": "string",
+                  "example": "401"
+                }
+              }
+            }
+          }
+        }
+      },
+      "403": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Access denied"
+                },
+                "code": {
+                  "type": "string",
+                  "example": "403"
+                }
+              }
+            }
+          }
+        }
+      },
+      "404": {
+        "description": "Not Found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Resource not found"
+                },
+                "code": {
+                  "type": "string",
+                  "example": "404"
+                }
+              }
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Resource already exists"
+                },
+                "code": {
+                  "type": "string",
+                  "example": "409"
+                }
+              }
+            }
+          }
+        }
+      },
+      "500": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "An unexpected error occurred"
+                },
+                "code": {
+                  "type": "string",
+                  "example": "500"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/admin/payouts": {
+      "get": {
+        "operationId": "get-admin-payouts",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/transactions": {
+      "get": {
+        "operationId": "get-admin-transactions",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/payouts/create": {
+      "post": {
+        "operationId": "post-admin-payouts-create",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/payouts/{payoutId}": {
+      "get": {
+        "operationId": "get-admin-payouts-{payoutId}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/creators/{creatorId}/bank-details": {
+      "get": {
+        "operationId": "get-admin-creators-{creatorId}-bank-details",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/payouts/{payoutId}/process": {
+      "post": {
+        "operationId": "post-admin-payouts-{payoutId}-process",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/broadcast/message": {
+      "post": {
+        "operationId": "post-broadcast-message",
+        "summary": "POST - Send private message broadcast",
+        "description": "",
+        "tags": [
+          "Broadcast"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/calls/initiate": {
+      "post": {
+        "operationId": "post-calls-initiate",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Calls"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/calls/stream": {
+      "get": {
+        "operationId": "get-calls-stream",
+        "summary": "GET - SSE stream endpoint for real-time call events",
+        "description": "",
+        "tags": [
+          "Calls"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/calls/{id}/accept": {
+      "post": {
+        "operationId": "post-calls-{id}-accept",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Calls"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/calls/{id}/end": {
+      "post": {
+        "operationId": "post-calls-{id}-end",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Calls"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/calls/{id}/reject": {
+      "post": {
+        "operationId": "post-calls-{id}-reject",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Calls"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "operationId": "get-conversations",
+        "summary": "GET - List conversations for the authenticated user",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-conversations",
+        "summary": "POST - Create a new conversation",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/conversations/{id}": {
+      "get": {
+        "operationId": "get-conversations-{id}",
+        "summary": "GET - Get a single conversation by ID",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/media": {
+      "post": {
+        "operationId": "post-conversations-{id}-media",
+        "summary": "POST - Upload media files for a conversation",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages": {
+      "get": {
+        "operationId": "get-conversations-{id}-messages",
+        "summary": "GET - List messages for a conversation",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-conversations-{id}-messages",
+        "summary": "POST - Send a message",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/typing": {
+      "post": {
+        "operationId": "post-conversations-{id}-typing",
+        "summary": "POST - Publish typing event",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages/stream": {
+      "get": {
+        "operationId": "get-conversations-{id}-messages-stream",
+        "summary": "GET - SSE stream endpoint for real-time messages",
+        "description": "",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/images": {
+      "get": {
+        "operationId": "get-creator-images",
+        "summary": "GET - Fetch creator profile and cover image URLs",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-creator-images",
+        "summary": "POST - Upload profile image or cover image",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/orders": {
+      "get": {
+        "operationId": "get-creator-orders",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/{username}": {
+      "get": {
+        "operationId": "get-creator-{username}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/orders/{orderId}": {
+      "patch": {
+        "operationId": "patch-creator-orders-{orderId}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/payouts/pending": {
+      "get": {
+        "operationId": "get-creator-payouts-pending",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/payouts/request": {
+      "post": {
+        "operationId": "post-creator-payouts-request",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/payouts/{payoutId}": {
+      "get": {
+        "operationId": "get-creator-payouts-{payoutId}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/orders/{orderId}/activate": {
+      "patch": {
+        "operationId": "patch-creator-orders-{orderId}-activate",
+        "summary": "PATCH - Activate a service order (change status from pending to active)",
+        "description": "",
+        "tags": [
+          "Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/customer/profile": {
+      "get": {
+        "operationId": "get-customer-profile",
+        "summary": "GET - Fetch customer profile with subscriptions",
+        "description": "",
+        "tags": [
+          "Customer"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/follow/{creatorId}": {
+      "post": {
+        "operationId": "post-follow-{creatorId}",
+        "summary": "POST - Follow a creator",
+        "description": "",
+        "tags": [
+          "Follow"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-follow-{creatorId}",
+        "summary": "DELETE - Unfollow a creator",
+        "description": "",
+        "tags": [
+          "Follow"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "get": {
+        "operationId": "get-follow-{creatorId}",
+        "summary": "GET - Check if current user follows creator",
+        "description": "",
+        "tags": [
+          "Follow"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/followers": {
+      "get": {
+        "operationId": "get-followers",
+        "summary": "GET - Fetch followers for a creator or get follower count",
+        "description": "",
+        "tags": [
+          "Followers"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/live/start": {
+      "post": {
+        "operationId": "post-live-start",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Live"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/live/active/{creatorId}": {
+      "get": {
+        "operationId": "get-live-active-{creatorId}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Live"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/live/{id}/end": {
+      "post": {
+        "operationId": "post-live-{id}-end",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Live"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/live/{id}/join": {
+      "post": {
+        "operationId": "post-live-{id}-join",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Live"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/live/{id}/kick": {
+      "post": {
+        "operationId": "post-live-{id}-kick",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Live"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/live/{id}/token": {
+      "get": {
+        "operationId": "get-live-{id}-token",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Live"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/livekit/token": {
+      "post": {
+        "operationId": "post-livekit-token",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Livekit"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/memberships/{id}": {
+      "get": {
+        "operationId": "get-memberships-{id}",
+        "summary": "GET - Fetch a specific membership",
+        "description": "",
+        "tags": [
+          "Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch-memberships-{id}",
+        "summary": "PATCH - Update a membership",
+        "description": "",
+        "tags": [
+          "Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-memberships-{id}",
+        "summary": "DELETE - Delete a membership",
+        "description": "",
+        "tags": [
+          "Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/memberships/{id}/images": {
+      "post": {
+        "operationId": "post-memberships-{id}-images",
+        "summary": "POST - Upload membership cover image",
+        "description": "",
+        "tags": [
+          "Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/memberships/{id}/subscription-status": {
+      "get": {
+        "operationId": "get-memberships-{id}-subscription-status",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "get-notifications",
+        "summary": "GET - Fetch user notifications",
+        "description": "",
+        "tags": [
+          "Notifications"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/notifications/send": {
+      "post": {
+        "operationId": "post-notifications-send",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Notifications"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/notifications/{id}/read": {
+      "patch": {
+        "operationId": "patch-notifications-{id}-read",
+        "summary": "PATCH - Mark notification as read",
+        "description": "",
+        "tags": [
+          "Notifications"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/og": {
+      "get": {
+        "operationId": "get-og",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Og"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/onboarding/complete": {
+      "post": {
+        "operationId": "post-onboarding-complete",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/onboarding/step": {
+      "get": {
+        "operationId": "get-onboarding-step",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-onboarding-step",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/onboarding/validate-username": {
+      "post": {
+        "operationId": "post-onboarding-validate-username",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/payments/callback": {
+      "get": {
+        "operationId": "get-payments-callback",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/payments/initiate": {
+      "post": {
+        "operationId": "post-payments-initiate",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/payments/webhook": {
+      "post": {
+        "operationId": "post-payments-webhook",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/payments/status/{transactionId}": {
+      "get": {
+        "operationId": "get-payments-status-{transactionId}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/feed": {
+      "get": {
+        "operationId": "get-posts-feed",
+        "summary": "GET - Fetch feed posts for authenticated creator (their own posts)",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/creator/{username}": {
+      "get": {
+        "operationId": "get-posts-creator-{username}",
+        "summary": "GET - Fetch posts for a specific creator by username",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/access": {
+      "get": {
+        "operationId": "get-posts-{id}-access",
+        "summary": "GET - Check if user has access to a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/broadcast": {
+      "post": {
+        "operationId": "post-posts-{id}-broadcast",
+        "summary": "POST - Broadcast post to selected followers",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/comments": {
+      "get": {
+        "operationId": "get-posts-{id}-comments",
+        "summary": "GET - Fetch comments for a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-posts-{id}-comments",
+        "summary": "POST - Create a comment",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/like": {
+      "post": {
+        "operationId": "post-posts-{id}-like",
+        "summary": "POST - Like a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-posts-{id}-like",
+        "summary": "DELETE - Unlike a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/link": {
+      "get": {
+        "operationId": "get-posts-{id}-link",
+        "summary": "GET - Get shareable link for a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/media": {
+      "post": {
+        "operationId": "post-posts-{id}-media",
+        "summary": "POST - Upload media files for a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/notify": {
+      "post": {
+        "operationId": "post-posts-{id}-notify",
+        "summary": "POST - Send notification to all followers about a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/pin": {
+      "post": {
+        "operationId": "post-posts-{id}-pin",
+        "summary": "POST - Toggle pinned status of a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/video": {
+      "post": {
+        "operationId": "post-posts-{id}-video",
+        "summary": "POST - Upload video file for a post",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/comments/{commentId}": {
+      "patch": {
+        "operationId": "patch-posts-{id}-comments-{commentId}",
+        "summary": "PATCH - Update a comment",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-posts-{id}-comments-{commentId}",
+        "summary": "DELETE - Delete a comment",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/video/process": {
+      "post": {
+        "operationId": "post-posts-{id}-video-process",
+        "summary": "POST - Process video with FFmpeg (DEPRECATED - use worker instead)",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "deprecated": true,
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts/{id}/video/status": {
+      "get": {
+        "operationId": "get-posts-{id}-video-status",
+        "summary": "GET - Get video processing status",
+        "description": "",
+        "tags": [
+          "Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/push/preferences": {
+      "get": {
+        "operationId": "get-push-preferences",
+        "summary": "GET - Get notification preferences",
+        "description": "",
+        "tags": [
+          "Push"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-push-preferences",
+        "summary": "POST - Update notification preferences",
+        "description": "",
+        "tags": [
+          "Push"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/push/subscribe": {
+      "post": {
+        "operationId": "post-push-subscribe",
+        "summary": "POST - Register push subscription",
+        "description": "",
+        "tags": [
+          "Push"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/push/unsubscribe": {
+      "post": {
+        "operationId": "post-push-unsubscribe",
+        "summary": "POST - Remove push subscription",
+        "description": "",
+        "tags": [
+          "Push"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/revalidate": {
+      "post": {
+        "operationId": "post-revalidate",
+        "summary": "WordPress webhook handler for content revalidation\r",
+        "description": "",
+        "tags": [
+          "Revalidate"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/profile": {
+      "get": {
+        "operationId": "get-creator-profile",
+        "summary": "GET - Fetch creator profile data",
+        "description": "Retrieves the profile information for the authenticated creator.",
+        "tags": [
+          "s Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch-creator-profile",
+        "summary": "PATCH - Update creator profile",
+        "description": "Updates the profile information for the authenticated creator.",
+        "tags": [
+          "s Creator"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/bank-details": {
+      "get": {
+        "operationId": "get-creator-bank-details",
+        "summary": "",
+        "description": "Retrieves the bank details for the authenticated creator.",
+        "tags": [
+          "s Creator, Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-creator-bank-details",
+        "summary": "",
+        "description": "Updates the bank details for the authenticated creator.",
+        "tags": [
+          "s Creator, Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/payout-settings": {
+      "get": {
+        "operationId": "get-creator-payout-settings",
+        "summary": "GET - Fetch payout settings",
+        "description": "Retrieves the payout settings for the authenticated creator.",
+        "tags": [
+          "s Creator, Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-creator-payout-settings",
+        "summary": "POST - Update payout settings",
+        "description": "Updates the payout settings for the authenticated creator.",
+        "tags": [
+          "s Creator, Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/creator/payouts": {
+      "get": {
+        "operationId": "get-creator-payouts",
+        "summary": "GET - Fetch all payouts for the authenticated creator",
+        "description": "Retrieves the payout history and pending amount for the authenticated creator.",
+        "tags": [
+          "s Creator, Payments"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/memberships": {
+      "get": {
+        "operationId": "get-memberships",
+        "summary": "GET - Fetch all memberships for the authenticated creator",
+        "description": "Retrieves all membership tiers created by the authenticated creator.",
+        "tags": [
+          "s Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-memberships",
+        "summary": "POST - Create a new membership",
+        "description": "Creates a new membership tier.",
+        "tags": [
+          "s Memberships"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/posts": {
+      "post": {
+        "operationId": "post-posts",
+        "summary": "POST - Create a new post",
+        "description": "Creates a new post for the authenticated creator.",
+        "tags": [
+          "s Posts"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/services": {
+      "get": {
+        "operationId": "get-services",
+        "summary": "GET - Fetch all services for the authenticated creator",
+        "description": "Retrieves all services created by the authenticated creator.",
+        "tags": [
+          "s Services"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-services",
+        "summary": "POST - Create a new service",
+        "description": "Creates a new service offering for the creator.",
+        "tags": [
+          "s Services"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/services/{id}": {
+      "get": {
+        "operationId": "get-services-{id}",
+        "summary": "GET - Fetch a specific service",
+        "description": "",
+        "tags": [
+          "Services"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch-services-{id}",
+        "summary": "PATCH - Update a service",
+        "description": "",
+        "tags": [
+          "Services"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-services-{id}",
+        "summary": "DELETE - Delete a service",
+        "description": "",
+        "tags": [
+          "Services"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    }
+  }
+}
