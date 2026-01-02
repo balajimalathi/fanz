@@ -27,6 +27,10 @@ export const auth = betterAuth({
       secure: process.env.NODE_ENV === "production",
       path: "/",
     },
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: ".skndan.cloud",
+    },
   },
   databaseHooks: {
     session: {
@@ -46,18 +50,18 @@ export const auth = betterAuth({
             // If role is "user", keep it (customer sign-in from /u/*)
             // If role is null or undefined, check the callbackURL to determine
             // For now, if role is not set, we'll check the referrer or use a default
-            
+
             // If user doesn't have a role yet, check if they should be a creator
             // This happens when signing in from /home paths
             // We'll use a different approach: check if user is accessing /home after login
             // For now, if role is "user", don't change it (customer sign-in)
             // If role is null, we need to determine based on context
-            
+
             // Since we can't easily access callbackURL here, we'll use a different strategy:
             // - Users signing in from /u/* will have role="user" (set in user.create hook)
             // - Users signing in from /home will need their role updated to "creator"
             // We'll handle this in a middleware or by checking the path they access after login
-            
+
             // For users with role="user", don't create creator record
             if (userRecord.role === "user") {
               return; // Customer sign-in, no creator record needed
