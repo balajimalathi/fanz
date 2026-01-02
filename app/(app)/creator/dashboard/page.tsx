@@ -58,21 +58,37 @@ export default async function CreatorDashboardPage() {
                 <p className="text-sm font-medium text-muted-foreground">Display Name</p>
                 <p className="text-lg">{creatorRecord.displayName}</p>
               </div>
-              {creatorRecord.subdomain && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Subdomain</p>
-                  <p className="text-lg">
-                    <a
-                      href={`https://${creatorRecord.subdomain}.${process.env.NEXT_PUBLIC_DOMAIN || "localhost:3000"}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {creatorRecord.subdomain}
-                    </a>
-                  </p>
-                </div>
-              )}
+              {creatorRecord.subdomain && (() => {
+                // Extract domain from NEXT_PUBLIC_APP_URL
+                let domain = "localhost:3000"
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL
+                if (appUrl) {
+                  try {
+                    const url = new URL(appUrl)
+                    domain = url.hostname
+                  } catch {
+                    // Fallback to NEXT_PUBLIC_DOMAIN if available
+                    domain = process.env.NEXT_PUBLIC_DOMAIN || "localhost:3000"
+                  }
+                } else {
+                  domain = process.env.NEXT_PUBLIC_DOMAIN || "localhost:3000"
+                }
+                return (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Subdomain</p>
+                    <p className="text-lg">
+                      <a
+                        href={`https://${creatorRecord.subdomain}.${domain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {creatorRecord.subdomain}
+                      </a>
+                    </p>
+                  </div>
+                )
+              })()}
               {creatorRecord.country && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Country</p>
