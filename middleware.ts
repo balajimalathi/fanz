@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 /**
  * Extract subdomain from hostname
  * Handles both production (subdomain.example.com), localhost (subdomain.localhost:3000),
- * and tunnel URLs (subdomain.tunnel-domain.srv.us)
+ * tunnel URLs (subdomain.tunnel-domain.srv.us), and skndan.cloud domain
  */
 function extractSubdomain(host: string): string | null {
   // Remove port if present
@@ -21,6 +21,24 @@ function extractSubdomain(host: string): string | null {
     // If format is "subdomain.thahryywpiigweqfxmgkq2uc3a.srv.us", extract subdomain
     if (parts.length >= 4 && parts[parts.length - 3] === "thahryywpiigweqfxmgkq2uc3a") {
       return parts[0];
+    }
+    return null;
+  }
+  
+  // Handle skndan.cloud domain: subdomain.skndan.cloud
+  if (hostWithoutPort.endsWith("skndan.cloud")) {
+    // If it's just "skndan.cloud", no subdomain
+    if (hostWithoutPort === "skndan.cloud") {
+      return null;
+    }
+    // If format is "subdomain.skndan.cloud", extract subdomain
+    if (parts.length >= 3 && parts[parts.length - 2] === "skndan" && parts[parts.length - 1] === "cloud") {
+      const subdomain = parts[0];
+      // Exclude common prefixes that aren't user subdomains
+      const excludedPrefixes = ["www", "api", "app", "admin", "mail", "ftp"];
+      if (!excludedPrefixes.includes(subdomain.toLowerCase())) {
+        return subdomain;
+      }
     }
     return null;
   }
@@ -115,21 +133,47 @@ export async function middleware(request: NextRequest) {
     // Full session validation happens server-side in page components
     // Better-auth typically uses cookies for session management
     
+    // Get all cookies for debugging
+    const allCookies = request.cookies.getAll();
+    
     // Check for better-auth session cookie
-    // The cookie name may vary, so we check common patterns
+    // Better-auth uses cookies with prefix "better-auth" and may have __Secure- prefix in production
+    // Common cookie names: better-auth.session_token, __Secure-better-auth.session_token
     const hasSessionCookie = 
+      // Check exact cookie names
       request.cookies.has("better-auth.session_token") ||
+      request.cookies.has("__Secure-better-auth.session_token") ||
       request.cookies.has("better-auth.session") ||
+      request.cookies.has("__Secure-better-auth.session") ||
       request.cookies.has("session_token") ||
-      // Check if any cookie starts with better-auth
-      Array.from(request.cookies.getAll()).some(
-        (cookie) => cookie.name.startsWith("better-auth")
+      // Check if any cookie starts with better-auth (with or without __Secure- prefix)
+      Array.from(allCookies).some(
+        (cookie) => 
+          cookie.name.startsWith("better-auth") ||
+          cookie.name.startsWith("__Secure-better-auth") ||
+          cookie.name.includes("session")
       );
+
+    // Debug logging (remove in production if not needed)
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔍 Middleware Auth Check:", {
+        pathname,
+        host,
+        hasSessionCookie,
+        cookieNames: allCookies.map(c => c.name),
+        cookieCount: allCookies.length,
+      });
+    }
 
     // If no session cookie found, redirect to login
     if (!hasSessionCookie) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
+      
+      if (process.env.NODE_ENV === "development") {
+        console.log("❌ No session cookie found, redirecting to:", loginUrl.toString());
+      }
+      
       return NextResponse.redirect(loginUrl);
     }
   } 

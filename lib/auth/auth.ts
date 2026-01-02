@@ -19,6 +19,15 @@ export const auth = betterAuth({
   },
   account: {},
   plugins: [admin(), nextCookies(), organization({})],
+  // Ensure cookies work correctly in production
+  advanced: {
+    cookiePrefix: "better-auth",
+    defaultCookieAttributes: {
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    },
+  },
   databaseHooks: {
     session: {
       create: {

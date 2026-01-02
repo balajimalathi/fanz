@@ -1,7 +1,8 @@
+import { Suspense } from "react"
 import { LoginForm } from "@/components/auth/login-form"
 import { Icons } from "@/components/ui/icons"
 import { siteConfig } from "@/site.config"
-import { GalleryVerticalEnd } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 
 export default function LoginPage() {
@@ -14,7 +15,9 @@ export default function LoginPage() {
             <span className="text-2xl font-bold">{siteConfig.site_name}</span>
           </div>
         </a>
-        <LoginForm />
+        <Suspense fallback={<Loader2 className="w-6 h-6 animate-spin mx-auto" />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   )

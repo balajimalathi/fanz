@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,12 +21,14 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get("redirect") || "/home"
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      await googleSignin("/home")
+      await googleSignin(redirectTo)
       // Redirect will happen after OAuth callback
     } catch (err) {
       setError("Failed to login with Google")
