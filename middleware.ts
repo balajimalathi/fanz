@@ -10,7 +10,7 @@ function extractSubdomain(host: string): string | null {
   // Remove port if present
   const hostWithoutPort = host.split(":")[0];
   const parts = hostWithoutPort.split(".");
-  
+
   // Handle tunnel URL: thahryywpiigweqfxmgkq2uc3a.srv.us
   // Format: subdomain.thahryywpiigweqfxmgkq2uc3a.srv.us
   if (hostWithoutPort.includes("thahryywpiigweqfxmgkq2uc3a.srv.us")) {
@@ -24,7 +24,7 @@ function extractSubdomain(host: string): string | null {
     }
     return null;
   }
-  
+
   // Handle skndan.cloud domain: subdomain.skndan.cloud
   if (hostWithoutPort.endsWith("skndan.cloud")) {
     // If it's just "skndan.cloud", no subdomain
@@ -42,7 +42,7 @@ function extractSubdomain(host: string): string | null {
     }
     return null;
   }
-  
+
   // Handle localhost cases: subdomain.localhost or subdomain.127.0.0.1
   if (hostWithoutPort.includes("localhost")) {
     // If it's just "localhost", no subdomain
@@ -55,7 +55,7 @@ function extractSubdomain(host: string): string | null {
     }
     return null;
   }
-  
+
   // Handle 127.0.0.1 cases: subdomain.127.0.0.1
   if (hostWithoutPort.includes("127.0.0.1")) {
     // If it's just "127.0.0.1", no subdomain
@@ -68,7 +68,7 @@ function extractSubdomain(host: string): string | null {
     }
     return null;
   }
-  
+
   // Handle production domains: subdomain.example.com
   // Need at least 3 parts (subdomain.domain.tld)
   if (parts.length >= 3) {
@@ -79,7 +79,7 @@ function extractSubdomain(host: string): string | null {
       return subdomain;
     }
   }
-  
+
   return null;
 }
 
@@ -92,13 +92,21 @@ export async function middleware(request: NextRequest) {
 
   // Handle subdomain rewrite
   if (subdomain) {
-    // Skip rewrite for API routes, auth routes, and static files
+    // Skip rewrite for API routes, auth routes, static files, and service worker
     if (
       pathname.startsWith("/api") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon.ico") ||
       pathname.startsWith("/robots.txt") ||
-      pathname.startsWith("/sitemap")
+      pathname.startsWith("/sitemap") ||
+      pathname === "/sw.js" ||
+      pathname.startsWith("/manifest.json") ||
+      pathname.startsWith("/login") ||
+      pathname.startsWith("/signup") ||
+      pathname.startsWith("/onboarding") ||
+      pathname.startsWith("/verify-email") ||
+      pathname.startsWith("/callback") ||
+      pathname.startsWith("/auth")
     ) {
       return NextResponse.next();
     }
@@ -108,7 +116,7 @@ export async function middleware(request: NextRequest) {
     const rewritePath = `/u/${subdomain}${pathname === "/" ? "" : pathname}`;
     const url = request.nextUrl.clone();
     url.pathname = rewritePath;
-    
+
     return NextResponse.rewrite(url);
   }
 
@@ -120,10 +128,12 @@ export async function middleware(request: NextRequest) {
 
   // Protect routes starting with /home
   if (pathname.startsWith("/home")) {
-    // Skip auth check for API routes and static files
+    // Skip auth check for API routes, static files, and service worker
     if (
       pathname.startsWith("/_next") ||
-      pathname.startsWith("/favicon.ico")
+      pathname.startsWith("/favicon.ico") ||
+      pathname === "/sw.js" ||
+      pathname.startsWith("/manifest.json")
     ) {
       return NextResponse.next();
     }
@@ -132,14 +142,14 @@ export async function middleware(request: NextRequest) {
     // In Edge runtime, we check for session cookie presence
     // Full session validation happens server-side in page components
     // Better-auth typically uses cookies for session management
-    
+
     // Get all cookies for debugging
     const allCookies = request.cookies.getAll();
-    
+
     // Check for better-auth session cookie
     // Better-auth uses cookies with prefix "better-auth" and may have __Secure- prefix in production
     // Common cookie names: better-auth.session_token, __Secure-better-auth.session_token
-    const hasSessionCookie = 
+    const hasSessionCookie =
       // Check exact cookie names
       request.cookies.has("better-auth.session_token") ||
       request.cookies.has("__Secure-better-auth.session_token") ||
@@ -148,7 +158,7 @@ export async function middleware(request: NextRequest) {
       request.cookies.has("session_token") ||
       // Check if any cookie starts with better-auth (with or without __Secure- prefix)
       Array.from(allCookies).some(
-        (cookie) => 
+        (cookie) =>
           cookie.name.startsWith("better-auth") ||
           cookie.name.startsWith("__Secure-better-auth") ||
           cookie.name.includes("session")
@@ -169,14 +179,14 @@ export async function middleware(request: NextRequest) {
     if (!hasSessionCookie) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      
+
       if (process.env.NODE_ENV === "development") {
         console.log("❌ No session cookie found, redirecting to:", loginUrl.toString());
       }
-      
+
       return NextResponse.redirect(loginUrl);
     }
-  } 
+  }
 
   return NextResponse.next();
 }
@@ -190,9 +200,11 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - sw.js (service worker)
+     * - manifest.json (PWA manifest)
      * - public files (images, etc.)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|sw.js|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 

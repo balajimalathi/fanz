@@ -78,9 +78,9 @@ const nextConfig: NextConfig = {
       "https://www.clarity.ms",
       "https://scripts.clarity.ms",
     ];
-    
+
     const mediaSrc = ["'self'", "blob:", "data:"];
-    
+
     if (r2Hostname) {
       connectSrc.push(`https://${r2Hostname}`);
       mediaSrc.push(`https://${r2Hostname}`);
@@ -112,14 +112,18 @@ const nextConfig: NextConfig = {
         if (url.protocol === "https:") {
           connectSrc.push(`ws://${url.host}`);
         }
+        // Allow HTTP/HTTPS connections to the base URL for subdomain support
+        // This allows subdomains to connect to the base domain (e.g., skndan.localhost:3000 -> localhost:3000)
+        connectSrc.push(appUrl);
       } catch (e) {
         // Invalid URL, skip
       }
     }
-    
-    // Allow localhost WebSocket for development
+
+    // Allow localhost HTTP and WebSocket for development (subdomain support)
+    connectSrc.push("http://localhost:3000", "https://localhost:3000");
     connectSrc.push("ws://localhost:8080", "wss://localhost:8080");
-    
+
     const cspValue = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms",

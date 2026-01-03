@@ -12,8 +12,51 @@ const isLocalhost = baseURL.includes('localhost') || baseURL.includes('127.0.0.1
 const isProduction = !isLocalhost && (baseURL.includes('skndan.cloud') || process.env.NODE_ENV === 'production');
 const useSecureCookies = isProduction || baseURL.startsWith('https://');
 
+// Build trusted origins list with wildcard support for subdomains
+// Better-auth supports wildcard patterns like *.example.com
+const trustedOrigins: string[] = [];
+
+// Always include the base URL origin
+try {
+  const url = new URL(baseURL);
+  const baseOrigin = url.origin;
+  trustedOrigins.push(baseOrigin);
+
+  // Extract domain pattern for wildcard subdomain support
+  const hostname = url.hostname;
+  const protocol = url.protocol;
+  const port = url.port ? `:${url.port}` : '';
+
+  if (isLocalhost) {
+    // For localhost, allow all subdomains: *.localhost:3000
+    // Also allow the base localhost
+    trustedOrigins.push(`${protocol}//*.localhost${port}`);
+    trustedOrigins.push(`${protocol}//localhost${port}`);
+  } else if (isProduction) {
+    // For production, allow all subdomains: *.skndan.cloud
+    // Extract the domain (e.g., skndan.cloud from subdomain.skndan.cloud)
+    const domainParts = hostname.split('.');
+    if (domainParts.length >= 2) {
+      // Get the base domain (last 2 parts: domain.tld)
+      const baseDomain = domainParts.slice(-2).join('.');
+      trustedOrigins.push(`${protocol}//*.${baseDomain}${port}`);
+    }
+  }
+} catch (e) {
+  // Invalid URL, skip
+}
+
+// Add additional trusted origins from environment variable (comma-separated)
+// This allows manual override or additional origins beyond the wildcard pattern
+const envTrustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS;
+if (envTrustedOrigins) {
+  const additionalOrigins = envTrustedOrigins.split(',').map(origin => origin.trim()).filter(Boolean);
+  trustedOrigins.push(...additionalOrigins);
+}
+
 export const auth = betterAuth({
   baseURL,
+  trustedOrigins: trustedOrigins.length > 0 ? trustedOrigins : undefined,
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
@@ -35,8 +78,8 @@ export const auth = betterAuth({
       path: "/",
     },
     crossSubDomainCookies: {
-      enabled: isProduction,
-      domain: isProduction ? ".skndan.cloud" : undefined,
+      enabled: true,
+      domain: isLocalhost ? "localhost" : (isProduction ? ".skndan.cloud" : undefined),
     },
   },
   databaseHooks: {
