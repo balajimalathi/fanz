@@ -22,6 +22,7 @@ import {
   getEngagementMetrics,
   getRecentActivity,
 } from "@/lib/dashboard/engagement-data";
+import { Separator } from "@/components/ui/separator";
 
 export default async function HomePage() {
   const session = await auth.api.getSession({
@@ -92,6 +93,9 @@ export default async function HomePage() {
           Welcome back! Here's an overview of your creator account.
         </p>
       </div>
+      
+      {/* Quick Actions */}
+      <QuickActions />
 
       {/* Stats Overview */}
       <StatsOverview
@@ -103,9 +107,6 @@ export default async function HomePage() {
         unreadMessages={engagementMetrics.unreadMessages}
         pendingServiceOrders={engagementMetrics.pendingServiceOrders}
       />
-
-      {/* Quick Actions */}
-      <QuickActions />
 
       {/* Revenue Section */}
       <RevenueSection

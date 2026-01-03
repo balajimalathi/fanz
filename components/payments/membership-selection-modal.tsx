@@ -25,6 +25,8 @@ import {
   calculateSavings,
   type BundleDuration,
 } from "@/lib/utils/membership-pricing"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface MembershipSelectionModalProps {
   open: boolean
@@ -35,6 +37,7 @@ interface MembershipSelectionModalProps {
     title: string
     description: string
     monthlyRecurringFee: number
+    currency?: string // ISO 4217 currency code
     coverImageUrl?: string | null
   }>
   originUrl?: string
@@ -59,6 +62,7 @@ export function MembershipSelectionModal({
   const currentOriginUrl = originUrl || pathname || "/"
 
   const selectedMembership = memberships.find((m) => m.id === selectedMembershipId)
+  const membershipCurrency = selectedMembership?.currency || "INR"
 
   // Calculate pricing for selected duration
   const bundlePrice =
@@ -138,7 +142,11 @@ export function MembershipSelectionModal({
                 </p>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold">
-                    ₹{membership.monthlyRecurringFee}
+                    <PriceDisplay
+                      amount={toSubunits(membership.monthlyRecurringFee, membership.currency || "INR")}
+                      originalCurrency={membership.currency || "INR"}
+                      className="text-2xl font-bold"
+                    />
                     <span className="text-sm font-normal text-muted-foreground">/month</span>
                   </span>
                   <Button
@@ -212,7 +220,13 @@ export function MembershipSelectionModal({
                 <div className="p-4 bg-muted rounded-lg space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Monthly Price</span>
-                    <span className="font-medium">₹{selectedMembership.monthlyRecurringFee}/month</span>
+                    <span className="font-medium">
+                      <PriceDisplay
+                        amount={toSubunits(selectedMembership.monthlyRecurringFee, membershipCurrency)}
+                        originalCurrency={membershipCurrency}
+                      />
+                      /month
+                    </span>
                   </div>
                   {bundleOption && bundleOption.discountPercent > 0 && (
                     <>
@@ -225,7 +239,10 @@ export function MembershipSelectionModal({
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">You Save</span>
                         <span className="font-medium text-green-600">
-                          ₹{savings.toLocaleString("en-IN")}
+                          <PriceDisplay
+                            amount={toSubunits(savings, membershipCurrency)}
+                            originalCurrency={membershipCurrency}
+                          />
                         </span>
                       </div>
                     </>
@@ -233,7 +250,13 @@ export function MembershipSelectionModal({
                   <div className="pt-2 border-t">
                     <div className="flex items-center justify-between">
                       <span className="text-base font-semibold">Total Amount</span>
-                      <span className="text-2xl font-bold">₹{bundlePrice.toLocaleString("en-IN")}</span>
+                      <span className="text-2xl font-bold">
+                        <PriceDisplay
+                          amount={toSubunits(bundlePrice, membershipCurrency)}
+                          originalCurrency={membershipCurrency}
+                          className="text-2xl font-bold"
+                        />
+                      </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       For {bundleOption?.label.toLowerCase()}

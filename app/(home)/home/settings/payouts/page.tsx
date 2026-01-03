@@ -15,6 +15,9 @@ import { SubHeading } from "@/components/ui/sub-heading"
 import { PayoutDetailsModal } from "@/components/settings/payout-details-modal"
 import { Eye, Loader2, DollarSign } from "lucide-react"
 import toast from "react-hot-toast"
+import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 
 interface Payout {
   id: string
@@ -56,16 +59,8 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
 export default function PayoutsPage() {
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [pendingAmount, setPendingAmount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
@@ -76,6 +71,9 @@ export default function PayoutsPage() {
     minimumThreshold: 1000,
     automaticPayout: false,
   })
+
+  const currency = currencyLoading ? "USD" : creatorCurrency
+  const currencySymbol = getCurrencySymbol(currency)
 
   useEffect(() => {
     fetchPayouts()
@@ -119,11 +117,13 @@ export default function PayoutsPage() {
 
   const handleRequestPayout = async () => {
     const minimumThreshold = payoutSettings.minimumThreshold || 1000
-    const pendingAmountInRupees = pendingAmount
+    const pendingAmountDisplay = pendingAmount
 
-    if (pendingAmountInRupees < minimumThreshold) {
+    if (pendingAmountDisplay < minimumThreshold) {
+      const thresholdFormatted = formatCurrencyUtil(minimumThreshold * 100, currency)
+      const pendingFormatted = formatCurrencyUtil(pendingAmountDisplay * 100, currency)
       toast.error(
-        `Minimum threshold of ₹${minimumThreshold} not met. Current pending amount: ₹${pendingAmountInRupees.toFixed(2)}`
+        `Minimum threshold of ${thresholdFormatted} not met. Current pending amount: ${pendingFormatted}`
       )
       return
     }
@@ -199,12 +199,13 @@ export default function PayoutsPage() {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-3xl font-bold">
-              {formatCurrency(pendingAmount)}
+              {formatCurrencyUtil(pendingAmount * 100, currency)}
             </div>
             {canRequestPayout && !meetsThreshold && (
               <p className="text-sm text-muted-foreground">
-                Minimum threshold: {formatCurrency(
-                  payoutSettings.minimumThreshold || 1000
+                Minimum threshold: {formatCurrencyUtil(
+                  (payoutSettings.minimumThreshold || 1000) * 100,
+                  currency
                 )}
               </p>
             )}
@@ -251,7 +252,7 @@ export default function PayoutsPage() {
                         </div>
                       </td>
                       <td className="p-3 text-sm font-medium">
-                        {formatCurrency(payout.netAmount)}
+                        {formatCurrencyUtil(payout.netAmount * 100, currency)}
                       </td>
                       <td className="p-3">
                         <Badge variant={getStatusBadgeVariant(payout.status)}>

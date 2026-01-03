@@ -13,6 +13,8 @@ import { CommentsSection } from "@/components/feed/comments-section"
 import { formatPostDate } from "@/lib/utils/feed"
 import { cn } from "@/lib/utils"
 import { ExclusivePostOverlay } from "@/components/payments/exclusive-post-overlay"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface PostMedia {
   id: string
@@ -38,6 +40,7 @@ interface FeedPost {
   caption: string | null
   postType: "subscription" | "exclusive"
   price: number | null
+  priceCurrency?: string // ISO 4217 currency code
   isPinned: boolean
   media: PostMedia[]
   likeCount: number
@@ -103,7 +106,10 @@ export function FeedPostCard({
           </div>
           {post.postType === "exclusive" && post.price && (
             <Badge variant="outline">
-              ₹{post.price.toFixed(2)}
+              <PriceDisplay
+                amount={toSubunits(post.price, post.currency || "INR")}
+                originalCurrency={post.currency || "INR"}
+              />
             </Badge>
           )}
         </div> */}
@@ -122,6 +128,7 @@ export function FeedPostCard({
                 <ExclusivePostOverlay
                   postId={post.id}
                   price={post.price}
+                  currency={post.priceCurrency || "INR"}
                   caption={post.caption}
                   onPurchaseComplete={() => {
                     // Reload page to show unlocked content

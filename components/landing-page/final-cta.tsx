@@ -16,7 +16,7 @@ export const FinalCTA = () => {
               Ready to start your creator journey?
             </h2>
             <p className="text-xl text-muted-foreground mb-10 leading-relaxed">
-              Join thousands of creators building their businesses on fancopy.
+              Join thousands of creators building their businesses on creatorx.
               Start today and keep more of what you earn.
             </p>
             <Button

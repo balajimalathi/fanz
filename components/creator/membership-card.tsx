@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils"
 import { membershipSchema } from "@/lib/validations/membership"
 import Image from "next/image"
 import toast from "react-hot-toast"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 
 interface Membership {
   id: string
@@ -31,18 +32,23 @@ interface Membership {
   updatedAt?: string
 }
 
-// Static monthly recurring fee options (in Rs.)
-const MONTHLY_FEE_OPTIONS = [
-  { value: 99, label: "Rs. 99/- per month" },
-  { value: 199, label: "Rs. 199/- per month" },
-  { value: 299, label: "Rs. 299/- per month" },
-  { value: 499, label: "Rs. 499/- per month" },
-  { value: 999, label: "Rs. 999/- per month" },
-  { value: 1499, label: "Rs. 1,499/- per month" },
-  { value: 1999, label: "Rs. 1,999/- per month" },
-  { value: 2999, label: "Rs. 2,999/- per month" },
-  { value: 4999, label: "Rs. 4,999/- per month" },
-]
+// Static monthly recurring fee options (values are currency-agnostic)
+const MONTHLY_FEE_VALUES = [99, 199, 299, 499, 999, 1499, 1999, 2999, 4999]
+
+const getMonthlyFeeOptions = (currency: string) => {
+  const symbol = getCurrencySymbol(currency)
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: currency === "JPY" ? 0 : 2,
+    maximumFractionDigits: currency === "JPY" ? 0 : 2,
+  })
+  
+  return MONTHLY_FEE_VALUES.map((value) => ({
+    value,
+    label: `${formatter.format(value)}/month`,
+  }))
+}
 
 
 export function MembershipCard() {
@@ -52,10 +58,12 @@ export function MembershipCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
   
   // Fetch memberships on mount
   useEffect(() => {
     fetchMemberships()
+    fetchCreatorCurrency()
   }, [])
 
   const fetchMemberships = async () => {
@@ -75,6 +83,18 @@ export function MembershipCard() {
       setTimeout(() => setMessage(null), 5000)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchCreatorCurrency = async () => {
+    try {
+      const response = await fetch("/api/creator/currency")
+      if (response.ok) {
+        const data = await response.json()
+        setCreatorCurrency(data.currency || "USD")
+      }
+    } catch (error) {
+      console.error("Error fetching creator currency:", error)
     }
   }
 
@@ -271,6 +291,7 @@ export function MembershipCard() {
               <MembershipForm
                 onSave={handleSaveMembership}
                 onCancel={() => setIsAddingMembership(false)}
+                creatorCurrency={creatorCurrency}
               />
             )}
 
@@ -290,6 +311,7 @@ export function MembershipCard() {
                     onCancel={() => setEditingMembershipId(null)}
                     onDelete={handleDeleteMembership}
                     onToggleVisibility={handleToggleMembershipVisibility}
+                    creatorCurrency={creatorCurrency}
                   />
                 ))}
               </div>
@@ -310,6 +332,7 @@ interface MembershipCardProps {
   onCancel: () => void
   onDelete: (id: string) => void
   onToggleVisibility: (id: string) => void
+  creatorCurrency?: string
 }
 
 function MembershipSection({
@@ -320,6 +343,7 @@ function MembershipSection({
   onCancel,
   onDelete,
   onToggleVisibility,
+  creatorCurrency = "USD",
 }: MembershipCardProps) {
   const [title, setTitle] = useState(membership.title)
   const [description, setDescription] = useState(membership.description)
@@ -387,7 +411,8 @@ function MembershipSection({
     }
   }
 
-  const selectedFeeOption = MONTHLY_FEE_OPTIONS.find(opt => opt.value === membership.monthlyRecurringFee)
+  const monthlyFeeOptions = getMonthlyFeeOptions(creatorCurrency)
+  const selectedFeeOption = monthlyFeeOptions.find(opt => opt.value === membership.monthlyRecurringFee)
 
   if (isEditing) {
     return (
@@ -422,7 +447,7 @@ function MembershipSection({
                 <SelectValue placeholder="Select monthly fee" />
               </SelectTrigger>
               <SelectContent>
-                {MONTHLY_FEE_OPTIONS.map((option) => (
+                {getMonthlyFeeOptions(creatorCurrency).map((option) => (
                   <SelectItem key={option.value} value={option.value.toString()}>
                     {option.label}
                   </SelectItem>
@@ -519,7 +544,13 @@ function MembershipSection({
                 <p className="text-sm text-muted-foreground">{description}</p>
               )}
               <p className="text-primary font-medium">
-                {selectedFeeOption?.label || `Rs. ${membership.monthlyRecurringFee.toLocaleString("en-IN")}/- per month`}
+                {selectedFeeOption?.label || 
+                  `${new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: creatorCurrency,
+                    minimumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                    maximumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                  }).format(membership.monthlyRecurringFee)}/month`}
               </p>
             </div>
           <div className="flex items-center gap-2 ml-4">
@@ -576,9 +607,10 @@ function MembershipSection({
 interface MembershipFormProps {
   onSave: (membership: Omit<Membership, "id">, croppedImageBlob?: Blob) => void
   onCancel: () => void
+  creatorCurrency?: string
 }
 
-function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
+function MembershipForm({ onSave, onCancel, creatorCurrency = "USD" }: MembershipFormProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [monthlyRecurringFee, setMonthlyRecurringFee] = useState("")
@@ -678,7 +710,7 @@ function MembershipForm({ onSave, onCancel }: MembershipFormProps) {
                 <SelectValue placeholder="Select monthly fee" />
               </SelectTrigger>
               <SelectContent>
-                {MONTHLY_FEE_OPTIONS.map((option) => (
+                {getMonthlyFeeOptions(creatorCurrency).map((option) => (
                   <SelectItem key={option.value} value={option.value.toString()}>
                     {option.label}
                   </SelectItem>

@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
         username: formData.username.toLowerCase(),
         displayName: formData.displayName,
         country: formData.country,
+        currency: (formData as any).currency || "USD",
         creatorType: formData.creatorType,
         contentType: formData.contentType,
         gender: formData.gender,
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
         onboarded: true,
         usernameLocked: true,
         subdomain: subdomain,
-        onboardingStep: 8,
+        onboardingStep: 9,
         onboardingData: formData as unknown as Record<string, unknown>,
         updatedAt: new Date(),
       })

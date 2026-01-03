@@ -6,8 +6,14 @@ import { db } from "../db/client";
 import { creator, user } from "../db/schema";
 import { eq } from "drizzle-orm";
 
+// Detect environment for cookie configuration
+const baseURL = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+const isLocalhost = baseURL.includes('localhost') || baseURL.includes('127.0.0.1');
+const isProduction = !isLocalhost && (baseURL.includes('skndan.cloud') || process.env.NODE_ENV === 'production');
+const useSecureCookies = isProduction || baseURL.startsWith('https://');
+
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL,
+  baseURL,
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
@@ -19,17 +25,18 @@ export const auth = betterAuth({
   },
   account: {},
   plugins: [admin(), nextCookies(), organization({})],
-  // Ensure cookies work correctly in production
+  // Ensure cookies work correctly in both localhost and production
+  // OAuth state cookies need SameSite=None with Secure=true for cross-site redirects
   advanced: {
     cookiePrefix: "better-auth",
     defaultCookieAttributes: {
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: useSecureCookies ? "none" : "lax",
+      secure: useSecureCookies,
       path: "/",
     },
     crossSubDomainCookies: {
-      enabled: true,
-      domain: ".skndan.cloud",
+      enabled: isProduction,
+      domain: isProduction ? ".skndan.cloud" : undefined,
     },
   },
   databaseHooks: {

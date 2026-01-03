@@ -1,17 +1,15 @@
-import "./globals.css";
-
-
 import { Gabarito, Instrument_Sans, Instrument_Serif, Libre_Baskerville } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/lib/utils";
 import { Toaster } from "react-hot-toast";
 import { PushInit } from "@/components/push/push-init";
-
-
+import NextTopLoader from 'nextjs-toploader';
 
 import type { Metadata } from "next";
 import Metrics from "./(metrics)";
+
+import "./globals.css";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -27,15 +25,15 @@ const baskerville = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Falustic - The platform for creators and global audiences",
+  title: "CreatorX - The platform for creators and global audiences",
   description: siteConfig.site_description,
   metadataBase: new URL(siteConfig.site_domain),
   alternates: {
     canonical: "/",
   },
-  keywords: ["Falustic", "platform for creators", "global audiences", "monetize your content", "subscriptions", "tips", "exclusive content sharing"],
+  keywords: ["CreatorX", "platform for creators", "global audiences", "monetize your content", "subscriptions", "tips", "exclusive content sharing"],
   openGraph: {
-    title: "Falustic - The platform for creators and global audiences",
+    title: "CreatorX - The platform for creators and global audiences",
     description: siteConfig.site_description,
     url: siteConfig.site_domain,
     type: "website",
@@ -60,7 +58,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "Falustic",
+              name: "CreatorX",
               applicationCategory: "Productivity",
               operatingSystem: "Browser Extension",
               offers: {
@@ -70,8 +68,8 @@ export default function RootLayout({
               },
               author: {
                 "@type": "Organization",
-                name: "Falustic",
-                url: "https://fancopy.com",
+                name: "CreatorX",
+                url: "https://creatorx.com",
               },
             }),
           }}
@@ -79,6 +77,7 @@ export default function RootLayout({
         <Metrics />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased ")}>
+        <NextTopLoader showSpinner={false} color="#1447e6" />
         <Metrics />
         <ThemeProvider
           attribute="class"

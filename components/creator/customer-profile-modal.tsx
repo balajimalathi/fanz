@@ -12,6 +12,8 @@ import { Loader2, User, Mail, Calendar, CreditCard } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 
 interface CustomerProfileModalProps {
   open: boolean
@@ -43,9 +45,12 @@ interface CustomerProfile {
 }
 
 export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModalProps) {
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  const currency = currencyLoading ? "USD" : creatorCurrency
 
   useEffect(() => {
     if (open) {
@@ -96,10 +101,6 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
     } catch {
       return "Invalid date"
     }
-  }
-
-  const formatPrice = (paise: number) => {
-    return `₹${(paise / 100).toFixed(2)}`
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -208,7 +209,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                                 <div>
                                   <p className="text-muted-foreground">Monthly Fee</p>
                                   <p className="font-medium">
-                                    {formatPrice(subscription.membership.monthlyRecurringFee)}
+                                    {formatCurrencyUtil(subscription.membership.monthlyRecurringFee * 100, currency)}
                                   </p>
                                 </div>
                                 <div>

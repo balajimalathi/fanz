@@ -1,14 +1,14 @@
-# fancopy.com llms.txt
+# creatorx.com llms.txt
 
 > Facilitate quick, automated extraction and integration of structured data from AI chat tools into popular databases, saving time and reducing manual effort for various professional use cases.
 
-- [Tags Page](https://fancopy.com/posts/tags): Display and manage tags for categorizing blog posts on the Falustic site.
-- [Falustic Blog Posts](https://fancopy.com/posts?category=1): Display blog posts and resources related to Falustic AI data extraction tool.
-- [Author's Posts Overview](https://fancopy.com/posts?author=1): Show posts by a specific author and provide navigation for Falustic resources and legal info.
-- [Blog Post Categories](https://fancopy.com/posts/categories): Organize and display blog post categories for easy navigation.
-- [AI Data Extraction Tool](https://fancopy.com): Enable seamless extraction and transfer of AI-generated structured data to databases with a simple browser extension.
-- [Falustic Blog Posts](https://fancopy.com/posts): Showcase and manage blog posts related to Falustic AI data extraction service.
-- [All Authors](https://fancopy.com/posts/authors): List and navigate blog post authors on Falustic platform.
-- [No Posts Available](https://fancopy.com/posts?category=3): Display category-specific blog posts but currently shows no posts available.
+- [Tags Page](https://creatorx.com/posts/tags): Display and manage tags for categorizing blog posts on the CreatorX site.
+- [CreatorX Blog Posts](https://creatorx.com/posts?category=1): Display blog posts and resources related to CreatorX AI data extraction tool.
+- [Author's Posts Overview](https://creatorx.com/posts?author=1): Show posts by a specific author and provide navigation for CreatorX resources and legal info.
+- [Blog Post Categories](https://creatorx.com/posts/categories): Organize and display blog post categories for easy navigation.
+- [AI Data Extraction Tool](https://creatorx.com): Enable seamless extraction and transfer of AI-generated structured data to databases with a simple browser extension.
+- [CreatorX Blog Posts](https://creatorx.com/posts): Showcase and manage blog posts related to CreatorX AI data extraction service.
+- [All Authors](https://creatorx.com/posts/authors): List and navigate blog post authors on CreatorX platform.
+- [No Posts Available](https://creatorx.com/posts?category=3): Display category-specific blog posts but currently shows no posts available.
 
 <!-- Unlock the full power of AI on your site by creating a free AI customer service agent at https://sitespeak.ai -->

@@ -20,12 +20,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { COUNTRIES, parseDateFromInput, isAdult } from "@/lib/onboarding/utils"
 import { validateUsernameClient } from "@/lib/onboarding/validation-client"
- 
+import { getCurrencyFromCountry } from "@/lib/currency/currency-config"
+import { SUPPORTED_CURRENCIES } from "@/lib/currency/currency-config"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { CATEGORIES, GenderOption } from "@/types/onboarding"
 
 const onboardingSchema = z.object({
   country: z.string().min(1, "Please select your country"),
+  currency: z.string().length(3, "Please select a currency"),
   creatorType: z.enum(["ai", "human"], {
     required_error: "Please select a creator type",
   }),
@@ -52,7 +55,7 @@ const onboardingSchema = z.object({
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>
 
-const TOTAL_STEPS = 8
+const TOTAL_STEPS = 9
 
 export function OnboardingWizard() {
   const router = useRouter()
@@ -67,12 +70,14 @@ export function OnboardingWizard() {
     mode: "onChange",
     defaultValues: {
       categories: [],
+      currency: "USD",
     },
   })
 
   const { watch, setValue, trigger, formState: { errors } } = form
   const watchedUsername = watch("username")
   const watchedCategories = watch("categories")
+  const watchedCountry = watch("country")
 
   // Check username uniqueness when it changes
   useEffect(() => {
@@ -199,23 +204,35 @@ export function OnboardingWizard() {
     }
   }
 
+  // Auto-set currency based on country when country changes
+  useEffect(() => {
+    if (watchedCountry) {
+      const suggestedCurrency = getCurrencyFromCountry(watchedCountry)
+      if (suggestedCurrency && !form.getValues("currency")) {
+        setValue("currency", suggestedCurrency)
+      }
+    }
+  }, [watchedCountry, setValue, form])
+
   const getFieldsForStep = (step: number): (keyof OnboardingFormValues)[] => {
     switch (step) {
       case 1:
         return ["country"]
       case 2:
-        return ["creatorType"]
+        return ["currency"]
       case 3:
-        return ["contentType"]
+        return ["creatorType"]
       case 4:
-        return ["username"]
+        return ["contentType"]
       case 5:
-        return ["displayName"]
+        return ["username"]
       case 6:
-        return ["gender"]
+        return ["displayName"]
       case 7:
-        return ["dateOfBirth"]
+        return ["gender"]
       case 8:
+        return ["dateOfBirth"]
+      case 9:
         return ["categories"]
       default:
         return []
@@ -252,6 +269,40 @@ export function OnboardingWizard() {
       case 2:
         return (
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select
+                value={form.watch("currency")}
+                onValueChange={(value) => setValue("currency", value)}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((curr) => (
+                    <SelectItem key={curr} value={curr}>
+                      <span className="flex items-center gap-2">
+                        <span>{getCurrencySymbol(curr)}</span>
+                        <span>{curr}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.currency && (
+                <p className="text-sm text-destructive">{errors.currency.message}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                This is the currency you'll use when setting prices for your content, memberships, and services.
+                Payment gateways will automatically convert prices to your fans' local currencies when they make payments.
+              </p>
+            </div>
+          </div>
+        )
+
+      case 3:
+        return (
+          <div className="space-y-4">
             <Label>Creator Type</Label>
             <div className="space-y-3">
               <label className="flex items-center space-x-3 cursor-pointer p-4 border rounded-md hover:bg-accent">
@@ -281,7 +332,7 @@ export function OnboardingWizard() {
           </div>
         )
 
-      case 3:
+      case 4:
         return (
           <div className="space-y-4">
             <Label>Content Type</Label>
@@ -313,7 +364,7 @@ export function OnboardingWizard() {
           </div>
         )
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-4">
             <Label htmlFor="username">Username</Label>
@@ -340,7 +391,7 @@ export function OnboardingWizard() {
           </div>
         )
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-4">
             <Label htmlFor="displayName">Display Name</Label>
@@ -356,7 +407,7 @@ export function OnboardingWizard() {
           </div>
         )
 
-      case 6:
+      case 7:
         return (
           <div className="space-y-4">
             <Label htmlFor="gender">Gender</Label>
@@ -381,7 +432,7 @@ export function OnboardingWizard() {
           </div>
         )
 
-      case 7:
+      case 8:
         return (
           <div className="space-y-4">
             <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -399,7 +450,7 @@ export function OnboardingWizard() {
           </div>
         )
 
-      case 8:
+      case 9:
         return (
           <div className="space-y-4">
             <Label>What defines you best? (Select at least one)</Label>
@@ -431,6 +482,7 @@ export function OnboardingWizard() {
 
   const stepTitles = [
     "Country",
+    "Currency",
     "Creator Type",
     "Content Type",
     "Username",

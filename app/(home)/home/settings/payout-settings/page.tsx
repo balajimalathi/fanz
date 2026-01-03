@@ -16,6 +16,8 @@ import { SubHeading } from "@/components/ui/sub-heading"
 import { Switch } from "@/components/ui/switch"
 import { Save, Loader2 } from "lucide-react"
 import toast from "react-hot-toast"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 
 interface PayoutSettings {
   minimumThreshold?: number
@@ -23,12 +25,16 @@ interface PayoutSettings {
 }
 
 export default function PayoutSettingsPage() {
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
   const [settings, setSettings] = useState<PayoutSettings>({
     minimumThreshold: 1000,
     automaticPayout: false,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  const currency = currencyLoading ? "USD" : creatorCurrency
+  const currencySymbol = getCurrencySymbol(currency)
 
   useEffect(() => {
     fetchSettings()
@@ -113,13 +119,13 @@ export default function PayoutSettingsPage() {
               <div className="space-y-0.5">
                 <Label htmlFor="minimumThreshold">Minimum Payout Threshold</Label>
                 <p className="text-sm text-muted-foreground">
-                  Minimum amount (in ₹) that must accumulate before a payout can be
+                  Minimum amount (in {currency}) that must accumulate before a payout can be
                   processed
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">₹</span>
+              <span className="text-sm font-medium">{currencySymbol}</span>
               <Input
                 id="minimumThreshold"
                 type="number"

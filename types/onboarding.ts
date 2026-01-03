@@ -5,6 +5,7 @@ export type GenderOption = "male" | "female" | "non-binary" | "prefer-not-to-say
 
 export interface OnboardingStepData {
   country?: string;
+  currency?: string;
   creatorType?: CreatorType;
   contentType?: ContentType;
   username?: string;

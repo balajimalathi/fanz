@@ -280,7 +280,7 @@ export function HlsVideoPlayer({
   }
 
   return (
-    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+    <div className="relative aspect-video bg-black rounded-lg overflow-hidden z-0">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50">
           <div className="text-center text-white">

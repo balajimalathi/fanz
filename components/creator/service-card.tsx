@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { serviceSchema } from "@/lib/validations/service"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 
 interface Service {
   id: string
@@ -29,10 +31,12 @@ export function ServiceCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
   
   // Fetch services on mount
   useEffect(() => {
     fetchServices()
+    fetchCreatorCurrency()
   }, [])
 
   const fetchServices = async () => {
@@ -52,6 +56,18 @@ export function ServiceCard() {
       setTimeout(() => setMessage(null), 5000)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchCreatorCurrency = async () => {
+    try {
+      const response = await fetch("/api/creator/currency")
+      if (response.ok) {
+        const data = await response.json()
+        setCreatorCurrency(data.currency || "USD")
+      }
+    } catch (error) {
+      console.error("Error fetching creator currency:", error)
     }
   }
 
@@ -226,6 +242,7 @@ export function ServiceCard() {
               <ServiceForm
                 onSave={handleSaveService}
                 onCancel={() => setIsAddingService(false)}
+                creatorCurrency={creatorCurrency}
               />
             )}
 
@@ -245,6 +262,7 @@ export function ServiceCard() {
                     onCancel={() => setEditingServiceId(null)}
                     onDelete={handleDeleteService}
                     onToggleVisibility={handleToggleServiceVisibility}
+                    creatorCurrency={creatorCurrency}
                   />
                 ))}
               </div>
@@ -265,6 +283,7 @@ interface ServiceCardProps {
   onCancel: () => void
   onDelete: (id: string) => void
   onToggleVisibility: (id: string) => void
+  creatorCurrency?: string
 }
 
 function ServiceSection({
@@ -275,6 +294,7 @@ function ServiceSection({
   onCancel,
   onDelete,
   onToggleVisibility,
+  creatorCurrency = "USD",
 }: ServiceCardProps) {
   const [name, setName] = useState(service.name)
   const [description, setDescription] = useState(service.description)
@@ -315,7 +335,7 @@ function ServiceSection({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`service-price-${service.id}`}>Price (Rs.)</Label>
+            <Label htmlFor={`service-price-${service.id}`}>Price ({getCurrencySymbol(creatorCurrency)})</Label>
             <Input
               id={`service-price-${service.id}`}
               type="number"
@@ -416,7 +436,12 @@ function ServiceSection({
               <p className="text-sm text-muted-foreground">{description}</p>
             )}
             <p className="text-primary font-medium">
-              Rs. {service.price.toLocaleString("en-IN")}
+              {new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: creatorCurrency,
+                minimumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                maximumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+              }).format(service.price)}
             </p>
           </div>
           <div className="flex items-center gap-2 ml-4">
@@ -450,9 +475,10 @@ function ServiceSection({
 interface ServiceFormProps {
   onSave: (service: Omit<Service, "id">) => void
   onCancel: () => void
+  creatorCurrency?: string
 }
 
-function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
+function ServiceForm({ onSave, onCancel, creatorCurrency = "USD" }: ServiceFormProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
@@ -502,7 +528,7 @@ function ServiceForm({ onSave, onCancel }: ServiceFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-service-price">Price (Rs.)</Label>
+            <Label htmlFor="new-service-price">Price ({getCurrencySymbol(creatorCurrency)})</Label>
             <Input
               id="new-service-price"
               type="number"

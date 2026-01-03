@@ -23,6 +23,7 @@ import { ImageUpload } from "@/components/post/image-upload"
 import { VideoUpload } from "@/components/post/video-upload"
 import { FollowerSelector } from "@/components/post/follower-selector"
 import { cn } from "@/lib/utils"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 
 interface Membership {
   id: string
@@ -62,10 +63,12 @@ export default function CreatePostPage() {
   const [linkCopied, setLinkCopied] = useState(false)
   const [followerSelectorOpen, setFollowerSelectorOpen] = useState(false)
   const [creatorId, setCreatorId] = useState<string | null>(null)
+  const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
 
   useEffect(() => {
     fetchMemberships()
     fetchCreatorId()
+    fetchCreatorCurrency()
   }, [])
 
   const fetchMemberships = async () => {
@@ -92,6 +95,18 @@ export default function CreatePostPage() {
       }
     } catch (error) {
       console.error("Error fetching creator ID:", error)
+    }
+  }
+
+  const fetchCreatorCurrency = async () => {
+    try {
+      const response = await fetch("/api/creator/currency")
+      if (response.ok) {
+        const data = await response.json()
+        setCreatorCurrency(data.currency || "USD")
+      }
+    } catch (error) {
+      console.error("Error fetching creator currency:", error)
     }
   }
 
@@ -408,7 +423,12 @@ export default function CreatePostPage() {
                           <div>
                             <p className="font-medium">{membership.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              Rs. {membership.monthlyRecurringFee}/month
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: creatorCurrency,
+                                minimumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                                maximumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                              }).format(membership.monthlyRecurringFee)}/month
                             </p>
                           </div>
                           {isSelected && (
@@ -430,7 +450,7 @@ export default function CreatePostPage() {
 
           {postType === "exclusive" && (
             <div>
-              <Label htmlFor="price">Price (Rs.)</Label>
+              <Label htmlFor="price">Price ({getCurrencySymbol(creatorCurrency)})</Label>
               <Input
                 id="price"
                 type="number"
@@ -443,7 +463,7 @@ export default function CreatePostPage() {
                 disabled={isPublishing || !!publishedPostId}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Price in Indian Rupees
+                Price in {creatorCurrency}
               </p>
             </div>
           )}

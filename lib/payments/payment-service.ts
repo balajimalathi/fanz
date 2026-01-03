@@ -11,12 +11,17 @@ import {
   notification,
   liveStream,
   liveStreamPurchase,
+  creator,
+  userCurrencyPreference,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { GatewayService } from "./gateway/gateway-service";
 import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
+import { convertToBaseCurrency, getExchangeRate } from "@/lib/currency/exchange-rate-service";
+import { BASE_CURRENCY } from "@/lib/currency/currency-config";
+import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
 export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream";
 
@@ -27,6 +32,7 @@ export interface InitiatePaymentRequest {
   returnUrl?: string;
   duration?: number; // Duration in months (for membership subscriptions)
   originUrl?: string; // Origin URL for redirect after payment
+  currency?: string; // User's preferred currency (ISO 4217). If not provided, will be detected.
 }
 
 export interface PaymentResult {
@@ -73,9 +79,19 @@ export class PaymentService {
         };
       }
 
+      // Get user's currency preference
+      let userCurrency = request.currency;
+      if (!userCurrency) {
+        const userPref = await db.query.userCurrencyPreference.findFirst({
+          where: (ucp, { eq: eqOp }) => eqOp(ucp.userId, request.userId),
+        });
+        userCurrency = userPref?.currency || BASE_CURRENCY;
+      }
+
       // Get entity details and calculate amount
       let amount: number;
       let creatorId: string;
+      let creatorCurrency: string;
       let orderId: string;
 
       switch (request.type) {
@@ -91,14 +107,22 @@ export class PaymentService {
             };
           }
 
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, membershipRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
           // Calculate amount based on duration (bundle pricing)
-          const monthlyPrice = membershipRecord.monthlyRecurringFee; // Already in paise
+          // Amount is stored in creator's currency subunits
+          const monthlyPrice = membershipRecord.monthlyRecurringFee;
           const duration = (request.duration || 1) as BundleDuration;
           
-          // Convert to rupees for calculation, then back to paise
-          const monthlyPriceInRupees = monthlyPrice / 100;
-          const bundlePriceInRupees = calculateBundlePrice(monthlyPriceInRupees, duration);
-          amount = bundlePriceInRupees * 100; // Convert back to paise
+          // Convert to display amount for calculation
+          const creatorDecimals = getCurrencyDecimals(creatorCurrency);
+          const monthlyPriceDisplay = monthlyPrice / Math.pow(10, creatorDecimals);
+          const bundlePriceDisplay = calculateBundlePrice(monthlyPriceDisplay, duration);
+          amount = Math.round(bundlePriceDisplay * Math.pow(10, creatorDecimals));
 
           creatorId = membershipRecord.creatorId;
           orderId = `membership_${request.entityId}_${Date.now()}`;
@@ -117,6 +141,12 @@ export class PaymentService {
             };
           }
 
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, postRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
           // Check if user already purchased this post
           const existingPurchase = await db.query.postPurchase.findFirst({
             where: (pp, { eq: eqOp, and: andOp }) =>
@@ -130,7 +160,7 @@ export class PaymentService {
             };
           }
 
-          amount = postRecord.price;
+          amount = postRecord.price; // Already in creator's currency subunits
           creatorId = postRecord.creatorId;
           orderId = `post_${request.entityId}_${Date.now()}`;
           break;
@@ -148,7 +178,13 @@ export class PaymentService {
             };
           }
 
-          amount = serviceRecord.price;
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, serviceRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
+          amount = serviceRecord.price; // Already in creator's currency subunits
           creatorId = serviceRecord.creatorId;
           orderId = `service_${request.entityId}_${Date.now()}`;
           break;
@@ -165,6 +201,12 @@ export class PaymentService {
               error: "Stream not found or not available for purchase",
             };
           }
+
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, streamRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
 
           // Check if user already purchased this stream
           const existingPurchase = await db.query.liveStreamPurchase.findFirst({
@@ -190,7 +232,7 @@ export class PaymentService {
             };
           }
 
-          amount = streamRecord.price;
+          amount = streamRecord.price; // Already in creator's currency subunits
           creatorId = streamRecord.creatorId;
           orderId = `live_stream_${request.entityId}_${Date.now()}`;
           break;
@@ -203,13 +245,34 @@ export class PaymentService {
           };
       }
 
-      // Calculate split payment
-      const split = calculateSplitPayment(amount);
+      // Convert amount from creator's currency to user's currency if different
+      let paymentAmount = amount;
+      let exchangeRate: number | null = null;
+      
+      if (creatorCurrency !== userCurrency) {
+        // Convert from creator's currency to user's currency
+        const { convertAmount } = await import("@/lib/currency/exchange-rate-service");
+        paymentAmount = await convertAmount(amount, creatorCurrency, userCurrency);
+        
+        // Get exchange rate for storage
+        const rateResult = await getExchangeRate(creatorCurrency, userCurrency);
+        exchangeRate = rateResult.rate;
+      }
+
+      // Convert payment amount to base currency for internal calculations
+      const baseAmount = await convertToBaseCurrency(paymentAmount, userCurrency);
+      const split = calculateSplitPayment(baseAmount);
+
+      // Get exchange rate to base currency
+      const baseRateResult = await getExchangeRate(userCurrency, BASE_CURRENCY);
+      const baseExchangeRate = baseRateResult.rate;
 
       // Build metadata with duration and originUrl for all payment types
       const metadata: Record<string, unknown> = {
         type: request.type,
         entityId: request.entityId,
+        creatorCurrency,
+        userCurrency,
       };
 
       // Store originUrl for all payment types
@@ -230,7 +293,11 @@ export class PaymentService {
           creatorId,
           type: request.type,
           entityId: request.entityId,
-          amount: split.totalAmount,
+          amount: paymentAmount, // Amount in user's currency subunits
+          originalCurrency: userCurrency,
+          baseCurrency: BASE_CURRENCY,
+          convertedAmount: baseAmount, // Amount in base currency subunits
+          exchangeRate: baseExchangeRate.toString(),
           platformFee: split.platformFee,
           creatorAmount: split.creatorAmount,
           status: "pending",
@@ -252,8 +319,8 @@ export class PaymentService {
 
       // Initiate payment with gateway
       const gatewayResponse = await GatewayService.initiatePayment({
-        amount: split.totalAmount,
-        currency: "INR",
+        amount: paymentAmount, // Amount in user's currency subunits
+        currency: userCurrency,
         orderId,
         customerId: request.userId,
         customerEmail: user.email,

@@ -46,35 +46,27 @@ const quickActions: QuickAction[] = [
 
 export function QuickActions() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
-        <CardDescription>Common tasks and shortcuts</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 md:grid-cols-3">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link key={action.title} href={action.href}>
-                <Button
-                  variant={action.variant || "outline"}
-                  className="w-full justify-start h-auto py-4 px-4"
-                >
-                  <Icon className="h-5 w-5 mr-3" />
-                  <div className="flex flex-col items-start text-left">
-                    <span className="font-medium">{action.title}</span>
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {action.description}
-                    </span>
-                  </div>
-                </Button>
-              </Link>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="grid gap-3 md:grid-cols-4">
+      {quickActions.map((action) => {
+        const Icon = action.icon;
+        return (
+          <Link key={action.title} href={action.href}>
+            <Button
+              variant={action.variant || "outline"}
+              className="w-full justify-start h-auto py-4 px-4"
+            >
+              <Icon className="h-5 w-5 mr-3" />
+              <div className="flex flex-col items-start text-left">
+                <span className="font-medium">{action.title}</span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  {action.description}
+                </span>
+              </div>
+            </Button>
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 

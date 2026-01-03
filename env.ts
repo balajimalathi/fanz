@@ -35,6 +35,8 @@ export const env = createEnv({
     PAYMENT_GATEWAY_MERCHANT_ID: z.string().optional(),
     PAYMENT_GATEWAY_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_GATEWAY_MODE: z.enum(["live", "test"]).default("test"),
+    // Exchange Rate API (optional, for currency conversion)
+    EXCHANGE_RATE_API_KEY: z.string().optional(),
     // LiveKit Cloud
     LIVEKIT_API_KEY: z.string().min(1),
     LIVEKIT_API_SECRET: z.string().min(1),
@@ -81,6 +83,7 @@ export const env = createEnv({
     PAYMENT_GATEWAY_MERCHANT_ID: process.env.PAYMENT_GATEWAY_MERCHANT_ID,
     PAYMENT_GATEWAY_WEBHOOK_SECRET: process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
     PAYMENT_GATEWAY_MODE: process.env.PAYMENT_GATEWAY_MODE,
+    EXCHANGE_RATE_API_KEY: process.env.EXCHANGE_RATE_API_KEY,
     LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
     LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
