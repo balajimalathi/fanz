@@ -512,3 +512,55 @@ export const userCurrencyPreference = pgTable("user_currency_preference", {
   detectedFrom: text("detected_from").notNull(), // 'ip', 'browser', or 'manual'
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const reportStatusEnum = pgEnum("report_status", ["pending", "reviewing", "resolved", "dismissed"]);
+export const reportTypeEnum = pgEnum("report_type", ["user", "creator", "post", "comment", "message", "other"]);
+
+export const report = pgTable("report", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  reporterId: text("reporter_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  reportedUserId: text("reported_user_id")
+    .references(() => user.id, { onDelete: "set null" }),
+  reportedCreatorId: text("reported_creator_id")
+    .references(() => creator.id, { onDelete: "set null" }),
+  reportedPostId: uuid("reported_post_id")
+    .references(() => post.id, { onDelete: "set null" }),
+  reportType: reportTypeEnum("report_type").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: reportStatusEnum("status").notNull().default("pending"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: text("resolved_by")
+    .references(() => user.id, { onDelete: "set null" }),
+  resolution: text("resolution"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const disputeStatusEnum = pgEnum("dispute_status", ["open", "investigating", "resolved", "closed"]);
+export const disputeTypeEnum = pgEnum("dispute_type", ["transaction", "payout", "refund", "service", "other"]);
+
+export const dispute = pgTable("dispute", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  transactionId: uuid("transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  payoutId: uuid("payout_id")
+    .references(() => payout.id, { onDelete: "set null" }),
+  creatorId: text("creator_id")
+    .references(() => creator.id, { onDelete: "set null" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  disputeType: disputeTypeEnum("dispute_type").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: disputeStatusEnum("status").notNull().default("open"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: text("resolved_by")
+    .references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

@@ -61,7 +61,7 @@ export function FloatingNav() {
           >
             <Image
               src={Logo}
-              alt="CreatorX"
+              alt="Exclusivz"
               width={32}
               height={20}
               className="dark:invert"

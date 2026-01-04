@@ -6,9 +6,9 @@ type SiteConfig = {
 };
 
 export const siteConfig: SiteConfig = {
-  site_name: "CreatorX",
+  site_name: "Exclusivz",
   site_description:
     "A creator-first platform for creators and global audiences. Monetize your content with subscriptions, tips, and exclusive content sharing.",
-  site_domain: "https://creatorx.com",
-  site_ogImage: "https://creatorx.com/opengraph-image.png",
+  site_domain: "https://exclusivz.com",
+  site_ogImage: "https://exclusivz.com/opengraph-image.png",
 };

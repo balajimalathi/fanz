@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { headers } from "next/headers"
-import { auth } from "@/lib/auth/auth"
+import { checkAdminAccess } from "@/lib/utils/admin-auth"
 import { db } from "@/lib/db/client"
 import { payout, payoutItem, creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
@@ -11,18 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ payoutId: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // TODO: Add admin role check
-    // if (session.user.role !== "admin") {
-    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    // }
+    const authError = await checkAdminAccess()
+    if (authError) return authError
 
     const { payoutId } = await params
 

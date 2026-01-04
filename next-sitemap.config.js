@@ -1,4 +1,4 @@
 module.exports = {
-  siteUrl: 'https://creatorx.com',
+  siteUrl: 'https://exclusivz.com',
   generateRobotsTxt: true,
 }

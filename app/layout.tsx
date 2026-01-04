@@ -25,15 +25,15 @@ const baskerville = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "CreatorX - The platform for creators and global audiences",
+  title: "Exclusivz - The platform for creators and global audiences",
   description: siteConfig.site_description,
   metadataBase: new URL(siteConfig.site_domain),
   alternates: {
     canonical: "/",
   },
-  keywords: ["CreatorX", "platform for creators", "global audiences", "monetize your content", "subscriptions", "tips", "exclusive content sharing"],
+  keywords: ["Exclusivz", "platform for creators", "global audiences", "monetize your content", "subscriptions", "tips", "exclusive content sharing"],
   openGraph: {
-    title: "CreatorX - The platform for creators and global audiences",
+    title: "Exclusivz - The platform for creators and global audiences",
     description: siteConfig.site_description,
     url: siteConfig.site_domain,
     type: "website",
@@ -58,7 +58,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "CreatorX",
+              name: "Exclusivz",
               applicationCategory: "Productivity",
               operatingSystem: "Browser Extension",
               offers: {
@@ -68,8 +68,8 @@ export default function RootLayout({
               },
               author: {
                 "@type": "Organization",
-                name: "CreatorX",
-                url: "https://creatorx.com",
+                name: "Exclusivz",
+                url: "https://exclusivz.com",
               },
             }),
           }}

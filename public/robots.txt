@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://creatorx.com
+Host: https://exclusivz.com
 
 # Sitemaps
-Sitemap: https://creatorx.com/sitemap.xml
+Sitemap: https://exclusivz.com/sitemap.xml
