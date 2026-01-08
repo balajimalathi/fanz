@@ -3,9 +3,7 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 export const env = createEnv({
-  server: {
-    WORDPRESS_URL: z.string().url(),
-    WORDPRESS_HOSTNAME: z.string(),
+  server: { 
     DATABASE_URL: z.string().url(),
     // Auth & identity (BetterAuth)
     BETTER_AUTH_SECRET: z.string().min(1),
@@ -56,8 +54,6 @@ export const env = createEnv({
   },
   // If you're using Next.js < 13.4.4, you'll need to specify the runtimeEnv manually
   runtimeEnv: {
-    WORDPRESS_URL: process.env.WORDPRESS_URL,
-    WORDPRESS_HOSTNAME: process.env.WORDPRESS_HOSTNAME,
     DATABASE_URL: process.env.DATABASE_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,

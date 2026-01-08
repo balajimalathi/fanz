@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Doc } from "contentlayer/generated"
+import type { Doc } from "@/lib/mdx-types"
 
 import { docsConfig } from "@/content/docs"
 import { cn } from "@/lib/utils"

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { allDocs } from "contentlayer/generated";
+import { getAllDocs, getDocBySlug } from "@/lib/mdx";
 
 import { getTableOfContents } from "@/lib/toc";
 import { Mdx } from "@/components/content/mdx-components";
@@ -21,7 +21,7 @@ interface DocPageProps {
 
 async function getDocFromParams(params: { slug: string[] }) {
   const slug = params.slug?.join("/") || "";
-  const doc = allDocs.find((doc) => doc.slugAsParams === slug);
+  const doc = await getDocBySlug(slug);
 
   if (!doc) return null;
 
@@ -47,7 +47,8 @@ export async function generateMetadata({
 export async function generateStaticParams(): Promise<
   Awaited<DocPageProps["params"]>[]
 > {
-  return allDocs.map((doc) => ({
+  const docs = await getAllDocs();
+  return docs.map((doc) => ({
     slug: doc.slugAsParams.split("/"),
   }));
 }

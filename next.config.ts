@@ -1,8 +1,5 @@
 import type { NextConfig } from "next";
-import { withContentlayer } from "next-contentlayer2";
 
-const wordpressHostname = process.env.WORDPRESS_HOSTNAME;
-const wordpressUrl = process.env.WORDPRESS_URL;
 const r2PublicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
 
 // Extract hostname from R2 public URL
@@ -16,28 +13,6 @@ const remotePatterns: Array<{
   pathname: string;
 }> = [];
 
-if (wordpressHostname) {
-  remotePatterns.push(
-    {
-      protocol: "https",
-      hostname: wordpressHostname,
-      port: "",
-      pathname: "/**",
-    },
-    {
-      protocol: "http",
-      hostname: "65.109.132.224",
-      port: "8081",
-      pathname: "/**",
-    },
-    {
-      protocol: "https",
-      hostname: "images.unsplash.com",
-      pathname: "/**",
-    }
-  );
-}
-
 if (r2Hostname) {
   remotePatterns.push({
     protocol: "https",
@@ -48,6 +23,7 @@ if (r2Hostname) {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  reactStrictMode: true,
   experimental: {
     optimizePackageImports: ["lucide-react"],
     middlewareClientMaxBodySize: "500mb",
@@ -58,15 +34,8 @@ const nextConfig: NextConfig = {
     remotePatterns,
   },
   async redirects() {
-    if (!wordpressUrl) {
-      return [];
-    }
     return [
-      {
-        source: "/admin",
-        destination: `${wordpressUrl}/wp-admin`,
-        permanent: true,
-      },
+
     ];
   },
   async headers() {
@@ -165,4 +134,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withContentlayer(nextConfig);
+export default nextConfig;

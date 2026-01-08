@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { allPages } from "contentlayer/generated";
+import { getAllPages, getPageBySlug } from "@/lib/mdx";
 
 import { Mdx } from "@/components/content/mdx-components";
 import "@/styles/mdx.css";
@@ -9,7 +9,8 @@ import { Metadata } from "next";
 import { constructMetadata, getBlurDataURL } from "@/lib/utils";
 
 export async function generateStaticParams() {
-  return allPages.map((page: any) => ({
+  const pages = await getAllPages();
+  return pages.map((page) => ({
     slug: page.slugAsParams,
   }));
 }
@@ -20,7 +21,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata | undefined> {
   const { slug } = await params;
-  const page = allPages.find((page: any) => page.slugAsParams === slug);
+  const page = await getPageBySlug(slug);
   if (!page) {
     return;
   }
@@ -41,7 +42,7 @@ export default async function PagePage({
   }>;
 }) {
   const { slug } = await params;
-  const page = allPages.find((page: any) => page.slugAsParams === slug);
+  const page = await getPageBySlug(slug);
 
   if (!page) {
     notFound();

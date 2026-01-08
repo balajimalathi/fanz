@@ -37,7 +37,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "wp.config.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

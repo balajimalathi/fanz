@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { useMDXComponent } from "next-contentlayer2/hooks";
+import { getMDXComponent } from "mdx-bundler/client";
 
 import { cn } from "@/lib/utils";
 import { MdxCard } from "@/components/content/mdx-card";
@@ -204,7 +204,7 @@ interface MdxProps {
 }
 
 export function Mdx({ code, images }: MdxProps) {
-  const Component = useMDXComponent(code);
+  const Component = getMDXComponent(code);
 
   const MDXImage = (props: any) => {
     if (!images) return null;

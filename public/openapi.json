@@ -1622,25 +1622,6 @@
         }
       }
     },
-    "/revalidate": {
-      "post": {
-        "operationId": "post-revalidate",
-        "summary": "WordPress webhook handler for content revalidation\r",
-        "description": "",
-        "tags": [
-          "Revalidate"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
-    },
     "/creator/profile": {
       "get": {
         "operationId": "get-creator-profile",
