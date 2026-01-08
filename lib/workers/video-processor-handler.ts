@@ -4,10 +4,11 @@ import { promisify } from "util"
 import { join } from "path"
 import { mkdir, rm, writeFile, rename } from "fs/promises"
 import { db } from "@/lib/db/client"
-import { post, postMedia } from "@/lib/db/schema"
+import { post, postMedia, creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { uploadFileToR2, uploadDirectoryToR2, getR2FileUrl } from "@/lib/storage/r2"
 import { VideoProcessingJobData } from "@/lib/queue/video-processing"
+import { getSubdomainUrl, getVideoWatermarkFilter } from "@/lib/utils/watermark"
 
 const execAsync = promisify(exec)
 
@@ -72,6 +73,12 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
 
     const creatorId = postRecord.creatorId
 
+    // Get creator subdomain for watermarking
+    const creatorRecord = await db.query.creator.findFirst({
+      where: (c, { eq: eqOp }) => eqOp(c.id, creatorId),
+    })
+    const subdomainUrl = getSubdomainUrl(creatorRecord?.subdomain || null)
+
     // Update job progress
     await job.updateProgress(10)
 
@@ -135,11 +142,22 @@ export async function processVideoJob(job: Job<VideoProcessingJobData>) {
       // For landscape: scale by width, let height adjust automatically
       // For portrait: scale by height, let width adjust automatically
       // force_original_aspect_ratio=decrease ensures we don't upscale or stretch
+      // force_divisible_by=2 ensures dimensions are even (required by libx264)
       const scaleFilter = isPortrait
-        ? `scale=-2:${targetHeight}:force_original_aspect_ratio=decrease`
-        : `scale=${targetWidth}:-2:force_original_aspect_ratio=decrease`
+        ? `scale=-2:${targetHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2`
+        : `scale=${targetWidth}:-2:force_original_aspect_ratio=decrease:force_divisible_by=2`
       
-      const ffmpegCommand = `ffmpeg -i "${normalizedVideoPath}" -preset veryfast -g 48 -sc_threshold 0 -map 0:v:0 -map 0:a:0? -vf "${scaleFilter}" -c:v libx264 -b:v ${variant.bitrate} -maxrate ${variant.bitrate} -bufsize ${bitrateNum * 2}k -c:a aac -b:a 128k -f hls -hls_time 4 -hls_list_size 0 -hls_segment_filename "${segmentFilename}" "${playlistPath}"`
+      // Get watermark filter if subdomain exists
+      const watermarkFilter = getVideoWatermarkFilter(subdomainUrl, targetWidth, targetHeight)
+      
+      // Build video filter chain - combine scale and watermark filters
+      let videoFilters = scaleFilter
+      if (watermarkFilter) {
+        // Combine filters using comma (FFmpeg filter chain syntax)
+        videoFilters = `${scaleFilter},${watermarkFilter}`
+      }
+      
+      const ffmpegCommand = `ffmpeg -i "${normalizedVideoPath}" -preset veryfast -g 48 -sc_threshold 0 -map 0:v:0 -map 0:a:0? -vf "${videoFilters}" -c:v libx264 -b:v ${variant.bitrate} -maxrate ${variant.bitrate} -bufsize ${bitrateNum * 2}k -c:a aac -b:a 128k -f hls -hls_time 4 -hls_list_size 0 -hls_segment_filename "${segmentFilename}" "${playlistPath}"`
       
       console.log(`[Job ${job.id}] Processing variant ${variant.label} (${variant.resolution}@${variant.bitrate})...`)
       
