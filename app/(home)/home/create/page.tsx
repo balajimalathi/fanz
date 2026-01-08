@@ -49,7 +49,7 @@ interface VideoFile {
 export default function CreatePostPage() {
   const router = useRouter()
   const [caption, setCaption] = useState("")
-  const [postType, setPostType] = useState<"subscription" | "exclusive">("subscription")
+  const [postType, setPostType] = useState<"subscription" | "exclusive" | "free">("subscription")
   const [selectedMemberships, setSelectedMemberships] = useState<Set<string>>(new Set())
   const [price, setPrice] = useState("")
   const [images, setImages] = useState<ImageFile[]>([])
@@ -131,6 +131,8 @@ export default function CreatePostPage() {
       return
     }
 
+    // Free posts don't require validation for price or memberships
+
     setIsPublishing(true)
 
     try {
@@ -142,9 +144,10 @@ export default function CreatePostPage() {
 
       if (postType === "subscription") {
         postData.membershipIds = Array.from(selectedMemberships)
-      } else {
+      } else if (postType === "exclusive") {
         postData.price = parseFloat(price)
       }
+      // Free posts don't need price or membershipIds
 
       const postResponse = await fetch("/api/posts", {
         method: "POST",
@@ -376,7 +379,7 @@ export default function CreatePostPage() {
             <Label className="mb-3 block">Post Type</Label>
             <RadioGroup
               value={postType}
-              onValueChange={(value) => setPostType(value as "subscription" | "exclusive")}
+              onValueChange={(value) => setPostType(value as "subscription" | "exclusive" | "free")}
               disabled={isPublishing || !!publishedPostId}
             >
               <div className="flex items-center space-x-2">
@@ -389,6 +392,12 @@ export default function CreatePostPage() {
                 <RadioGroupItem value="exclusive" id="exclusive" />
                 <Label htmlFor="exclusive" className="cursor-pointer">
                   Exclusive (one-time payment)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="free" id="free" />
+                <Label htmlFor="free" className="cursor-pointer">
+                  Free (visible to all logged-in users)
                 </Label>
               </div>
             </RadioGroup>

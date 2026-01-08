@@ -27,7 +27,7 @@ interface FeedPost {
   id: string
   creator: Creator | null
   caption: string | null
-  postType: "subscription" | "exclusive"
+  postType: "subscription" | "exclusive" | "free"
   price: number | null
   isPinned: boolean
   media: PostMedia[]

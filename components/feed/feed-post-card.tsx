@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import Image from "next/image"
-import { Pin, Lock } from "lucide-react"
+import { Pin, Lock, LogIn } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { ExclusivePostOverlay } from "@/components/payments/exclusive-post-overlay"
 import { PriceDisplay } from "@/components/currency/price-display"
 import { toSubunits } from "@/lib/currency/currency-utils"
+import { Button } from "@/components/ui/button"
 
 interface PostMedia {
   id: string
@@ -38,7 +40,7 @@ interface FeedPost {
   id: string
   creator: Creator | null
   caption: string | null
-  postType: "subscription" | "exclusive"
+  postType: "subscription" | "exclusive" | "free"
   price: number | null
   priceCurrency?: string // ISO 4217 currency code
   isPinned: boolean
@@ -64,6 +66,7 @@ export function FeedPostCard({
   onCommentCountChange,
 }: FeedPostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount)
+  const pathname = usePathname()
 
   const creatorLink = post.creator?.username
     ? `/u/${post.creator.username}`
@@ -141,6 +144,22 @@ export function FeedPostCard({
                   <div className="flex flex-col items-center gap-2 text-white">
                     <Lock className="h-8 w-8" />
                     <p className="text-sm font-medium">Membership Required</p>
+                  </div>
+                </div>
+              )}
+              {!post.hasAccess && post.postType === "free" && !currentUserId && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                  <div className="flex flex-col items-center gap-4 text-white px-4">
+                    <LogIn className="h-10 w-10" />
+                    <p className="text-base font-semibold">Sign in to view</p>
+                    <p className="text-sm text-white/80 text-center">
+                      This is free content available to all logged-in users
+                    </p>
+                    <Button asChild className="mt-2">
+                      <Link href={`/login?redirect=${encodeURIComponent(pathname || "/")}`}>
+                        Sign In
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               )}

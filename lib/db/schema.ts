@@ -69,7 +69,7 @@ export const verification = pgTable("verification", {
 
 export const creatorTypeEnum = pgEnum("creator_type", ["ai", "human"]);
 export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
-export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive"]);
+export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive", "free"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
 export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream"]);

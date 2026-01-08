@@ -14,7 +14,7 @@ import { createPostSchema } from "@/lib/validations/post"
  * @security BearerAuth
  * @param {object} request.body.required - The post creation data
  * @property {string} [caption] - The caption of the post
- * @property {string} postType - The type of post (subscription/exclusive)
+ * @property {string} postType - The type of post (subscription/exclusive/free)
  * @property {number} [price] - The price for exclusive posts
  * @property {string[]} [membershipIds] - IDs of memberships for subscription posts
  * @returns {object} 201 - The created post
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert price from rupees to paise for exclusive posts
+    // Free posts don't have a price
     const priceInPaise = postType === "exclusive" && price ? Math.round(price * 100) : null
 
     // Create the post

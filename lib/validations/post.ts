@@ -3,7 +3,7 @@ import { z } from "zod"
 export const createPostSchema = z
   .object({
     caption: z.string().max(5000, "Caption must be less than 5000 characters").optional(),
-    postType: z.enum(["subscription", "exclusive"]),
+    postType: z.enum(["subscription", "exclusive", "free"]),
     price: z.number().min(0, "Price must be non-negative").optional(),
     membershipIds: z.array(z.string().uuid("Invalid membership ID")).optional(),
   })
@@ -14,6 +14,10 @@ export const createPostSchema = z
       }
       if (data.postType === "exclusive") {
         return data.price !== undefined && data.price > 0
+      }
+      // Free posts don't require price or memberships
+      if (data.postType === "free") {
+        return true
       }
       return true
     },

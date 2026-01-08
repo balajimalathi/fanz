@@ -225,6 +225,13 @@
       "when": 1767535906601,
       "tag": "0031_dusty_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1767897375285,
+      "tag": "0032_sad_tyrannus",
+      "breakpoints": true
     }
   ]
 }
