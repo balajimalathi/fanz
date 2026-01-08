@@ -101,10 +101,6 @@ export function DisputesTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Disputes</CardTitle>
-        <CardDescription>Review and resolve transaction disputes</CardDescription>
-      </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex gap-4">

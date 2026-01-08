@@ -128,10 +128,6 @@ export function ReportsTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>User Reports</CardTitle>
-        <CardDescription>Review and resolve user reports</CardDescription>
-      </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex gap-4">

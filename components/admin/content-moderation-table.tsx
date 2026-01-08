@@ -150,10 +150,6 @@ export function ContentModerationTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Content Moderation</CardTitle>
-        <CardDescription>Review and moderate posts and comments</CardDescription>
-      </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">

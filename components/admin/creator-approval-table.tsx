@@ -113,10 +113,6 @@ export function CreatorApprovalTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Creator Management</CardTitle>
-        <CardDescription>Approve or reject creator applications</CardDescription>
-      </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex gap-4">
