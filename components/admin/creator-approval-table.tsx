@@ -173,12 +173,12 @@ export function CreatorApprovalTable() {
         cell: ({ row }) => {
           const creator = row.original
           return (
-            <div className="flex flex-col gap-1">
-              <Badge variant={creator.onboarded ? "default" : "outline"}>
+            <div className="flex flex-col gap-1 items-left">
+              <Badge variant={creator.onboarded ? "default" : "outline"} className="shrink-0">
                 {creator.onboarded ? "Approved" : "Pending"}
               </Badge>
               {creator.banned && (
-                <Badge variant="destructive" className="text-xs">
+                <Badge variant="destructive" className="text-xs shrink-0">
                   Suspended
                 </Badge>
               )}

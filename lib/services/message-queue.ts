@@ -72,6 +72,9 @@ async function persistMessageToDatabase(
       content: messageData.content,
       mediaUrl: messageData.mediaUrl,
       thumbnailUrl: messageData.thumbnailUrl,
+      // Use the timestamp from the message to ensure consistent ordering
+      // This prevents DB defaultNow() from creating a different timestamp
+      createdAt: new Date(messageData.timestamp),
     };
     
     // Use provided ID if available, otherwise let DB generate it
@@ -131,8 +134,18 @@ async function processSingleMessage(
         throw new Error("Failed to save message to database");
       }
 
+      // Normalize createdAt to ISO string for consistent format
+      const normalizedMessage = {
+        ...savedMessage,
+        createdAt: savedMessage.createdAt instanceof Date 
+          ? savedMessage.createdAt.toISOString() 
+          : typeof savedMessage.createdAt === 'string'
+          ? savedMessage.createdAt
+          : new Date(messageData.timestamp).toISOString(),
+      };
+
       // Publish to Redis pub/sub for real-time updates
-      await publishMessage(messageData.conversationId, savedMessage);
+      await publishMessage(messageData.conversationId, normalizedMessage);
 
       // Acknowledge the message
       await acknowledgeMessage(getStreamClient(), messageId);

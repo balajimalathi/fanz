@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { conversation, chatMessage } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, asc } from "drizzle-orm";
 import {
   queueMessageForPersistence,
   saveMessageDirectly,
@@ -50,15 +50,12 @@ export async function GET(
       );
     }
 
-    // Get messages
+    // Get messages in chronological order (oldest first)
     const messages = await db.query.chatMessage.findMany({
       where: (m, { eq: eqOp }) => eqOp(m.conversationId, conversationId),
-      orderBy: [desc(chatMessage.createdAt)],
+      orderBy: [asc(chatMessage.createdAt)],
       limit: 100, // Get last 100 messages
     });
-
-    // Reverse to get chronological order (oldest first)
-    messages.reverse();
 
     return NextResponse.json(messages);
   } catch (error) {
@@ -138,8 +135,17 @@ export async function POST(
     // This ensures persistence happens quickly while not blocking the response
     const savePromise = saveMessageDirectly(queuedMessage).then((savedMessage) => {
       if (savedMessage) {
+        // Normalize createdAt to ISO string for consistent format
+        const normalizedMessage = {
+          ...savedMessage,
+          createdAt: savedMessage.createdAt instanceof Date 
+            ? savedMessage.createdAt.toISOString() 
+            : typeof savedMessage.createdAt === 'string'
+            ? savedMessage.createdAt
+            : new Date(timestamp).toISOString(),
+        };
         // Publish to Redis pub/sub after successful save
-        publishMessage(conversationId, savedMessage).catch((error) => {
+        publishMessage(conversationId, normalizedMessage).catch((error) => {
           console.error("[Messages API] Error publishing saved message to Redis pub/sub:", error);
         });
         return savedMessage;

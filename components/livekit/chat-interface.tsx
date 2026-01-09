@@ -56,10 +56,123 @@ export function ChatInterface({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const messagesMapRef = useRef<Map<string, number>>(new Map()); // Map<messageId, index> for O(1) lookups
+  const scrollPositionRef = useRef<number>(0);
+  const isUserScrolledUpRef = useRef<boolean>(false);
   const maxReconnectAttempts = 5;
   const baseReconnectDelay = 1000; // 1 second
   const typingDebounceDelay = 300; // 300ms debounce
   const typingTimeoutDelay = 3000; // 3 seconds timeout
+  const SCROLL_THRESHOLD = 100; // pixels from bottom to consider "at bottom"
+
+  // Normalize message createdAt to ISO string format
+  const normalizeMessage = (message: any): Message => {
+    let normalizedCreatedAt: string;
+    const createdAt = message.createdAt;
+    if (createdAt && typeof createdAt === 'object' && createdAt.constructor === Date) {
+      normalizedCreatedAt = createdAt.toISOString();
+    } else if (typeof createdAt === 'string') {
+      normalizedCreatedAt = createdAt;
+    } else {
+      normalizedCreatedAt = new Date().toISOString();
+    }
+    return {
+      ...message,
+      createdAt: normalizedCreatedAt,
+    };
+  };
+
+  // Binary search to find insertion index for a message (oldest first)
+  const findInsertionIndex = (messages: Message[], newMessage: Message): number => {
+    const newTime = new Date(newMessage.createdAt).getTime();
+    let left = 0;
+    let right = messages.length;
+
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      const midTime = new Date(messages[mid].createdAt).getTime();
+      
+      if (midTime < newTime) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+
+    return left;
+  };
+
+  // Smart message insertion: append if newer than last, binary search if older
+  const insertMessageSorted = (
+    messages: Message[], 
+    newMessage: Message, 
+    messagesMap: Map<string, number>
+  ): Message[] => {
+    // Check for duplicate using Map (O(1))
+    const existingIndex = messagesMap.get(newMessage.id);
+    if (existingIndex !== undefined && existingIndex < messages.length) {
+      // Message exists, update in-place if timestamp hasn't changed significantly
+      const existing = messages[existingIndex];
+      const existingTime = new Date(existing.createdAt).getTime();
+      const newTime = new Date(newMessage.createdAt).getTime();
+      
+      // If timestamps are very close (within 1 second), just update in-place
+      if (Math.abs(existingTime - newTime) < 1000) {
+        const updated = [...messages];
+        updated[existingIndex] = newMessage;
+        return updated;
+      }
+      
+      // Timestamp changed significantly, need to re-insert
+      const filtered = messages.filter((_, idx) => idx !== existingIndex);
+      // Rebuild map for filtered array
+      messagesMap.clear();
+      filtered.forEach((msg, idx) => messagesMap.set(msg.id, idx));
+      // Continue with insertion logic below
+      const insertIndex = findInsertionIndex(filtered, newMessage);
+      const result = [...filtered];
+      result.splice(insertIndex, 0, newMessage);
+      // Rebuild map for new array
+      messagesMap.clear();
+      result.forEach((msg, idx) => messagesMap.set(msg.id, idx));
+      return result;
+    }
+
+    // New message - optimize common case: append if newer than last message
+    if (messages.length === 0) {
+      messagesMap.set(newMessage.id, 0);
+      return [newMessage];
+    }
+
+    const lastMessage = messages[messages.length - 1];
+    const lastTime = new Date(lastMessage.createdAt).getTime();
+    const newTime = new Date(newMessage.createdAt).getTime();
+
+    if (newTime >= lastTime) {
+      // Append (O(1) - most common case)
+      messagesMap.set(newMessage.id, messages.length);
+      return [...messages, newMessage];
+    }
+
+    // Out of order - use binary search insertion (O(log n))
+    const insertIndex = findInsertionIndex(messages, newMessage);
+    const result = [...messages];
+    result.splice(insertIndex, 0, newMessage);
+    // Rebuild map (needed because indices shifted)
+    messagesMap.clear();
+    result.forEach((msg, idx) => messagesMap.set(msg.id, idx));
+    return result;
+  };
+
+  // Update messages and map atomically
+  const addOrUpdateMessage = (
+    prev: Message[], 
+    newMessage: Message, 
+    messagesMap: Map<string, number>
+  ): Message[] => {
+    return insertMessageSorted(prev, newMessage, messagesMap);
+  };
+
 
   // Fetch initial messages
   useEffect(() => {
@@ -69,10 +182,15 @@ export function ChatInterface({
         const response = await fetch(`/api/conversations/${conversationId}/messages`);
         if (!response.ok) throw new Error("Failed to fetch messages");
         const data = await response.json();
-        // Ensure messages are sorted by createdAt (oldest first)
-        const sortedMessages = [...data].sort((a, b) => 
+        // Normalize all messages first (ensure createdAt is ISO string)
+        const normalized = data.map((msg: any) => normalizeMessage(msg));
+        // Messages from API are already sorted, but ensure they are
+        const sortedMessages = [...normalized].sort((a, b) => 
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
+        // Rebuild messages map
+        messagesMapRef.current.clear();
+        sortedMessages.forEach((msg, idx) => messagesMapRef.current.set(msg.id, idx));
         console.log("[ChatInterface] Fetched", sortedMessages.length, "messages");
         setMessages(sortedMessages);
       } catch (error) {
@@ -112,21 +230,14 @@ export function ChatInterface({
 
         eventSource.addEventListener("message", (event) => {
           try {
-            const newMessage: Message = JSON.parse(event.data);
+            const rawMessage: any = JSON.parse(event.data);
+            // Normalize the message before processing
+            const newMessage = normalizeMessage(rawMessage);
             console.log("[ChatInterface] Received message via SSE:", newMessage);
-            // Only add message if it doesn't already exist (prevent duplicates)
+            // Update or add message using smart insertion
             setMessages((prev) => {
-              const exists = prev.some((msg) => msg.id === newMessage.id);
-              if (exists) {
-                console.log("[ChatInterface] Message already exists, skipping:", newMessage.id);
-                return prev;
-              }
-              // Add new message and sort by createdAt to ensure correct order
-              const updated = [...prev, newMessage];
-              updated.sort((a, b) => 
-                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-              );
-              console.log("[ChatInterface] Added new message, total messages:", updated.length);
+              const updated = addOrUpdateMessage(prev, newMessage, messagesMapRef.current);
+              console.log("[ChatInterface] Message processed, total messages:", updated.length);
               return updated;
             });
           } catch (error) {
@@ -220,52 +331,106 @@ export function ChatInterface({
     };
   }, [conversationId, currentUserId]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Get scroll viewport element
+  const getScrollViewport = (): HTMLElement | null => {
+    if (!scrollAreaRef.current) return null;
+    
+    // Method 1: Try data attribute (Radix ScrollArea)
+    let viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    
+    // Method 2: Try finding by role or class
+    if (!viewport) {
+      viewport = scrollAreaRef.current.querySelector('div[style*="overflow"]') as HTMLElement;
+    }
+    
+    // Method 3: Try finding the first scrollable div
+    if (!viewport) {
+      const divs = scrollAreaRef.current.querySelectorAll('div');
+      for (const div of Array.from(divs)) {
+        if (div.scrollHeight > div.clientHeight) {
+          viewport = div;
+          break;
+        }
+      }
+    }
+    
+    return viewport;
+  };
+
+  // Check if user is near bottom of scroll
+  const isNearBottom = (): boolean => {
+    const viewport = getScrollViewport();
+    if (!viewport) return true; // Default to true if can't determine
+    
+    const { scrollTop, scrollHeight, clientHeight } = viewport;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    return distanceFromBottom <= SCROLL_THRESHOLD;
+  };
+
+  // Scroll to bottom
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    const viewport = getScrollViewport();
+    if (viewport) {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior,
+      });
+      scrollPositionRef.current = viewport.scrollHeight;
+      isUserScrolledUpRef.current = false;
+    } else {
+      // Fallback: use scrollIntoView on anchor element
+      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+    }
+  };
+
+  // Track scroll position to detect user scrolling
   useEffect(() => {
-    // Use requestAnimationFrame and setTimeout to ensure DOM is fully updated
-    const scrollToBottom = () => {
-      if (scrollAreaRef.current) {
-        // Try multiple methods to find and scroll the viewport
-        // Method 1: Try data attribute (Radix ScrollArea)
-        let viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-        
-        // Method 2: Try finding by role or class
-        if (!viewport) {
-          viewport = scrollAreaRef.current.querySelector('div[style*="overflow"]') as HTMLElement;
-        }
-        
-        // Method 3: Try finding the first scrollable div
-        if (!viewport) {
-          const divs = scrollAreaRef.current.querySelectorAll('div');
-          for (const div of Array.from(divs)) {
-            if (div.scrollHeight > div.clientHeight) {
-              viewport = div;
-              break;
-            }
-          }
-        }
-        
-        if (viewport) {
-          // Scroll the viewport to bottom
-          viewport.scrollTo({
-            top: viewport.scrollHeight,
-            behavior: "smooth",
-          });
-        } else {
-          // Fallback: use scrollIntoView on anchor element
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }
-      } else {
-        // Fallback: use scrollIntoView on anchor element
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Wait for viewport to be available
+    const timeoutId = setTimeout(() => {
+      const viewport = getScrollViewport();
+      if (!viewport) return;
+
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = viewport;
+        scrollPositionRef.current = scrollTop;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        isUserScrolledUpRef.current = distanceFromBottom > SCROLL_THRESHOLD;
+      };
+
+      viewport.addEventListener("scroll", handleScroll, { passive: true });
+      
+      // Initial check
+      handleScroll();
+    }, 100);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(timeoutId);
+      const viewport = getScrollViewport();
+      if (viewport) {
+        // Note: We can't remove the specific handler, but that's okay since
+        // the viewport will be cleaned up when component unmounts
       }
     };
-    
-    // Use requestAnimationFrame to ensure layout is complete, then delay for DOM update
-    requestAnimationFrame(() => {
-      setTimeout(scrollToBottom, 150);
-    });
-  }, [messages, typingUser]);
+  }, [messages.length]); // Re-attach when message count changes (viewport might change)
+
+  // Smart auto-scroll: only scroll if user is at bottom or on initial load
+  useEffect(() => {
+    // Always scroll on initial load
+    if (messages.length > 0 && scrollPositionRef.current === 0) {
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToBottom("auto"), 100);
+      });
+      return;
+    }
+
+    // For new messages, only auto-scroll if user is near bottom
+    if (isNearBottom() && !isUserScrolledUpRef.current) {
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToBottom("smooth"), 150);
+      });
+    }
+  }, [messages.length, typingUser]); // Only trigger on message count change or typing
 
   // Timer effect for recording
   useEffect(() => {
@@ -383,8 +548,8 @@ export function ChatInterface({
         createdAt: new Date().toISOString(),
       };
       
-      // Add optimistic message immediately
-      setMessages((prev) => [...prev, optimisticMessage]);
+      // Add optimistic message immediately using smart insertion
+      setMessages((prev) => addOrUpdateMessage(prev, optimisticMessage, messagesMapRef.current));
       
       // Upload and send in background
       (async () => {
@@ -411,12 +576,17 @@ export function ChatInterface({
           
           // Replace optimistic message with real message
           setMessages((prev) => {
-            const filtered = prev.filter((msg) => msg.id !== tempMessageId);
-            const exists = filtered.some((msg) => msg.id === newMessage.id);
-            if (exists) {
-              return filtered;
+            // Remove optimistic message from map
+            const optimisticIndex = messagesMapRef.current.get(tempMessageId);
+            if (optimisticIndex !== undefined) {
+              messagesMapRef.current.delete(tempMessageId);
             }
-            return [...filtered, newMessage];
+            const filtered = prev.filter((msg) => msg.id !== tempMessageId);
+            // Rebuild map for filtered array
+            messagesMapRef.current.clear();
+            filtered.forEach((msg, idx) => messagesMapRef.current.set(msg.id, idx));
+            // Add real message using smart insertion
+            return addOrUpdateMessage(filtered, normalizeMessage(newMessage), messagesMapRef.current);
           });
           
           // Clear file selection
@@ -428,7 +598,13 @@ export function ChatInterface({
         } catch (error) {
           console.error("Error uploading image:", error);
           // Remove optimistic message on error
-          setMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
+          setMessages((prev) => {
+            const filtered = prev.filter((msg) => msg.id !== tempMessageId);
+            // Rebuild map
+            messagesMapRef.current.clear();
+            filtered.forEach((msg, idx) => messagesMapRef.current.set(msg.id, idx));
+            return filtered;
+          });
           setError(error instanceof Error ? error.message : "Failed to upload image");
           // Keep the file selected so user can retry
         }
@@ -486,8 +662,8 @@ export function ChatInterface({
             createdAt: new Date().toISOString(),
           };
           
-          // Add optimistic message immediately
-          setMessages((prev) => [...prev, optimisticMessage]);
+          // Add optimistic message immediately using smart insertion
+          setMessages((prev) => addOrUpdateMessage(prev, optimisticMessage, messagesMapRef.current));
           
           // Upload and send in background
           try {
@@ -514,12 +690,17 @@ export function ChatInterface({
             
             // Replace optimistic message with real message
             setMessages((prev) => {
-              const filtered = prev.filter((msg) => msg.id !== tempMessageId);
-              const exists = filtered.some((msg) => msg.id === newMessage.id);
-              if (exists) {
-                return filtered;
+              // Remove optimistic message from map
+              const optimisticIndex = messagesMapRef.current.get(tempMessageId);
+              if (optimisticIndex !== undefined) {
+                messagesMapRef.current.delete(tempMessageId);
               }
-              return [...filtered, newMessage];
+              const filtered = prev.filter((msg) => msg.id !== tempMessageId);
+              // Rebuild map for filtered array
+              messagesMapRef.current.clear();
+              filtered.forEach((msg, idx) => messagesMapRef.current.set(msg.id, idx));
+              // Add real message using smart insertion
+              return addOrUpdateMessage(filtered, normalizeMessage(newMessage), messagesMapRef.current);
             });
             
             // Cleanup temp URL
@@ -527,7 +708,13 @@ export function ChatInterface({
           } catch (error) {
             console.error("Error sending audio:", error);
             // Remove optimistic message on error
-            setMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
+            setMessages((prev) => {
+              const filtered = prev.filter((msg) => msg.id !== tempMessageId);
+              // Rebuild map
+              messagesMapRef.current.clear();
+              filtered.forEach((msg, idx) => messagesMapRef.current.set(msg.id, idx));
+              return filtered;
+            });
             URL.revokeObjectURL(tempUrl);
             setError(error instanceof Error ? error.message : "Failed to send audio");
           }
@@ -613,13 +800,7 @@ export function ChatInterface({
       if (!response.ok) throw new Error("Failed to send message");
 
       const newMessage = await response.json();
-      setMessages((prev) => {
-        const exists = prev.some((msg) => msg.id === newMessage.id);
-        if (exists) {
-          return prev;
-        }
-        return [...prev, newMessage];
-      });
+      setMessages((prev) => addOrUpdateMessage(prev, normalizeMessage(newMessage), messagesMapRef.current));
 
       // Clear media state
       if (selectedFile) {
@@ -706,18 +887,7 @@ export function ChatInterface({
       const newMessage = await response.json();
       console.log("[ChatInterface] Message sent successfully:", newMessage);
       // Message will be added via SSE, but add it optimistically for immediate UI update
-      setMessages((prev) => {
-        const exists = prev.some((msg) => msg.id === newMessage.id);
-        if (exists) {
-          return prev;
-        }
-        // Add new message and sort by createdAt to ensure correct order
-        const updated = [...prev, newMessage];
-        updated.sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-        return updated;
-      });
+      setMessages((prev) => addOrUpdateMessage(prev, normalizeMessage(newMessage), messagesMapRef.current));
     } catch (error) {
       console.error("Error sending message:", error);
       setInputValue(messageContent); // Restore input on error
