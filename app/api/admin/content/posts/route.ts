@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkAdminAccess } from "@/lib/utils/admin-auth"
 import { db } from "@/lib/db/client"
 import { post, creator, postMedia } from "@/lib/db/schema"
-import { eq, desc, and, or, like, inArray } from "drizzle-orm"
+import { eq, desc, asc, and, or, like, inArray, count, sql } from "drizzle-orm"
+import { AdminListResponse } from "@/types/admin-table"
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,8 +13,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
     const creatorId = searchParams.get("creatorId")
-    const limit = parseInt(searchParams.get("limit") || "50")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const postType = searchParams.get("postType")
+    const page = parseInt(searchParams.get("page") || "1")
+    const pageSize = parseInt(searchParams.get("pageSize") || "10")
+    const sortBy = searchParams.get("sortBy") || "createdAt"
+    const sortOrder = searchParams.get("sortOrder") || "desc"
+    
+    const limit = pageSize
+    const offset = (page - 1) * pageSize
 
     let whereConditions = []
 
@@ -26,11 +33,32 @@ export async function GET(request: NextRequest) {
       whereConditions.push(like(post.caption, `%${search}%`))
     }
 
+    if (postType) {
+      // Handle comma-separated post types
+      const types = postType.split(",").filter(Boolean)
+      if (types.length > 0) {
+        whereConditions.push(inArray(post.postType, types))
+      }
+    }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined
+
+    // Get total count
+    const [{ totalCount }] = await db
+      .select({ totalCount: count() })
+      .from(post)
+      .where(whereClause)
+
+    // Determine sort order
+    const orderByClause = sortOrder === "asc" 
+      ? asc(post.createdAt)
+      : desc(post.createdAt)
+
     const posts = await db
       .select()
       .from(post)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(post.createdAt))
+      .where(whereClause)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset)
 
@@ -76,7 +104,12 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ posts: postsWithDetails })
+    const response: AdminListResponse<typeof postsWithDetails[0]> = {
+      rows: postsWithDetails,
+      total: totalCount,
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Error fetching posts:", error)
     return NextResponse.json(

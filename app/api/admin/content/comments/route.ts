@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkAdminAccess } from "@/lib/utils/admin-auth"
 import { db } from "@/lib/db/client"
 import { postComment, user, post } from "@/lib/db/schema"
-import { eq, desc, and, like, inArray } from "drizzle-orm"
+import { eq, desc, asc, and, like, inArray, count } from "drizzle-orm"
+import { AdminListResponse } from "@/types/admin-table"
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,8 +13,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
     const postId = searchParams.get("postId")
-    const limit = parseInt(searchParams.get("limit") || "50")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const page = parseInt(searchParams.get("page") || "1")
+    const pageSize = parseInt(searchParams.get("pageSize") || "10")
+    const sortBy = searchParams.get("sortBy") || "createdAt"
+    const sortOrder = searchParams.get("sortOrder") || "desc"
+    
+    const limit = pageSize
+    const offset = (page - 1) * pageSize
 
     let whereConditions = []
 
@@ -25,11 +31,24 @@ export async function GET(request: NextRequest) {
       whereConditions.push(like(postComment.content, `%${search}%`))
     }
 
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined
+
+    // Get total count
+    const [{ totalCount }] = await db
+      .select({ totalCount: count() })
+      .from(postComment)
+      .where(whereClause)
+
+    // Determine sort order
+    const orderByClause = sortOrder === "asc" 
+      ? asc(postComment.createdAt)
+      : desc(postComment.createdAt)
+
     const comments = await db
       .select()
       .from(postComment)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(postComment.createdAt))
+      .where(whereClause)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset)
 
@@ -69,7 +88,12 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ comments: commentsWithDetails })
+    const response: AdminListResponse<typeof commentsWithDetails[0]> = {
+      rows: commentsWithDetails,
+      total: totalCount,
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Error fetching comments:", error)
     return NextResponse.json(

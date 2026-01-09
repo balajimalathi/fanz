@@ -126,6 +126,66 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Protect routes starting with /admin
+  if (pathname.startsWith("/admin")) {
+    // Skip auth check for API routes, static files, and service worker
+    if (
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/favicon.ico") ||
+      pathname === "/sw.js" ||
+      pathname.startsWith("/manifest.json")
+    ) {
+      return NextResponse.next();
+    }
+
+    // Check authentication using better-auth
+    // In Edge runtime, we check for session cookie presence
+    // Full role validation happens server-side in layout components via requireAdmin()
+    // Better-auth typically uses cookies for session management
+
+    // Get all cookies for debugging
+    const allCookies = request.cookies.getAll();
+
+    // Check for better-auth session cookie
+    const hasSessionCookie =
+      // Check exact cookie names
+      request.cookies.has("better-auth.session_token") ||
+      request.cookies.has("__Secure-better-auth.session_token") ||
+      request.cookies.has("better-auth.session") ||
+      request.cookies.has("__Secure-better-auth.session") ||
+      request.cookies.has("session_token") ||
+      // Check if any cookie starts with better-auth (with or without __Secure- prefix)
+      Array.from(allCookies).some(
+        (cookie) =>
+          cookie.name.startsWith("better-auth") ||
+          cookie.name.startsWith("__Secure-better-auth") ||
+          cookie.name.includes("session")
+      );
+
+    // Debug logging (remove in production if not needed)
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔍 Middleware Admin Auth Check:", {
+        pathname,
+        host,
+        hasSessionCookie,
+        cookieNames: allCookies.map(c => c.name),
+        cookieCount: allCookies.length,
+      });
+    }
+
+    // If no session cookie found, redirect to login
+    if (!hasSessionCookie) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("❌ No session cookie found for admin route, redirecting to:", loginUrl.toString());
+      }
+
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // Protect routes starting with /home
   if (pathname.startsWith("/home")) {
     // Skip auth check for API routes, static files, and service worker

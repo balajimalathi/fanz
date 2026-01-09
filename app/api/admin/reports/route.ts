@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkAdminAccess } from "@/lib/utils/admin-auth"
 import { db } from "@/lib/db/client"
 import { report, user, creator, post } from "@/lib/db/schema"
-import { eq, desc, and, or, like, inArray } from "drizzle-orm"
+import { eq, desc, asc, and, or, like, inArray, count } from "drizzle-orm"
+import { AdminListResponse } from "@/types/admin-table"
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,26 +11,54 @@ export async function GET(request: NextRequest) {
     if (authError) return authError
 
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status")
-    const reportType = searchParams.get("type")
-    const limit = parseInt(searchParams.get("limit") || "50")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const status = searchParams.get("status") // Comma-separated
+    const reportType = searchParams.get("type") // Comma-separated
+    const page = parseInt(searchParams.get("page") || "1")
+    const pageSize = parseInt(searchParams.get("pageSize") || "10")
+    const sortBy = searchParams.get("sortBy") || "createdAt"
+    const sortOrder = searchParams.get("sortOrder") || "desc"
+    
+    const limit = pageSize
+    const offset = (page - 1) * pageSize
 
     let whereConditions = []
 
     if (status) {
-      whereConditions.push(eq(report.status, status as any))
+      const statuses = status.split(",").filter(Boolean)
+      if (statuses.length === 1) {
+        whereConditions.push(eq(report.status, statuses[0] as any))
+      } else if (statuses.length > 1) {
+        whereConditions.push(inArray(report.status, statuses as any[]))
+      }
     }
 
     if (reportType) {
-      whereConditions.push(eq(report.reportType, reportType as any))
+      const types = reportType.split(",").filter(Boolean)
+      if (types.length === 1) {
+        whereConditions.push(eq(report.reportType, types[0] as any))
+      } else if (types.length > 1) {
+        whereConditions.push(inArray(report.reportType, types as any[]))
+      }
     }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined
+
+    // Get total count
+    const [{ totalCount }] = await db
+      .select({ totalCount: count() })
+      .from(report)
+      .where(whereClause)
+
+    // Determine sort order
+    const orderByClause = sortOrder === "asc" 
+      ? asc(report.createdAt)
+      : desc(report.createdAt)
 
     const reports = await db
       .select()
       .from(report)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(report.createdAt))
+      .where(whereClause)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset)
 
@@ -96,7 +125,12 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ reports: reportsWithDetails })
+    const response: AdminListResponse<typeof reportsWithDetails[0]> = {
+      rows: reportsWithDetails,
+      total: totalCount,
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Error fetching reports:", error)
     return NextResponse.json(

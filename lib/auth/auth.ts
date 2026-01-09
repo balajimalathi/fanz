@@ -118,8 +118,9 @@ export const auth = betterAuth({
             }
 
             // For users without a role or with role="creator", ensure creator record exists
-            if (!userRecord.role || userRecord.role === "creator") {
-              // Update user role to creator if not set
+            // Don't override admin role
+            if ((!userRecord.role || userRecord.role === "creator") && userRecord.role !== "admin") {
+              // Update user role to creator if not set (but never override admin)
               if (!userRecord.role) {
                 await db
                   .update(user)

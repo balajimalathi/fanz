@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMemo, useState } from "react"
+import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { CheckCircle, XCircle, Search, Loader2 } from "lucide-react"
+import { CheckCircle, XCircle, Loader2, Ban, Unlock } from "lucide-react"
 import toast from "react-hot-toast"
+import { AdminDataTable } from "./table/admin-data-table"
 
 interface Creator {
   id: string
@@ -18,47 +18,13 @@ interface Creator {
   contentType: string | null
   country: string | null
   categories: string[] | null
+  banned?: boolean
   createdAt: string
   updatedAt: string
 }
 
 export function CreatorApprovalTable() {
-  const [creators, setCreators] = useState<Creator[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [processing, setProcessing] = useState<string | null>(null)
-
-  const fetchCreators = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter)
-      }
-      if (search) {
-        params.append("search", search)
-      }
-
-      const response = await fetch(`/api/admin/creators?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch creators")
-      }
-
-      const data = await response.json()
-      setCreators(data.creators || [])
-    } catch (error) {
-      console.error("Error fetching creators:", error)
-      toast.error("Failed to load creators")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchCreators()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
 
   const handleApprove = async (creatorId: string) => {
     setProcessing(creatorId)
@@ -72,7 +38,7 @@ export function CreatorApprovalTable() {
       }
 
       toast.success("Creator approved successfully")
-      fetchCreators()
+      window.location.reload()
     } catch (error) {
       console.error("Error approving creator:", error)
       toast.error("Failed to approve creator")
@@ -97,7 +63,7 @@ export function CreatorApprovalTable() {
       }
 
       toast.success("Creator rejected")
-      fetchCreators()
+      window.location.reload()
     } catch (error) {
       console.error("Error rejecting creator:", error)
       toast.error("Failed to reject creator")
@@ -106,154 +72,232 @@ export function CreatorApprovalTable() {
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    fetchCreators()
+  const handleSuspend = async (creatorId: string) => {
+    if (!confirm("Are you sure you want to suspend this creator? They will not be able to log in.")) {
+      return
+    }
+
+    setProcessing(creatorId)
+    try {
+      const response = await fetch(`/api/admin/users/${creatorId}/suspend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: "Suspended by admin from creator management",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to suspend creator")
+      }
+
+      toast.success("Creator suspended successfully")
+      window.location.reload()
+    } catch (error) {
+      console.error("Error suspending creator:", error)
+      toast.error("Failed to suspend creator")
+    } finally {
+      setProcessing(null)
+    }
   }
 
-  return (
-    <Card>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex gap-4">
-            <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by username or name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-              <Button type="submit" variant="outline">
-                Search
-              </Button>
-            </form>
-            <div className="flex gap-2">
-              <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                onClick={() => setStatusFilter("all")}
-              >
-                All
-              </Button>
-              <Button
-                variant={statusFilter === "pending" ? "default" : "outline"}
-                onClick={() => setStatusFilter("pending")}
-              >
-                Pending
-              </Button>
-              <Button
-                variant={statusFilter === "approved" ? "default" : "outline"}
-                onClick={() => setStatusFilter("approved")}
-              >
-                Approved
-              </Button>
-            </div>
-          </div>
+  const handleUnsuspend = async (creatorId: string) => {
+    setProcessing(creatorId)
+    try {
+      const response = await fetch(`/api/admin/users/${creatorId}/unsuspend`, {
+        method: "POST",
+      })
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
+      if (!response.ok) {
+        throw new Error("Failed to unsuspend creator")
+      }
+
+      toast.success("Creator unsuspended successfully")
+      window.location.reload()
+    } catch (error) {
+      console.error("Error unsuspending creator:", error)
+      toast.error("Failed to unsuspend creator")
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const columns: ColumnDef<Creator>[] = useMemo(
+    () => [
+      {
+        accessorKey: "displayName",
+        header: "Creator",
+        cell: ({ row }) => {
+          const creator = row.original
+          return (
+            <div>
+              <div className="font-medium">{creator.displayName}</div>
+              {creator.username && (
+                <div className="text-sm text-muted-foreground">
+                  @{creator.username}
+                </div>
+              )}
             </div>
-          ) : creators.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No creators found
+          )
+        },
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => (
+          <div className="text-sm">{row.original.email}</div>
+        ),
+      },
+      {
+        accessorKey: "creatorType",
+        header: "Type",
+        cell: ({ row }) => {
+          const creator = row.original
+          return (
+            <div className="space-y-1">
+              <div>{creator.creatorType || "-"}</div>
+              {creator.contentType && (
+                <Badge variant="outline" className="text-xs">
+                  {creator.contentType}
+                </Badge>
+              )}
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Creator</th>
-                    <th className="text-left p-3 font-medium">Email</th>
-                    <th className="text-left p-3 font-medium">Type</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium">Created</th>
-                    <th className="text-right p-3 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {creators.map((creator) => (
-                    <tr key={creator.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">
-                        <div>
-                          <div className="font-medium">{creator.displayName}</div>
-                          {creator.username && (
-                            <div className="text-sm text-muted-foreground">
-                              @{creator.username}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm">{creator.email}</td>
-                      <td className="p-3 text-sm">
-                        <div className="space-y-1">
-                          <div>{creator.creatorType || "-"}</div>
-                          {creator.contentType && (
-                            <Badge variant="outline" className="text-xs">
-                              {creator.contentType}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <Badge
-                          variant={creator.onboarded ? "default" : "outline"}
-                        >
-                          {creator.onboarded ? "Approved" : "Pending"}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-sm text-muted-foreground">
-                        {new Date(creator.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex justify-end gap-2">
-                          {!creator.onboarded && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleApprove(creator.id)}
-                                disabled={processing === creator.id}
-                              >
-                                {processing === creator.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Approve
-                                  </>
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleReject(creator.id)}
-                                disabled={processing === creator.id}
-                              >
-                                {processing === creator.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Reject
-                                  </>
-                                )}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          )
+        },
+      },
+      {
+        accessorKey: "onboarded",
+        header: "Status",
+        cell: ({ row }) => {
+          const creator = row.original
+          return (
+            <div className="flex flex-col gap-1">
+              <Badge variant={creator.onboarded ? "default" : "outline"}>
+                {creator.onboarded ? "Approved" : "Pending"}
+              </Badge>
+              {creator.banned && (
+                <Badge variant="destructive" className="text-xs">
+                  Suspended
+                </Badge>
+              )}
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          )
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => (
+          <div className="text-sm text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const creator = row.original
+          return (
+            <div className="flex justify-end gap-2">
+              {!creator.onboarded && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleApprove(creator.id)}
+                    disabled={processing === creator.id}
+                  >
+                    {processing === creator.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleReject(creator.id)}
+                    disabled={processing === creator.id}
+                  >
+                    {processing === creator.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+              {creator.banned ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleUnsuspend(creator.id)}
+                  disabled={processing === creator.id}
+                >
+                  {processing === creator.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Unlock className="h-4 w-4 mr-1" />
+                      Unsuspend
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSuspend(creator.id)}
+                  disabled={processing === creator.id}
+                >
+                  {processing === creator.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Ban className="h-4 w-4 mr-1" />
+                      Suspend
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    [processing]
+  )
+
+  const statusOptions = [
+    { label: "Pending", value: "pending" },
+    { label: "Approved", value: "approved" },
+  ]
+
+  return (
+    <AdminDataTable<Creator>
+      columns={columns}
+      endpoint="/api/admin/creators"
+      searchKey="displayName"
+      searchPlaceholder="Search by username or name..."
+      stateKey="creators"
+      filterConfigs={[
+        {
+          param: "status",
+          column: "onboarded", // This won't sync to column filter, but that's OK - it's handled server-side
+          title: "Status",
+          options: statusOptions,
+        },
+      ]}
+      emptyStateText="No creators found"
+    />
   )
 }
-

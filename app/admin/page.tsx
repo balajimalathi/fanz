@@ -61,7 +61,7 @@ export default async function AdminDashboardPage() {
       value: pendingCreatorsCount[0]?.count || 0,
       description: "Awaiting approval",
       icon: Users,
-      href: "/home/admin/creators?status=pending",
+      href: "/admin/creators?status=pending",
       color: "text-yellow-600",
     },
     {
@@ -69,7 +69,7 @@ export default async function AdminDashboardPage() {
       value: totalCreatorsCount[0]?.count || 0,
       description: "All creators",
       icon: CheckCircle,
-      href: "/home/admin/creators",
+      href: "/admin/creators",
       color: "text-blue-600",
     },
     {
@@ -77,7 +77,7 @@ export default async function AdminDashboardPage() {
       value: pendingReportsCount[0]?.count || 0,
       description: "Require review",
       icon: AlertTriangle,
-      href: "/home/admin/reports",
+      href: "/admin/reports",
       color: "text-red-600",
     },
     {
@@ -85,15 +85,15 @@ export default async function AdminDashboardPage() {
       value: openDisputesCount[0]?.count || 0,
       description: "Need resolution",
       icon: FileText,
-      href: "/home/admin/disputes",
+      href: "/admin/disputes",
       color: "text-orange-600",
     },
     {
       title: "Total Revenue",
-      value: `₹${((totalRevenue[0]?.total || 0) / 100).toLocaleString()}`,
+      value: `$${((totalRevenue[0]?.total || 0) / 100).toLocaleString()}`,
       description: "All time",
       icon: DollarSign,
-      href: "/home/admin/transactions",
+      href: "/admin/transactions",
       color: "text-green-600",
     },
     {
@@ -101,7 +101,7 @@ export default async function AdminDashboardPage() {
       value: recentTransactionsCount[0]?.count || 0,
       description: "Last 7 days",
       icon: DollarSign,
-      href: "/home/admin/transactions",
+      href: "/admin/transactions",
       color: "text-purple-600",
     },
   ]
@@ -146,25 +146,25 @@ export default async function AdminDashboardPage() {
             <CardDescription>Common admin tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Link href="/home/admin/creators?status=pending">
+            <Link href="/admin/creators?status=pending">
               <Button variant="outline" className="w-full justify-start">
                 <Users className="mr-2 h-4 w-4" />
                 Review Pending Creators
               </Button>
             </Link>
-            <Link href="/home/admin/reports">
+            <Link href="/admin/reports">
               <Button variant="outline" className="w-full justify-start">
                 <AlertTriangle className="mr-2 h-4 w-4" />
                 Review Reports
               </Button>
             </Link>
-            <Link href="/home/admin/content">
+            <Link href="/admin/content">
               <Button variant="outline" className="w-full justify-start">
                 <FileText className="mr-2 h-4 w-4" />
                 Moderate Content
               </Button>
             </Link>
-            <Link href="/home/admin/disputes">
+            <Link href="/admin/disputes">
               <Button variant="outline" className="w-full justify-start">
                 <FileText className="mr-2 h-4 w-4" />
                 Resolve Disputes

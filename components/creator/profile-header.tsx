@@ -6,12 +6,13 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FollowButton } from "./follow-button"
 import { CustomerProfileModal } from "./customer-profile-modal"
 import { Button } from "@/components/ui/button"
-import { User } from "lucide-react"
+import { User, Flag } from "lucide-react"
 import { useSession } from "@/lib/auth/auth-client"
 import { NotificationPermission } from "@/components/push/notification-permission"
 import { PWAInstallButton } from "@/components/push/pwa-install-button"
 import { LiveIndicator } from "@/components/livekit/live-indicator"
 import { useLiveHandler } from "@/app/(app)/u/[username]/_components/live-handler-context"
+import { ReportCreatorDialog } from "@/components/report/report-creator-dialog"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -32,8 +33,12 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const { data: session } = useSession()
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showReportDialog, setShowReportDialog] = useState(false)
   const isAuthenticated = !!session?.user
   const liveHandler = useLiveHandler()
+  
+  // Don't show report button if user is reporting themselves
+  const canReport = isAuthenticated && session?.user?.id !== creatorId
 
   const initials = displayName
     .split(" ")
@@ -106,6 +111,16 @@ export function ProfileHeader({
                   </Button>
                 </>
               )}
+              {canReport && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReportDialog(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Flag className="h-4 w-4" />
+                  <span className="hidden sm:inline">Report</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -122,6 +137,11 @@ export function ProfileHeader({
       <CustomerProfileModal
         open={showProfileModal}
         onOpenChange={setShowProfileModal}
+      />
+      <ReportCreatorDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        creatorId={creatorId}
       />
     </div>
   )

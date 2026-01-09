@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMemo, useState } from "react"
+import { useQueryState, parseAsString } from "nuqs"
+import { ColumnDef } from "@tanstack/react-table"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Search, Loader2, MessageSquare, Image } from "lucide-react"
+import { Trash2, Loader2, Image as ImageIcon } from "lucide-react"
 import toast from "react-hot-toast"
+import { Checkbox } from "@/components/ui/checkbox"
+import { AdminDataTable } from "./table/admin-data-table"
 
 interface Post {
   id: string
@@ -32,63 +35,11 @@ interface Comment {
 }
 
 export function ContentModerationTable() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [comments, setComments] = useState<Comment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("posts")
-  const [search, setSearch] = useState("")
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("posts")
+  )
   const [processing, setProcessing] = useState<string | null>(null)
-
-  const fetchPosts = async () => {
-    try {
-      const params = new URLSearchParams()
-      if (search) {
-        params.append("search", search)
-      }
-
-      const response = await fetch(`/api/admin/content/posts?${params.toString()}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch posts")
-      }
-
-      const data = await response.json()
-      setPosts(data.posts || [])
-    } catch (error) {
-      console.error("Error fetching posts:", error)
-      toast.error("Failed to load posts")
-    }
-  }
-
-  const fetchComments = async () => {
-    try {
-      const params = new URLSearchParams()
-      if (search) {
-        params.append("search", search)
-      }
-
-      const response = await fetch(`/api/admin/content/comments?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch comments")
-      }
-
-      const data = await response.json()
-      setComments(data.comments || [])
-    } catch (error) {
-      console.error("Error fetching comments:", error)
-      toast.error("Failed to load comments")
-    }
-  }
-
-  useEffect(() => {
-    setLoading(true)
-    if (activeTab === "posts") {
-      fetchPosts().finally(() => setLoading(false))
-    } else {
-      fetchComments().finally(() => setLoading(false))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
 
   const handleDeletePost = async (postId: string) => {
     if (!confirm("Are you sure you want to delete this post?")) return
@@ -104,7 +55,8 @@ export function ContentModerationTable() {
       }
 
       toast.success("Post deleted successfully")
-      fetchPosts()
+      // Trigger a page refresh by changing a dummy query param
+      window.location.reload()
     } catch (error) {
       console.error("Error deleting post:", error)
       toast.error("Failed to delete post")
@@ -130,7 +82,7 @@ export function ContentModerationTable() {
       }
 
       toast.success("Comment deleted successfully")
-      fetchComments()
+      window.location.reload()
     } catch (error) {
       console.error("Error deleting comment:", error)
       toast.error("Failed to delete comment")
@@ -139,185 +91,248 @@ export function ContentModerationTable() {
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (activeTab === "posts") {
-      fetchPosts()
-    } else {
-      fetchComments()
-    }
-  }
+  // Post columns
+  const postColumns: ColumnDef<Post>[] = useMemo(
+    () => [
+      // {
+      //   id: "select",
+      //   header: ({ table }) => (
+      //     <Checkbox
+      //       checked={table.getIsAllPageRowsSelected()}
+      //       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      //       aria-label="Select all"
+      //     />
+      //   ),
+      //   cell: ({ row }) => (
+      //     <Checkbox
+      //       checked={row.getIsSelected()}
+      //       onCheckedChange={(value) => row.toggleSelected(!!value)}
+      //       aria-label="Select row"
+      //     />
+      //   ),
+      //   enableSorting: false,
+      //   enableHiding: false,
+      // },
+      {
+        accessorKey: "creatorName",
+        header: "Creator",
+        cell: ({ row }) => {
+          const post = row.original
+          return (
+            <div className="text-sm">
+              <div>{post.creatorName}</div>
+              {post.creatorUsername && (
+                <div className="text-xs text-muted-foreground">
+                  @{post.creatorUsername}
+                </div>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "caption",
+        header: "Post",
+        cell: ({ row }) => {
+          const post = row.original
+          return (
+            <div className="max-w-md">
+              <div className="text-sm font-medium line-clamp-2">
+                {post.caption || "No caption"}
+              </div>
+              {post.media.length > 0 && (
+                <div className="flex gap-1 mt-1">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {post.media.length} media
+                  </span>
+                </div>
+              )}
+            </div>
+          )
+        },
+      }, 
+      {
+        accessorKey: "postType",
+        header: "Pricing",
+        cell: ({ row }) => (
+          <Badge variant="outline">{row.original.postType.toUpperCase()}</Badge>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => (
+          <div className="text-sm text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const post = row.original
+          return (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleDeletePost(post.id)}
+                disabled={processing === post.id}
+              >
+                {processing === post.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </>
+                )}
+              </Button>
+            </div>
+          )
+        },
+      },
+    ],
+    [processing]
+  )
+
+  // Comment columns
+  const commentColumns: ColumnDef<Comment>[] = useMemo(
+    () => [
+      // {
+      //   id: "select",
+      //   header: ({ table }) => (
+      //     <Checkbox
+      //       checked={table.getIsAllPageRowsSelected()}
+      //       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      //       aria-label="Select all"
+      //     />
+      //   ),
+      //   cell: ({ row }) => (
+      //     <Checkbox
+      //       checked={row.getIsSelected()}
+      //       onCheckedChange={(value) => row.toggleSelected(!!value)}
+      //       aria-label="Select row"
+      //     />
+      //   ),
+      //   enableSorting: false,
+      //   enableHiding: false,
+      // },
+      {
+        accessorKey: "content",
+        header: "Comment",
+        cell: ({ row }) => (
+          <div className="max-w-md text-sm">{row.original.content}</div>
+        ),
+      },
+      {
+        accessorKey: "userName",
+        header: "User",
+        cell: ({ row }) => {
+          const comment = row.original
+          return (
+            <div className="text-sm">
+              <div>{comment.userName}</div>
+              <div className="text-xs text-muted-foreground">
+                {comment.userEmail}
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => (
+          <div className="text-sm text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const comment = row.original
+          return (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleDeleteComment(comment.id)}
+                disabled={processing === comment.id}
+              >
+                {processing === comment.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </>
+                )}
+              </Button>
+            </div>
+          )
+        },
+      },
+    ],
+    [processing]
+  )
+
+  // Get post types for filter - we'll need to fetch this separately or make it static
+  // For now, using common post types
+  const postTypeOptions = [
+    // { label: "Image", value: "image" },
+    { label: "Free", value: "free" },
+    { label: "Subscription", value: "subscription" },
+    { label: "Exclusive", value: "exclusive" },
+    // { label: "Image", value: "image" },
+    // { label: "Video", value: "video" },
+    // { label: "Text", value: "text" },
+  ]
 
   return (
     <Card>
-      <CardContent>
+      <CardContent className="pt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="posts">Posts</TabsTrigger>
             <TabsTrigger value="comments">Comments</TabsTrigger>
           </TabsList>
 
-          <div className="mb-4">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search content..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-              <Button type="submit" variant="outline">
-                Search
-              </Button>
-            </form>
-          </div>
-
-          <TabsContent value="posts">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No posts found
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-medium">Post</th>
-                      <th className="text-left p-3 font-medium">Creator</th>
-                      <th className="text-left p-3 font-medium">Type</th>
-                      <th className="text-left p-3 font-medium">Created</th>
-                      <th className="text-right p-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {posts.map((post) => (
-                      <tr key={post.id} className="border-b hover:bg-muted/50">
-                        <td className="p-3">
-                          <div className="max-w-md">
-                            <div className="text-sm font-medium line-clamp-2">
-                              {post.caption || "No caption"}
-                            </div>
-                            {post.media.length > 0 && (
-                              <div className="flex gap-1 mt-1">
-                                <Image className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                  {post.media.length} media
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-sm">
-                          <div>{post.creatorName}</div>
-                          {post.creatorUsername && (
-                            <div className="text-xs text-muted-foreground">
-                              @{post.creatorUsername}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <Badge variant="outline">{post.postType}</Badge>
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground">
-                          {new Date(post.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex justify-end">
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeletePost(post.id)}
-                              disabled={processing === post.id}
-                            >
-                              {processing === post.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Delete
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <TabsContent value="posts" className="space-y-4">
+            <AdminDataTable<Post>
+              columns={postColumns}
+              endpoint="/api/admin/content/posts"
+              searchKey="caption"
+              searchPlaceholder="Search posts..."
+              stateKey="content_posts"
+              filterConfigs={[
+                {
+                  param: "postType",
+                  column: "postType",
+                  title: "Post Type",
+                  options: postTypeOptions,
+                },
+              ]}
+              emptyStateText="No posts found"
+            />
           </TabsContent>
 
-          <TabsContent value="comments">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : comments.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No comments found
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-medium">Comment</th>
-                      <th className="text-left p-3 font-medium">User</th>
-                      <th className="text-left p-3 font-medium">Created</th>
-                      <th className="text-right p-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comments.map((comment) => (
-                      <tr key={comment.id} className="border-b hover:bg-muted/50">
-                        <td className="p-3">
-                          <div className="max-w-md text-sm">{comment.content}</div>
-                        </td>
-                        <td className="p-3 text-sm">
-                          <div>{comment.userName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {comment.userEmail}
-                          </div>
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground">
-                          {new Date(comment.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex justify-end">
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeleteComment(comment.id)}
-                              disabled={processing === comment.id}
-                            >
-                              {processing === comment.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Delete
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <TabsContent value="comments" className="space-y-4">
+            <AdminDataTable<Comment>
+              columns={commentColumns}
+              endpoint="/api/admin/content/comments"
+              searchKey="content"
+              searchPlaceholder="Search comments..."
+              stateKey="content_comments"
+              emptyStateText="No comments found"
+            />
           </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
   )
 }
-

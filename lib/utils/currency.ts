@@ -22,7 +22,7 @@ export function subunitsToDisplay(amountInSubunits: number, currency: string = "
  * @param amountInSubunits - Amount in smallest currency unit
  * @param currency - Currency code (ISO 4217), defaults to USD
  * @param options - Formatting options
- * @returns Formatted currency string (e.g., "$1,234.56" or "₹500.00")
+ * @returns Formatted currency string (e.g., "$1,234.56" or "$500.00")
  */
 export function formatCurrency(
   amountInSubunits: number,
@@ -56,7 +56,7 @@ export function formatCurrency(
 }
 
 /**
- * Format currency in compact notation (e.g., "$1.2K", "₹5.4M")
+ * Format currency in compact notation (e.g., "$1.2K", "$5.4M")
  * @param amountInSubunits - Amount in smallest currency unit
  * @param currency - Currency code (ISO 4217), defaults to USD
  * @returns Compact formatted currency string

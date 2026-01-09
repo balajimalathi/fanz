@@ -34,20 +34,27 @@ export default function OAuthCallbackPage() {
         // Clear the stored return URL
         sessionStorage.removeItem("oauth_return_url");
 
+        // Override return URL if user is admin and returnUrl is not an admin route
+        // This ensures admins always go to admin dashboard unless explicitly going elsewhere
+        let finalReturnUrl = returnUrl;
+        if (session.user.role === "admin" && !returnUrl.startsWith("/admin")) {
+          finalReturnUrl = "/admin";
+        }
+
         // Check if return URL is cross-origin (e.g. localhost -> skndan.localhost)
         // If so, we need to port the session cookie
         try {
-          const targetUrl = new URL(returnUrl);
+          const targetUrl = new URL(finalReturnUrl, window.location.origin);
           if (targetUrl.origin !== window.location.origin) {
             // Use port-session endpoint to transfer cookie
-            window.location.href = `/api/auth/port-session?returnUrl=${encodeURIComponent(returnUrl)}`;
+            window.location.href = `/api/auth/port-session?returnUrl=${encodeURIComponent(finalReturnUrl)}`;
           } else {
             // Same origin, direct redirect
-            window.location.href = returnUrl;
+            window.location.href = finalReturnUrl;
           }
         } catch {
           // Fallback
-          window.location.href = returnUrl;
+          window.location.href = finalReturnUrl;
         }
         return;
       } else {
@@ -55,9 +62,14 @@ export default function OAuthCallbackPage() {
       }
     }
 
-    // If authenticated but no return URL, redirect to home
+    // If authenticated but no return URL, redirect based on role
     if (session?.user && !returnUrl) {
-      router.push("/home");
+      // Check if user is admin and redirect to admin dashboard
+      if (session.user.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/home");
+      }
       return;
     }
 

@@ -17,6 +17,14 @@ import { ExclusivePostOverlay } from "@/components/payments/exclusive-post-overl
 import { PriceDisplay } from "@/components/currency/price-display"
 import { toSubunits } from "@/lib/currency/currency-utils"
 import { Button } from "@/components/ui/button"
+import { ReportContentDialog } from "@/components/report/report-content-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreVertical, Flag } from "lucide-react"
 
 interface PostMedia {
   id: string
@@ -66,7 +74,11 @@ export function FeedPostCard({
   onCommentCountChange,
 }: FeedPostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount)
+  const [showReportDialog, setShowReportDialog] = useState(false)
   const pathname = usePathname()
+  
+  // Don't show report button if user is reporting their own content
+  const canReport = currentUserId && currentUserId !== post.creator?.id
 
   const creatorLink = post.creator?.username
     ? `/u/${post.creator.username}`
@@ -178,29 +190,55 @@ export function FeedPostCard({
         )}
         {/* Actions */}
         <div className="px-4 py-3 space-y-3 border-t">
-          <div className="flex gap-4">
-            <LikeButton
-              postId={post.id}
-              initialLiked={post.isLiked}
-              initialCount={post.likeCount}
-              disabled={!post.hasAccess}
-              onLikeChange={(liked, count) => {
-                onLikeChange?.(post.id, liked, count)
-              }}
-            />
-            <CommentsSection
-              postId={post.id}
-              initialCount={commentCount}
-              currentUserId={currentUserId}
-              disabled={!post.hasAccess}
-              onCountChange={(count) => {
-                setCommentCount(count)
-                onCommentCountChange?.(post.id, count)
-              }}
-            />
+          <div className="flex gap-4 items-center justify-between">
+            <div className="flex gap-4">
+              <LikeButton
+                postId={post.id}
+                initialLiked={post.isLiked}
+                initialCount={post.likeCount}
+                disabled={!post.hasAccess}
+                onLikeChange={(liked, count) => {
+                  onLikeChange?.(post.id, liked, count)
+                }}
+              />
+              <CommentsSection
+                postId={post.id}
+                initialCount={commentCount}
+                currentUserId={currentUserId}
+                disabled={!post.hasAccess}
+                onCountChange={(count) => {
+                  setCommentCount(count)
+                  onCommentCountChange?.(post.id, count)
+                }}
+              />
+            </div>
+            {canReport && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">More options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowReportDialog(true)}>
+                    <Flag className="mr-2 h-4 w-4" />
+                    Report
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </CardContent>
+      {canReport && (
+        <ReportContentDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          postId={post.id}
+          creatorId={post.creator?.id}
+        />
+      )}
     </Card>
   )
 }

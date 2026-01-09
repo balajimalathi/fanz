@@ -33,9 +33,15 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  // Check if user has creator role, if not set it
-  if (session.user.role !== "creator") {
-    // Update user role to creator
+  // Redirect admins to admin dashboard
+  if (session.user.role === "admin") {
+    redirect("/admin");
+  }
+
+  // Check if user has creator role, if not set it (but don't override admin role)
+  if (!session.user.role || session.user.role !== "creator") {
+    // Update user role to creator only if they don't have a role or have a different non-admin role
+    // This will never run for admins since they're redirected above
     await db
       .update(user)
       .set({ role: "creator" })

@@ -1,17 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMemo, useState } from "react"
+import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Loader2, CheckCircle, XCircle, Ban } from "lucide-react"
 import toast from "react-hot-toast"
+import { AdminDataTable } from "./table/admin-data-table"
 
 interface Report {
   id: string
   reporterName: string
   reporterEmail: string
+  reportedUserId: string | null
+  reportedCreatorId: string | null
   reportedUserName: string | null
   reportedCreatorName: string | null
   reportType: string
@@ -22,39 +24,7 @@ interface Report {
 }
 
 export function ReportsTable() {
-  const [reports, setReports] = useState<Report[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [processing, setProcessing] = useState<string | null>(null)
-
-  const fetchReports = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter)
-      }
-
-      const response = await fetch(`/api/admin/reports?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch reports")
-      }
-
-      const data = await response.json()
-      setReports(data.reports || [])
-    } catch (error) {
-      console.error("Error fetching reports:", error)
-      toast.error("Failed to load reports")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchReports()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
 
   const handleResolve = async (reportId: string, resolution: string) => {
     setProcessing(reportId)
@@ -75,7 +45,7 @@ export function ReportsTable() {
       }
 
       toast.success("Report resolved")
-      fetchReports()
+      window.location.reload()
     } catch (error) {
       console.error("Error resolving report:", error)
       toast.error("Failed to resolve report")
@@ -102,10 +72,47 @@ export function ReportsTable() {
       }
 
       toast.success("Report dismissed")
-      fetchReports()
+      window.location.reload()
     } catch (error) {
       console.error("Error dismissing report:", error)
       toast.error("Failed to dismiss report")
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const handleSuspend = async (report: Report) => {
+    const userId = report.reportedUserId || report.reportedCreatorId
+    if (!userId) {
+      toast.error("Cannot suspend: No user ID found")
+      return
+    }
+
+    if (!confirm("Are you sure you want to suspend this user? They will not be able to log in.")) {
+      return
+    }
+
+    setProcessing(report.id)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/suspend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: `Suspended due to report: ${report.reason}`,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to suspend user")
+      }
+
+      toast.success("User suspended successfully")
+      await handleResolve(report.id, "User suspended due to report")
+    } catch (error) {
+      console.error("Error suspending user:", error)
+      toast.error("Failed to suspend user")
     } finally {
       setProcessing(null)
     }
@@ -126,159 +133,172 @@ export function ReportsTable() {
     }
   }
 
-  return (
-    <Card>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex gap-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                fetchReports()
-              }}
-              className="flex-1 flex gap-2"
-            >
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search reports..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
+  const columns: ColumnDef<Report>[] = useMemo(
+    () => [
+      {
+        accessorKey: "reason",
+        header: "Report",
+        cell: ({ row }) => {
+          const report = row.original
+          return (
+            <div className="max-w-md">
+              <div className="font-medium">{report.reason}</div>
+              {report.description && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  {report.description}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground mt-1">
+                Reported:{" "}
+                {report.reportedUserName ||
+                  report.reportedCreatorName ||
+                  "N/A"}
               </div>
-              <Button type="submit" variant="outline">
-                Search
-              </Button>
-            </form>
-            <div className="flex gap-2">
-              <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                onClick={() => setStatusFilter("all")}
-              >
-                All
-              </Button>
-              <Button
-                variant={statusFilter === "pending" ? "default" : "outline"}
-                onClick={() => setStatusFilter("pending")}
-              >
-                Pending
-              </Button>
-              <Button
-                variant={statusFilter === "resolved" ? "default" : "outline"}
-                onClick={() => setStatusFilter("resolved")}
-              >
-                Resolved
-              </Button>
             </div>
+          )
+        },
+      },
+      {
+        accessorKey: "reporterName",
+        header: "Reporter",
+        cell: ({ row }) => {
+          const report = row.original
+          return (
+            <div className="text-sm">
+              <div>{report.reporterName}</div>
+              <div className="text-xs text-muted-foreground">
+                {report.reporterEmail}
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "reportType",
+        header: "Type",
+        cell: ({ row }) => (
+          <Badge variant="outline">{row.original.reportType}</Badge>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge variant={getStatusBadgeVariant(row.original.status)}>
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => (
+          <div className="text-sm text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
           </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const report = row.original
+          return (
+            <div className="flex justify-end gap-2">
+              {report.status === "pending" && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleResolve(report.id, "Resolved by admin")}
+                    disabled={processing === report.id}
+                  >
+                    {processing === report.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Resolve
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDismiss(report.id)}
+                    disabled={processing === report.id}
+                  >
+                    {processing === report.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Dismiss
+                      </>
+                    )}
+                  </Button>
+                  {(report.reportedUserId || report.reportedCreatorId) && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleSuspend(report)}
+                      disabled={processing === report.id}
+                    >
+                      {processing === report.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Ban className="h-4 w-4 mr-1" />
+                          Suspend
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    [processing]
+  )
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : reports.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No reports found
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Report</th>
-                    <th className="text-left p-3 font-medium">Reporter</th>
-                    <th className="text-left p-3 font-medium">Type</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium">Created</th>
-                    <th className="text-right p-3 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.map((report) => (
-                    <tr key={report.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">
-                        <div className="max-w-md">
-                          <div className="font-medium">{report.reason}</div>
-                          {report.description && (
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {report.description}
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Reported:{" "}
-                            {report.reportedUserName ||
-                              report.reportedCreatorName ||
-                              "N/A"}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm">
-                        <div>{report.reporterName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {report.reporterEmail}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="outline">{report.reportType}</Badge>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant={getStatusBadgeVariant(report.status)}>
-                          {report.status}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-sm text-muted-foreground">
-                        {new Date(report.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex justify-end gap-2">
-                          {report.status === "pending" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() =>
-                                  handleResolve(report.id, "Resolved by admin")
-                                }
-                                disabled={processing === report.id}
-                              >
-                                {processing === report.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Resolve
-                                  </>
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDismiss(report.id)}
-                                disabled={processing === report.id}
-                              >
-                                {processing === report.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Dismiss
-                                  </>
-                                )}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+  const statusOptions = [
+    { label: "Pending", value: "pending" },
+    { label: "Reviewing", value: "reviewing" },
+    { label: "Resolved", value: "resolved" },
+    { label: "Dismissed", value: "dismissed" },
+  ]
+
+  const typeOptions = [
+    { label: "Creator", value: "creator" },
+    { label: "Post", value: "post" },
+    { label: "User", value: "user" },
+  ]
+
+  return (
+    <AdminDataTable<Report>
+      columns={columns}
+      endpoint="/api/admin/reports"
+      searchKey="reason"
+      searchPlaceholder="Search reports..."
+      stateKey="reports"
+      filterConfigs={[
+        {
+          param: "status",
+          column: "status",
+          title: "Status",
+          options: statusOptions,
+        },
+        {
+          param: "type",
+          column: "reportType",
+          title: "Type",
+          options: typeOptions,
+        },
+      ]}
+      emptyStateText="No reports found"
+    />
   )
 }
-

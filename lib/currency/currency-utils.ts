@@ -21,7 +21,7 @@ export const CURRENCY_METADATA: Record<
   USD: { symbol: "$", name: "US Dollar", decimals: 2, symbolPosition: "before" },
   EUR: { symbol: "€", name: "Euro", decimals: 2, symbolPosition: "before" },
   GBP: { symbol: "£", name: "British Pound", decimals: 2, symbolPosition: "before" },
-  INR: { symbol: "₹", name: "Indian Rupee", decimals: 2, symbolPosition: "before" },
+  INR: { symbol: "$", name: "Indian Rupee", decimals: 2, symbolPosition: "before" },
   CAD: { symbol: "C$", name: "Canadian Dollar", decimals: 2, symbolPosition: "before" },
   AUD: { symbol: "A$", name: "Australian Dollar", decimals: 2, symbolPosition: "before" },
   JPY: { symbol: "¥", name: "Japanese Yen", decimals: 0, symbolPosition: "before" },
@@ -90,7 +90,7 @@ export function toSubunits(displayAmount: number, currency: string): number {
  * @param amountInSubunits - Amount in smallest currency unit
  * @param currency - Currency code (ISO 4217)
  * @param options - Formatting options
- * @returns Formatted string (e.g., "$10.50" or "₹500.00")
+ * @returns Formatted string (e.g., "$10.50" or "$500.00")
  */
 export function formatCurrency(
   amountInSubunits: number,

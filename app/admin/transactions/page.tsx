@@ -71,7 +71,7 @@ export default async function AdminTransactionsPage() {
                       <Badge variant="outline">{transaction.type}</Badge>
                     </td>
                     <td className="p-3 text-sm font-medium">
-                      ₹{(transaction.amount / 100).toLocaleString()}
+                      ${(transaction.amount / 100).toLocaleString()}
                     </td>
                     <td className="p-3">
                       <Badge variant={getStatusBadgeVariant(transaction.status)}>

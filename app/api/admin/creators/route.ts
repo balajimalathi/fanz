@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkAdminAccess } from "@/lib/utils/admin-auth"
 import { db } from "@/lib/db/client"
 import { creator, user } from "@/lib/db/schema"
-import { eq, desc, and, or, like, inArray } from "drizzle-orm"
+import { eq, desc, asc, and, or, like, inArray, count } from "drizzle-orm"
+import { AdminListResponse } from "@/types/admin-table"
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,18 +11,28 @@ export async function GET(request: NextRequest) {
     if (authError) return authError
 
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status") // "pending", "approved", "rejected", or null for all
+    const status = searchParams.get("status") // Comma-separated: "pending", "approved", or null for all
     const search = searchParams.get("search") // Search by username or display name
-    const limit = parseInt(searchParams.get("limit") || "50")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const page = parseInt(searchParams.get("page") || "1")
+    const pageSize = parseInt(searchParams.get("pageSize") || "10")
+    const sortBy = searchParams.get("sortBy") || "createdAt"
+    const sortOrder = searchParams.get("sortOrder") || "desc"
+    
+    const limit = pageSize
+    const offset = (page - 1) * pageSize
 
     let whereConditions = []
 
-    // Filter by onboarded status
-    if (status === "pending") {
-      whereConditions.push(eq(creator.onboarded, false))
-    } else if (status === "approved") {
-      whereConditions.push(eq(creator.onboarded, true))
+    // Filter by onboarded status (handle comma-separated values)
+    if (status) {
+      const statuses = status.split(",").filter(Boolean)
+      if (statuses.includes("pending") && statuses.includes("approved")) {
+        // Both selected, no filter needed
+      } else if (statuses.includes("pending")) {
+        whereConditions.push(eq(creator.onboarded, false))
+      } else if (statuses.includes("approved")) {
+        whereConditions.push(eq(creator.onboarded, true))
+      }
     }
 
     // Search filter
@@ -34,11 +45,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined
+
+    // Get total count
+    const [{ totalCount }] = await db
+      .select({ totalCount: count() })
+      .from(creator)
+      .where(whereClause)
+
+    // Determine sort order
+    const orderByClause = sortOrder === "asc" 
+      ? asc(creator.createdAt)
+      : desc(creator.createdAt)
+
     const creators = await db
       .select()
       .from(creator)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(creator.createdAt))
+      .where(whereClause)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset)
 
@@ -64,12 +88,18 @@ export async function GET(request: NextRequest) {
         contentType: c.contentType,
         country: c.country,
         categories: c.categories,
+        banned: userRecord?.banned || false,
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString(),
       }
     })
 
-    return NextResponse.json({ creators: creatorsWithDetails })
+    const response: AdminListResponse<typeof creatorsWithDetails[0]> = {
+      rows: creatorsWithDetails,
+      total: totalCount,
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Error fetching creators:", error)
     return NextResponse.json(

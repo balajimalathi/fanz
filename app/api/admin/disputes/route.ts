@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkAdminAccess } from "@/lib/utils/admin-auth"
 import { db } from "@/lib/db/client"
 import { dispute, user, creator } from "@/lib/db/schema"
-import { eq, desc, and, inArray } from "drizzle-orm"
+import { eq, desc, asc, and, inArray, count } from "drizzle-orm"
+import { AdminListResponse } from "@/types/admin-table"
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,26 +11,54 @@ export async function GET(request: NextRequest) {
     if (authError) return authError
 
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status")
-    const disputeType = searchParams.get("type")
-    const limit = parseInt(searchParams.get("limit") || "50")
-    const offset = parseInt(searchParams.get("offset") || "0")
+    const status = searchParams.get("status") // Comma-separated
+    const disputeType = searchParams.get("type") // Comma-separated
+    const page = parseInt(searchParams.get("page") || "1")
+    const pageSize = parseInt(searchParams.get("pageSize") || "10")
+    const sortBy = searchParams.get("sortBy") || "createdAt"
+    const sortOrder = searchParams.get("sortOrder") || "desc"
+    
+    const limit = pageSize
+    const offset = (page - 1) * pageSize
 
     let whereConditions = []
 
     if (status) {
-      whereConditions.push(eq(dispute.status, status as any))
+      const statuses = status.split(",").filter(Boolean)
+      if (statuses.length === 1) {
+        whereConditions.push(eq(dispute.status, statuses[0] as any))
+      } else if (statuses.length > 1) {
+        whereConditions.push(inArray(dispute.status, statuses as any[]))
+      }
     }
 
     if (disputeType) {
-      whereConditions.push(eq(dispute.disputeType, disputeType as any))
+      const types = disputeType.split(",").filter(Boolean)
+      if (types.length === 1) {
+        whereConditions.push(eq(dispute.disputeType, types[0] as any))
+      } else if (types.length > 1) {
+        whereConditions.push(inArray(dispute.disputeType, types as any[]))
+      }
     }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined
+
+    // Get total count
+    const [{ totalCount }] = await db
+      .select({ totalCount: count() })
+      .from(dispute)
+      .where(whereClause)
+
+    // Determine sort order
+    const orderByClause = sortOrder === "asc" 
+      ? asc(dispute.createdAt)
+      : desc(dispute.createdAt)
 
     const disputes = await db
       .select()
       .from(dispute)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(dispute.createdAt))
+      .where(whereClause)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset)
 
@@ -78,7 +107,12 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ disputes: disputesWithDetails })
+    const response: AdminListResponse<typeof disputesWithDetails[0]> = {
+      rows: disputesWithDetails,
+      total: totalCount,
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Error fetching disputes:", error)
     return NextResponse.json(

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "react-hot-toast";
 import { PushInit } from "@/components/push/push-init";
 import NextTopLoader from 'nextjs-toploader';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
 import type { Metadata } from "next";
 import Metrics from "./(metrics)";
@@ -85,9 +86,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <PushInit />
-          {children}
-          <Toaster
+          <NuqsAdapter>
+            <PushInit />
+            {children}
+            <Toaster
             position="bottom-center"
             toastOptions={{
               duration: 4000,
@@ -105,6 +107,7 @@ export default function RootLayout({
               },
             }}
           />
+          </NuqsAdapter>
         </ThemeProvider>
       </body>
     </html>

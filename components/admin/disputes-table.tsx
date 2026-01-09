@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMemo, useState } from "react"
+import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, Loader2, CheckCircle } from "lucide-react"
+import { Loader2, CheckCircle, Ban } from "lucide-react"
 import toast from "react-hot-toast"
+import { AdminDataTable } from "./table/admin-data-table"
 
 interface Dispute {
   id: string
+  userId: string
+  creatorId: string | null
   userName: string
   userEmail: string
   creatorName: string | null
@@ -21,40 +23,7 @@ interface Dispute {
 }
 
 export function DisputesTable() {
-  const [disputes, setDisputes] = useState<Dispute[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [processing, setProcessing] = useState<string | null>(null)
-
-  const fetchDisputes = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter)
-      }
-
-      const response = await fetch(`/api/admin/disputes?${params.toString()}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch disputes")
-      }
-
-      const data = await response.json()
-      setDisputes(data.disputes || [])
-    } catch (error) {
-      console.error("Error fetching disputes:", error)
-      toast.error("Failed to load disputes")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchDisputes()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
 
   const handleResolve = async (disputeId: string, resolution: string) => {
     setProcessing(disputeId)
@@ -75,10 +44,46 @@ export function DisputesTable() {
       }
 
       toast.success("Dispute resolved")
-      fetchDisputes()
+      window.location.reload()
     } catch (error) {
       console.error("Error resolving dispute:", error)
       toast.error("Failed to resolve dispute")
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const handleSuspendCreator = async (dispute: Dispute) => {
+    if (!dispute.creatorId) {
+      toast.error("Cannot suspend: No creator ID found")
+      return
+    }
+
+    if (!confirm("Are you sure you want to suspend this creator? They will not be able to log in.")) {
+      return
+    }
+
+    setProcessing(dispute.id)
+    try {
+      const response = await fetch(`/api/admin/users/${dispute.creatorId}/suspend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: `Suspended due to dispute: ${dispute.reason}`,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to suspend creator")
+      }
+
+      toast.success("Creator suspended successfully")
+      await handleResolve(dispute.id, "Creator suspended due to dispute")
+    } catch (error) {
+      console.error("Error suspending creator:", error)
+      toast.error("Failed to suspend creator")
     } finally {
       setProcessing(null)
     }
@@ -99,140 +104,158 @@ export function DisputesTable() {
     }
   }
 
-  return (
-    <Card>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex gap-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                fetchDisputes()
-              }}
-              className="flex-1 flex gap-2"
-            >
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search disputes..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
+  const columns: ColumnDef<Dispute>[] = useMemo(
+    () => [
+      {
+        accessorKey: "reason",
+        header: "Dispute",
+        cell: ({ row }) => {
+          const dispute = row.original
+          return (
+            <div className="max-w-md">
+              <div className="font-medium">{dispute.reason}</div>
+              {dispute.description && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  {dispute.description}
+                </div>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "userName",
+        header: "User",
+        cell: ({ row }) => {
+          const dispute = row.original
+          return (
+            <div className="text-sm">
+              <div>{dispute.userName}</div>
+              <div className="text-xs text-muted-foreground">
+                {dispute.userEmail}
               </div>
-              <Button type="submit" variant="outline">
-                Search
-              </Button>
-            </form>
-            <div className="flex gap-2">
-              <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                onClick={() => setStatusFilter("all")}
-              >
-                All
-              </Button>
-              <Button
-                variant={statusFilter === "open" ? "default" : "outline"}
-                onClick={() => setStatusFilter("open")}
-              >
-                Open
-              </Button>
-              <Button
-                variant={statusFilter === "resolved" ? "default" : "outline"}
-                onClick={() => setStatusFilter("resolved")}
-              >
-                Resolved
-              </Button>
             </div>
+          )
+        },
+      },
+      {
+        accessorKey: "creatorName",
+        header: "Creator",
+        cell: ({ row }) => (
+          <div className="text-sm">{row.original.creatorName || "-"}</div>
+        ),
+      },
+      {
+        accessorKey: "disputeType",
+        header: "Type",
+        cell: ({ row }) => (
+          <Badge variant="outline">{row.original.disputeType}</Badge>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge variant={getStatusBadgeVariant(row.original.status)}>
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => (
+          <div className="text-sm text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
           </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const dispute = row.original
+          return (
+            <div className="flex justify-end gap-2">
+              {dispute.status === "open" && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleResolve(dispute.id, "Resolved by admin")}
+                    disabled={processing === dispute.id}
+                  >
+                    {processing === dispute.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Resolve
+                      </>
+                    )}
+                  </Button>
+                  {dispute.creatorId && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleSuspendCreator(dispute)}
+                      disabled={processing === dispute.id}
+                    >
+                      {processing === dispute.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Ban className="h-4 w-4 mr-1" />
+                          Suspend Creator
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    [processing]
+  )
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : disputes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No disputes found
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Dispute</th>
-                    <th className="text-left p-3 font-medium">User</th>
-                    <th className="text-left p-3 font-medium">Creator</th>
-                    <th className="text-left p-3 font-medium">Type</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium">Created</th>
-                    <th className="text-right p-3 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {disputes.map((dispute) => (
-                    <tr key={dispute.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">
-                        <div className="max-w-md">
-                          <div className="font-medium">{dispute.reason}</div>
-                          {dispute.description && (
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {dispute.description}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm">
-                        <div>{dispute.userName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {dispute.userEmail}
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm">
-                        {dispute.creatorName || "-"}
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="outline">{dispute.disputeType}</Badge>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant={getStatusBadgeVariant(dispute.status)}>
-                          {dispute.status}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-sm text-muted-foreground">
-                        {new Date(dispute.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex justify-end">
-                          {dispute.status === "open" && (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() =>
-                                handleResolve(dispute.id, "Resolved by admin")
-                              }
-                              disabled={processing === dispute.id}
-                            >
-                              {processing === dispute.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Resolve
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+  const statusOptions = [
+    { label: "Open", value: "open" },
+    { label: "Investigating", value: "investigating" },
+    { label: "Resolved", value: "resolved" },
+    { label: "Closed", value: "closed" },
+  ]
+
+  const typeOptions = [
+    { label: "Transaction", value: "transaction" },
+    { label: "Service", value: "service" },
+    { label: "Refund", value: "refund" },
+  ]
+
+  return (
+    <AdminDataTable<Dispute>
+      columns={columns}
+      endpoint="/api/admin/disputes"
+      searchKey="reason"
+      searchPlaceholder="Search disputes..."
+      stateKey="disputes"
+      filterConfigs={[
+        {
+          param: "status",
+          column: "status",
+          title: "Status",
+          options: statusOptions,
+        },
+        {
+          param: "type",
+          column: "disputeType",
+          title: "Type",
+          options: typeOptions,
+        },
+      ]}
+      emptyStateText="No disputes found"
+    />
   )
 }
-

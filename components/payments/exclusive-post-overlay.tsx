@@ -10,7 +10,7 @@ import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface ExclusivePostOverlayProps {
   postId: string
-  price: number // Price in display format (e.g., 500 for ₹500)
+  price: number // Price in display format (e.g., 500 for $500)
   currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
   caption?: string | null
   onPurchaseComplete?: () => void
