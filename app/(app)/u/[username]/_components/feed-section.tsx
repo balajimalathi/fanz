@@ -70,7 +70,9 @@ export function FeedSection({ username, creatorId, memberships = [] }: FeedSecti
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        const response = await fetch("/api/auth/session")
+        const response = await fetch("/api/auth/session", {
+          credentials: "include", // Include cookies for subdomain requests
+        })
         if (response.ok) {
           const data = await response.json()
           setCurrentUserId(data?.user?.id || null)

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { creator, user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { checkBannedUser } from "@/lib/utils/check-banned-user";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { RevenueSection } from "@/components/dashboard/revenue-section";
 import { SubscribersSection } from "@/components/dashboard/subscribers-section";
@@ -32,6 +33,9 @@ export default async function HomePage() {
   if (!session?.user) {
     redirect("/login");
   }
+
+  // Check if user is banned (redirects to /suspended if banned)
+  await checkBannedUser()
 
   // Redirect admins to admin dashboard
   if (session.user.role === "admin") {

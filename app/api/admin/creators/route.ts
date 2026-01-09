@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status") // Comma-separated: "pending", "approved", or null for all
+    const creatorType = searchParams.get("creatorType") // Comma-separated
+    const contentType = searchParams.get("contentType") // Comma-separated
     const search = searchParams.get("search") // Search by username or display name
     const page = parseInt(searchParams.get("page") || "1")
     const pageSize = parseInt(searchParams.get("pageSize") || "10")
@@ -32,6 +34,26 @@ export async function GET(request: NextRequest) {
         whereConditions.push(eq(creator.onboarded, false))
       } else if (statuses.includes("approved")) {
         whereConditions.push(eq(creator.onboarded, true))
+      }
+    }
+
+    // Filter by creator type (comma-separated)
+    if (creatorType) {
+      const types = creatorType.split(",").filter(Boolean)
+      if (types.length === 1) {
+        whereConditions.push(eq(creator.creatorType, types[0] as any))
+      } else if (types.length > 1) {
+        whereConditions.push(inArray(creator.creatorType, types as any[]))
+      }
+    }
+
+    // Filter by content type (comma-separated)
+    if (contentType) {
+      const types = contentType.split(",").filter(Boolean)
+      if (types.length === 1) {
+        whereConditions.push(eq(creator.contentType, types[0] as any))
+      } else if (types.length > 1) {
+        whereConditions.push(inArray(creator.contentType, types as any[]))
       }
     }
 

@@ -11,12 +11,17 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper"
+import { checkBannedUser } from "@/lib/utils/check-banned-user"
 
 export default async function layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Check if user is banned (redirects to /suspended if banned)
+  // This runs before rendering any protected home routes
+  await checkBannedUser()
+
   return (
     <CallGlobalWrapper>
       <SidebarProvider

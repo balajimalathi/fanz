@@ -25,16 +25,39 @@ interface DataTableFacetedFilterProps<TData, TValue> {
     value: string
     icon?: React.ComponentType<{ className?: string }>
   }[]
+  // Server-side filtering props
+  selectedValues?: string[]
+  onFilterChange?: (values: string[] | undefined) => void
 }
 
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
   options,
+  selectedValues: propSelectedValues,
+  onFilterChange,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues()
-  const selectedValues = new Set(column?.getFilterValue() as string[])
+  
+  // Use server-side selectedValues if provided, otherwise fallback to column filter (client-side)
+  const columnFilterValue = column?.getFilterValue() as string[] | undefined
+  const serverSelectedValues = propSelectedValues || []
+  const clientSelectedValues = columnFilterValue || []
+  const activeSelectedValues = propSelectedValues !== undefined ? serverSelectedValues : clientSelectedValues
+  const selectedValues = new Set(activeSelectedValues)
+  
   const [searchValue, setSearchValue] = React.useState("")
+  
+  // Handle filter change - use onFilterChange for server-side, or column.setFilterValue for client-side
+  const handleFilterChange = React.useCallback((values: string[] | undefined) => {
+    if (onFilterChange) {
+      // Server-side mode
+      onFilterChange(values)
+    } else if (column) {
+      // Client-side mode
+      column.setFilterValue(values)
+    }
+  }, [onFilterChange, column])
 
   const filteredOptions = React.useMemo(() => {
     if (!searchValue) return options
@@ -119,7 +142,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                           newSelectedValues.add(option.value)
                         }
                         const filterValue = Array.from(newSelectedValues)
-                        column?.setFilterValue(
+                        handleFilterChange(
                           filterValue.length ? filterValue : undefined
                         )
                       }}
@@ -134,7 +157,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                             newSelectedValues.delete(option.value)
                           }
                           const filterValue = Array.from(newSelectedValues)
-                          column?.setFilterValue(
+                          handleFilterChange(
                             filterValue.length ? filterValue : undefined
                           )
                         }}
@@ -157,7 +180,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                   <>
                     <Separator className="my-1" />
                     <button
-                      onClick={() => column?.setFilterValue(undefined)}
+                      onClick={() => handleFilterChange(undefined)}
                       className="w-full rounded-sm px-2 py-1.5 text-sm text-center hover:bg-accent hover:text-accent-foreground"
                     >
                       Clear filters

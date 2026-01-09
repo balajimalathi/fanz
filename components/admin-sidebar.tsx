@@ -73,7 +73,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
         <TeamSwitcher teams={sidebarData.teams} />
       </SidebarHeader>
       <SidebarContent> 
-        <NavSecondary items={adminNavItems} className="md:mt-auto" />
+        <NavSecondary items={adminNavItems} />
       </SidebarContent>
       <SidebarRail />
       <SidebarFooter>

@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // Get admin user for resolvedBy
-    const session = await import("@/lib/auth/auth").then((m) => m.auth.api.getSession({
+    const session = await import("@/lib/auth/auth").then(async (m) => m.auth.api.getSession({
       headers: await headers(),
     }))
     const adminId = session?.user?.id

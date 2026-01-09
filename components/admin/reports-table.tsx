@@ -272,9 +272,12 @@ export function ReportsTable() {
   ]
 
   const typeOptions = [
+    { label: "User", value: "user" },
     { label: "Creator", value: "creator" },
     { label: "Post", value: "post" },
-    { label: "User", value: "user" },
+    { label: "Comment", value: "comment" },
+    { label: "Message", value: "message" },
+    { label: "Other", value: "other" },
   ]
 
   return (

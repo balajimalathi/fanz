@@ -116,6 +116,7 @@ export function AdminDataTable<TData>({
   const columnFiltersRef = React.useRef<ColumnFiltersState>([])
   const [table, setTable] = React.useState<TanstackTable<TData> | null>(null)
   const syncingFromUrl = React.useRef(false)
+  const isResettingPage = React.useRef(false)
   
   // Keep ref in sync with state
   React.useEffect(() => {
@@ -138,6 +139,42 @@ export function AdminDataTable<TData>({
 
   // Create a stable string representation for dependency checking
   const filterValuesStr = React.useMemo(() => JSON.stringify(filterValues), [filterValues])
+
+  // Reset page to 1 when filters change (but not when page itself changes)
+  const prevFilterValuesStr = React.useRef<string>(filterValuesStr)
+  React.useEffect(() => {
+    if (prevFilterValuesStr.current !== filterValuesStr && !isResettingPage.current) {
+      prevFilterValuesStr.current = filterValuesStr
+      if (page !== 1) {
+        isResettingPage.current = true
+        setPage(1)
+        // Reset flag after state update
+        requestAnimationFrame(() => {
+          isResettingPage.current = false
+        })
+      }
+    } else {
+      prevFilterValuesStr.current = filterValuesStr
+    }
+  }, [filterValuesStr, page, setPage])
+
+  // Reset page to 1 when search changes
+  const prevSearch = React.useRef<string>(search)
+  React.useEffect(() => {
+    if (prevSearch.current !== search && !isResettingPage.current) {
+      prevSearch.current = search
+      if (page !== 1) {
+        isResettingPage.current = true
+        setPage(1)
+        // Reset flag after state update
+        requestAnimationFrame(() => {
+          isResettingPage.current = false
+        })
+      }
+    } else {
+      prevSearch.current = search
+    }
+  }, [search, page, setPage])
 
   // Fetch data when dependencies change - use direct effect to avoid callback dependency issues
   React.useEffect(() => {
@@ -202,12 +239,12 @@ export function AdminDataTable<TData>({
 
   // Sync URL filter values to column filters for toolbar display (one-way sync from URL to table)
   // Use ref to track previous value and prevent unnecessary updates
-  const prevFilterValuesStr = React.useRef<string>("")
+  const prevFilterValuesStrForColumnSync = React.useRef<string>("")
   React.useEffect(() => {
     if (!table || syncingFromUrl.current) return
-    if (prevFilterValuesStr.current === filterValuesStr) return
+    if (prevFilterValuesStrForColumnSync.current === filterValuesStr) return
     
-    prevFilterValuesStr.current = filterValuesStr
+    prevFilterValuesStrForColumnSync.current = filterValuesStr
     
     const newFilters: ColumnFiltersState = []
     filterConfigs.forEach((config) => {
@@ -261,6 +298,7 @@ export function AdminDataTable<TData>({
   }, [tableInstance, table])
 
   // Handle filter changes from toolbar and sync to URL
+  // Reset page to 1 when filters change
   const handleFilterChange = React.useCallback(
     (columnName: string, values: string[] | undefined) => {
       const config = filterConfigs.find((c) => c.column === columnName)
@@ -268,14 +306,31 @@ export function AdminDataTable<TData>({
         const configIndex = filterConfigs.indexOf(config)
         const [, setFilterValue] = filterStates[configIndex]
         setFilterValue(values || [])
+        // Reset page to 1 when filter changes
+        if (page !== 1) {
+          setPage(1)
+        }
       }
     },
-    [filterConfigs, filterStates]
+    [filterConfigs, filterStates, page, setPage]
+  )
+
+  // Handle search changes and reset page to 1
+  const handleSearchChange = React.useCallback(
+    (value: string) => {
+      setSearch(value)
+      // Reset page to 1 when search changes
+      if (page !== 1) {
+        setPage(1)
+      }
+    },
+    [setSearch, page, setPage]
   )
 
   // Build filter configs for toolbar
   const toolbarFilters = filterConfigs.map((config) => ({
     column: config.column,
+    param: config.param,
     title: config.title,
     options: config.options,
   }))
@@ -288,7 +343,7 @@ export function AdminDataTable<TData>({
         searchKey={searchKey}
         searchPlaceholder={searchPlaceholder}
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={handleSearchChange}
         filters={toolbarFilters}
         onFilterChange={handleFilterChange}
         filterValues={filterValues}

@@ -282,6 +282,16 @@ export function CreatorApprovalTable() {
     { label: "Approved", value: "approved" },
   ]
 
+  const creatorTypeOptions = [
+    { label: "AI", value: "ai" },
+    { label: "Human", value: "human" },
+  ]
+
+  const contentTypeOptions = [
+    { label: "18+", value: "18+" },
+    { label: "General", value: "general" },
+  ]
+
   return (
     <AdminDataTable<Creator>
       columns={columns}
@@ -295,6 +305,18 @@ export function CreatorApprovalTable() {
           column: "onboarded", // This won't sync to column filter, but that's OK - it's handled server-side
           title: "Status",
           options: statusOptions,
+        },
+        {
+          param: "creatorType",
+          column: "creatorType",
+          title: "Creator Type",
+          options: creatorTypeOptions,
+        },
+        {
+          param: "contentType",
+          column: "contentType",
+          title: "Content Type",
+          options: contentTypeOptions,
         },
       ]}
       emptyStateText="No creators found"

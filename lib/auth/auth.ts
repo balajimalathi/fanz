@@ -67,7 +67,28 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => { }),
   },
   account: {},
-  plugins: [admin(), nextCookies(), organization({})],
+  plugins: [
+    admin({
+      // Customize banned user message
+      bannedUserMessage: "Your account has been suspended. Please contact support if you believe this is an error.",
+    }),
+    nextCookies(),
+    organization({}),
+  ],
+  // Customize error handling for banned users
+  onAPIError: {
+    errorURL: "/suspended",
+    customizeDefaultErrorPage: {
+      colors: {
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: "hsl(var(--primary))",
+        muted: "hsl(var(--muted))",
+        mutedForeground: "hsl(var(--muted-foreground))",
+        destructive: "hsl(var(--destructive))",
+      },
+    },
+  },
   // Ensure cookies work correctly in both localhost and production
   // OAuth state cookies need SameSite=None with Secure=true for cross-site redirects
   advanced: {

@@ -1,8 +1,8 @@
 import { requireAdmin } from "@/lib/utils/admin-auth"
 import { redirect } from "next/navigation"
-import { TransactionsTable } from "@/components/admin/transactions-table"
+import { ReportsTable } from "@/components/admin/reports-table"
 
-export default async function AdminTransactionsPage() {
+export default async function AdminReportsPage() {
   const adminUser = await requireAdmin()
 
   if (!adminUser) {
@@ -12,14 +12,13 @@ export default async function AdminTransactionsPage() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
         <p className="text-muted-foreground">
-          View all payment transactions
+          Review and manage user reports
         </p>
       </div>
 
-      <TransactionsTable />
+      <ReportsTable />
     </div>
   )
 }
-

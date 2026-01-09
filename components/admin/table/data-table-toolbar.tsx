@@ -15,6 +15,7 @@ interface DataTableToolbarProps<TData> {
   onSearchChange?: (value: string) => void
   filters?: Array<{
     column: string
+    param?: string
     title: string
     options: Array<{
       label: string
@@ -41,25 +42,33 @@ export function DataTableToolbar<TData>({
     : Object.keys(filterValues).length > 0 || (searchValue && searchValue.length > 0)
 
   const handleReset = () => {
+    // Clear search if onSearchChange is provided (server-side filtering)
+    if (onSearchChange) {
+      onSearchChange("")
+    }
+    // Clear filters if onFilterChange is provided
+    if (onFilterChange) {
+      filters.forEach((filter) => onFilterChange(filter.column, undefined))
+    }
+    // Also reset table column filters if table exists (client-side filtering)
     if (table) {
       table.resetColumnFilters()
-    } else {
-      if (onSearchChange) onSearchChange("")
-      if (onFilterChange) {
-        filters.forEach((filter) => onFilterChange(filter.column, undefined))
-      }
     }
   }
 
-  const currentSearchValue = table
+  // Prioritize searchValue/onSearchChange props for server-side filtering
+  // Only use table column filters if searchValue/onSearchChange are not provided
+  const currentSearchValue = searchValue !== undefined
+    ? searchValue
+    : table
     ? ((table.getColumn(searchKey)?.getFilterValue() as string) ?? "")
-    : searchValue ?? ""
+    : ""
 
   const handleClearSearch = () => {
-    if (table) {
-      table.getColumn(searchKey)?.setFilterValue("")
-    } else if (onSearchChange) {
+    if (onSearchChange) {
       onSearchChange("")
+    } else if (table) {
+      table.getColumn(searchKey)?.setFilterValue("")
     }
   }
 
@@ -72,10 +81,11 @@ export function DataTableToolbar<TData>({
             value={currentSearchValue}
             onChange={(event) => {
               const value = event.target.value
-              if (table) {
-                table.getColumn(searchKey)?.setFilterValue(value)
-              } else if (onSearchChange) {
+              // Prioritize onSearchChange for server-side filtering
+              if (onSearchChange) {
                 onSearchChange(value)
+              } else if (table) {
+                table.getColumn(searchKey)?.setFilterValue(value)
               }
             }}
             className="h-8 w-[150px] lg:w-[250px] pr-8"
@@ -93,7 +103,23 @@ export function DataTableToolbar<TData>({
           )}
         </div>
         {filters.map((filter) => {
-          if (table) {
+          // If server-side props are provided, use server-side mode
+          // Otherwise, fallback to client-side column-based filtering if table exists
+          if (onFilterChange && filterValues !== undefined) {
+            // Server-side mode: use props instead of column
+            // Use param if available, otherwise fallback to column
+            const filterKey = filter.param || filter.column
+            return (
+              <DataTableFacetedFilter
+                key={filter.column}
+                title={filter.title}
+                options={filter.options}
+                selectedValues={filterValues[filterKey] || []}
+                onFilterChange={(values) => onFilterChange(filter.column, values)}
+              />
+            )
+          } else if (table) {
+            // Client-side mode: use column-based filtering
             const column = table.getColumn(filter.column)
             if (!column) return null
             return (
@@ -105,8 +131,7 @@ export function DataTableToolbar<TData>({
               />
             )
           } else {
-            // For non-table mode, we need a custom implementation
-            // For now, skip filters when table is not provided
+            // No table and no server-side props - skip filter
             return null
           }
         })}

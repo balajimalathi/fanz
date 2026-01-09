@@ -3,19 +3,12 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import Image from "next/image"
-import { Pin, Lock, LogIn } from "lucide-react"
+import { Lock, LogIn, Pin } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { PostMediaDisplay } from "@/components/post/post-media-display"
 import { LikeButton } from "@/components/feed/like-button"
 import { CommentsSection } from "@/components/feed/comments-section"
-import { formatPostDate } from "@/lib/utils/feed"
-import { cn } from "@/lib/utils"
 import { ExclusivePostOverlay } from "@/components/payments/exclusive-post-overlay"
-import { PriceDisplay } from "@/components/currency/price-display"
-import { toSubunits } from "@/lib/currency/currency-utils"
 import { Button } from "@/components/ui/button"
 import { ReportContentDialog } from "@/components/report/report-content-dialog"
 import {
@@ -25,6 +18,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical, Flag } from "lucide-react"
+import { toSubunits } from "@/lib/currency/currency-utils"
+import { formatPostDate } from "@/lib/utils/feed"
+import { PriceDisplay } from "../currency/price-display"
+import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar"
+import { Badge } from "../ui/badge"
 
 interface PostMedia {
   id: string
@@ -76,7 +74,7 @@ export function FeedPostCard({
   const [commentCount, setCommentCount] = useState(post.commentCount)
   const [showReportDialog, setShowReportDialog] = useState(false)
   const pathname = usePathname()
-  
+
   // Don't show report button if user is reporting their own content
   const canReport = currentUserId && currentUserId !== post.creator?.id
 
@@ -88,7 +86,7 @@ export function FeedPostCard({
     <Card className="w-full">
       <CardContent className="p-0">
         {/* Header */}
-        {/* <div className="flex items-center gap-3 p-4 pb-2">
+        <div className="flex items-center gap-3 p-4 pb-2">
           <Link href={creatorLink}>
             <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
               <AvatarImage
@@ -122,13 +120,13 @@ export function FeedPostCard({
           {post.postType === "exclusive" && post.price && (
             <Badge variant="outline">
               <PriceDisplay
-                amount={toSubunits(post.price, post.currency || "INR")}
-                originalCurrency={post.currency || "INR"}
+                amount={toSubunits(post.price, post.priceCurrency || "INR")}
+                originalCurrency={post.priceCurrency || "INR"}
               />
             </Badge>
           )}
-        </div> */}
- 
+        </div>
+
         {/* Media */}
         <div className="w-full relative">
           {post.media.length > 0 ? (

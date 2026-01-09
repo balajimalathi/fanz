@@ -230,8 +230,10 @@ export function DisputesTable() {
 
   const typeOptions = [
     { label: "Transaction", value: "transaction" },
-    { label: "Service", value: "service" },
+    { label: "Payout", value: "payout" },
     { label: "Refund", value: "refund" },
+    { label: "Service", value: "service" },
+    { label: "Other", value: "other" },
   ]
 
   return (
