@@ -286,3 +286,80 @@ export async function unsubscribeFromCallEvents(
   }
 }
 
+export interface LiveStreamEvent {
+  type: "stream_started" | "stream_ended";
+  creatorId: string;
+  streamId?: string;
+  streamType?: "free" | "follower_only" | "paid";
+  price?: number | null;
+  timestamp: number;
+}
+
+/**
+ * Publish a live stream event to Redis
+ * @param creatorId - The creator ID to publish the event for (for creator-specific channels)
+ * @param event - The live stream event object to publish
+ */
+export async function publishLiveStreamEvent(
+  creatorId: string,
+  event: LiveStreamEvent
+): Promise<void> {
+  try {
+    const publisher = getPublisherClient();
+    const channel = `live:${creatorId}`;
+    await publisher.publish(channel, JSON.stringify(event));
+    console.log("[Redis Pub/Sub] Published live stream event to channel:", channel, "event:", event.type);
+  } catch (error) {
+    console.error("Error publishing live stream event to Redis:", error);
+    // Don't throw - graceful degradation
+  }
+}
+
+/**
+ * Subscribe to live stream events for a creator
+ * @param subscriber - Redis subscriber client
+ * @param creatorId - The creator ID to subscribe to live stream events for
+ * @param callback - Callback function to handle received live stream events
+ */
+export async function subscribeToLiveStreamEvents(
+  subscriber: Redis,
+  creatorId: string,
+  callback: (event: LiveStreamEvent) => void
+): Promise<void> {
+  try {
+    const channel = `live:${creatorId}`;
+    await subscriber.subscribe(channel);
+    
+    subscriber.on("message", (receivedChannel, message) => {
+      if (receivedChannel === channel) {
+        try {
+          const parsedEvent = JSON.parse(message) as LiveStreamEvent;
+          callback(parsedEvent);
+        } catch (error) {
+          console.error("Error parsing Redis live stream event:", error);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error subscribing to live stream events:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unsubscribe from live stream events for a creator
+ * @param subscriber - Redis subscriber client
+ * @param creatorId - The creator ID to unsubscribe from
+ */
+export async function unsubscribeFromLiveStreamEvents(
+  subscriber: Redis,
+  creatorId: string
+): Promise<void> {
+  try {
+    const channel = `live:${creatorId}`;
+    await subscriber.unsubscribe(channel);
+  } catch (error) {
+    console.error("Error unsubscribing from live stream events:", error);
+  }
+}
+

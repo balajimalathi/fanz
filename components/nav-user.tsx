@@ -65,8 +65,8 @@ export function NavUser({
 
     fetchUnreadCount()
     // Refresh every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000)
-    return () => clearInterval(interval)
+    // const interval = setInterval(fetchUnreadCount, 30000)
+    // return () => clearInterval(interval)
   }, [])
 
   async function handleLogOut() {
