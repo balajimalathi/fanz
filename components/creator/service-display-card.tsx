@@ -35,6 +35,9 @@ export function ServiceDisplayCard({
   const isCreator = session?.user?.id === creatorId
   const showPurchaseButton = isAuthenticated && !isCreator
 
+  const currentOriginUrl =
+    typeof window !== "undefined" ? window.location.href : pathname || "/"
+
   return (
     <>
       <Card className="h-full hover:shadow-md transition-shadow flex flex-col">
@@ -79,7 +82,7 @@ export function ServiceDisplayCard({
         amount={price}
         title={`Purchase ${name}`}
         description={description}
-        originUrl={pathname || undefined}
+        originUrl={currentOriginUrl}
       />
     </>
   )

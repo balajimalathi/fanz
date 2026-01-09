@@ -58,8 +58,10 @@ export function MembershipSelectionModal({
   const [selectedDuration, setSelectedDuration] = useState<BundleDuration>(1)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Get origin URL from prop or use current pathname
-  const currentOriginUrl = originUrl || pathname || "/"
+  // Get origin URL from prop or use current full URL (including subdomain)
+  const currentOriginUrl =
+    originUrl ||
+    (typeof window !== "undefined" ? window.location.href : pathname || "/")
 
   const selectedMembership = memberships.find((m) => m.id === selectedMembershipId)
   const membershipCurrency = selectedMembership?.currency || "INR"

@@ -363,3 +363,193 @@ export async function unsubscribeFromLiveStreamEvents(
   }
 }
 
+// ============================================================================
+// Redis Streams for Message Queue
+// ============================================================================
+
+export const MESSAGE_STREAM_KEY = "messages:queue";
+export const MESSAGE_CONSUMER_GROUP = "message-processors";
+export const MESSAGE_CONSUMER_NAME = "processor-1";
+
+export interface QueuedMessage {
+  id?: string; // Optional message ID (will be generated if not provided)
+  conversationId: string;
+  senderId: string;
+  messageType: string;
+  content: string | null;
+  mediaUrl: string | null;
+  thumbnailUrl: string | null;
+  timestamp: number;
+}
+
+/**
+ * Queue a message to Redis Stream for async persistence
+ * @param message - The message data to queue
+ * @returns The stream ID of the queued message
+ */
+export async function queueMessage(message: QueuedMessage): Promise<string | null> {
+  try {
+    const publisher = getPublisherClient();
+    const fields: (string | number)[] = [
+      "conversationId", message.conversationId,
+      "senderId", message.senderId,
+      "messageType", message.messageType,
+      "content", message.content || "",
+      "mediaUrl", message.mediaUrl || "",
+      "thumbnailUrl", message.thumbnailUrl || "",
+      "timestamp", message.timestamp.toString()
+    ];
+    
+    // Include message ID if provided
+    if (message.id) {
+      fields.push("messageId", message.id);
+    }
+    
+    const streamId = await publisher.xadd(
+      MESSAGE_STREAM_KEY,
+      "*", // Auto-generate stream ID
+      ...fields
+    );
+    console.log("[Redis Streams] Message queued with stream ID:", streamId);
+    return streamId;
+  } catch (error) {
+    console.error("[Redis Streams] Error queueing message:", error);
+    return null;
+  }
+}
+
+/**
+ * Create consumer group for message processing if it doesn't exist
+ * @param redis - Redis client instance
+ */
+export async function createMessageConsumerGroup(redis: Redis): Promise<void> {
+  try {
+    await redis.xgroup(
+      "CREATE",
+      MESSAGE_STREAM_KEY,
+      MESSAGE_CONSUMER_GROUP,
+      "0", // Start from beginning
+      "MKSTREAM" // Create stream if it doesn't exist
+    );
+    console.log("[Redis Streams] Consumer group created:", MESSAGE_CONSUMER_GROUP);
+  } catch (error: any) {
+    // BUSYGROUP means group already exists, which is fine
+    if (error?.message?.includes("BUSYGROUP")) {
+      console.log("[Redis Streams] Consumer group already exists");
+    } else {
+      console.error("[Redis Streams] Error creating consumer group:", error);
+      throw error;
+    }
+  }
+}
+
+/**
+ * Read messages from the stream using consumer group
+ * @param redis - Redis client instance
+ * @param count - Number of messages to read (default: 10)
+ * @returns Array of message entries with IDs
+ */
+export async function readQueuedMessages(
+  redis: Redis,
+  count: number = 10
+): Promise<Array<{ id: string; message: QueuedMessage }>> {
+  try {
+    const messages = await redis.xreadgroup(
+      "GROUP",
+      MESSAGE_CONSUMER_GROUP,
+      MESSAGE_CONSUMER_NAME,
+      "COUNT",
+      count.toString(),
+      "BLOCK",
+      "1000", // Block for 1 second if no messages
+      "STREAMS",
+      MESSAGE_STREAM_KEY,
+      ">" // Read pending messages first, then new ones
+    );
+
+    if (!messages || messages.length === 0) {
+      return [];
+    }
+
+    const results: Array<{ id: string; message: QueuedMessage }> = [];
+    // ioredis returns: [[streamName, [[id, [field1, value1, field2, value2, ...]], ...]]]
+    const streamData = messages[0];
+    if (!streamData || !Array.isArray(streamData) || streamData.length < 2) {
+      return [];
+    }
+    
+    const streamEntries = streamData[1] as Array<[string, string[]]>;
+    if (!streamEntries || !Array.isArray(streamEntries)) {
+      return [];
+    }
+
+    for (const entry of streamEntries) {
+      const [id, fieldArray] = entry;
+      if (!id || !Array.isArray(fieldArray)) {
+        continue;
+      }
+      
+      // Convert field array [field1, value1, field2, value2, ...] to object
+      const fields: Record<string, string> = {};
+      for (let i = 0; i < fieldArray.length; i += 2) {
+        const key = fieldArray[i] as string;
+        const value = fieldArray[i + 1] as string;
+        if (key && value !== undefined) {
+          fields[key] = value;
+        }
+      }
+
+      const message: QueuedMessage = {
+        id: fields.messageId || undefined,
+        conversationId: fields.conversationId,
+        senderId: fields.senderId,
+        messageType: fields.messageType,
+        content: fields.content || null,
+        mediaUrl: fields.mediaUrl || null,
+        thumbnailUrl: fields.thumbnailUrl || null,
+        timestamp: parseInt(fields.timestamp, 10),
+      };
+      results.push({ id, message });
+    }
+
+    return results;
+  } catch (error) {
+    console.error("[Redis Streams] Error reading queued messages:", error);
+    return [];
+  }
+}
+
+/**
+ * Acknowledge a processed message
+ * @param redis - Redis client instance
+ * @param messageId - The stream ID of the message to acknowledge
+ */
+export async function acknowledgeMessage(
+  redis: Redis,
+  messageId: string
+): Promise<void> {
+  try {
+    await redis.xack(
+      MESSAGE_STREAM_KEY,
+      MESSAGE_CONSUMER_GROUP,
+      messageId
+    );
+    console.log("[Redis Streams] Message acknowledged:", messageId);
+  } catch (error) {
+    console.error("[Redis Streams] Error acknowledging message:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get a Redis client for stream operations
+ * @returns A new Redis client instance
+ */
+export function getStreamClient(): Redis {
+  const client = new Redis(redisConfig);
+  client.on("error", (err) => {
+    console.error("Redis Stream Client Error:", err);
+  });
+  return client;
+}
+

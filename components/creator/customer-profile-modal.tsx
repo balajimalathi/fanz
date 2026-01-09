@@ -52,6 +52,8 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState<string | null>(null)
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
+  const [subscriptionToCancel, setSubscriptionToCancel] = useState<Subscription | null>(null)
   
   const currency = currencyLoading ? "USD" : creatorCurrency
 
@@ -126,16 +128,20 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
     return new Date(subscription.currentPeriodEnd) > new Date()
   }
 
-  const handleCancelSubscription = async (subscription: Subscription) => {
-    if (!window.confirm(`Are you sure you want to cancel your subscription to "${subscription.membership?.title || 'this membership'}"? You will continue to have access until ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the end of the current period'}.`)) {
-      return
-    }
+  const handleCancelSubscription = (subscription: Subscription) => {
+    setSubscriptionToCancel(subscription)
+    setConfirmCancelOpen(true)
+  }
 
-    setCancellingSubscriptionId(subscription.id)
+  const confirmCancelSubscription = async () => {
+    if (!subscriptionToCancel) return
+
+    setConfirmCancelOpen(false)
+    setCancellingSubscriptionId(subscriptionToCancel.id)
     setError(null)
 
     try {
-      const response = await fetch(`/api/subscriptions/${subscription.id}/cancel`, {
+      const response = await fetch(`/api/subscriptions/${subscriptionToCancel.id}/cancel`, {
         method: "POST",
       })
 
@@ -151,6 +157,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
       setError(err instanceof Error ? err.message : "Failed to cancel subscription")
     } finally {
       setCancellingSubscriptionId(null)
+      setSubscriptionToCancel(null)
     }
   }
 
@@ -324,6 +331,35 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
           </div>
         ) : null}
       </DialogContent>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <Dialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel your subscription to "{subscriptionToCancel?.membership?.title || 'this membership'}"? You will continue to have access until {subscriptionToCancel?.currentPeriodEnd ? new Date(subscriptionToCancel.currentPeriodEnd).toLocaleDateString() : 'the end of the current period'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmCancelOpen(false)
+                setSubscriptionToCancel(null)
+              }}
+            >
+              Keep Subscription
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmCancelSubscription}
+            >
+              Cancel Subscription
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

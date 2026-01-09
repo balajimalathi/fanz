@@ -4,6 +4,11 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { conversation, chatMessage } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import {
+  queueMessageForPersistence,
+  saveMessageDirectly,
+  processQueuedMessages,
+} from "@/lib/services/message-queue";
 import { publishMessage } from "@/lib/utils/redis-pubsub";
 
 // GET - List messages for a conversation
@@ -113,35 +118,73 @@ export async function POST(
       );
     }
 
-    // Create message
-    const [newMessage] = await db
-      .insert(chatMessage)
-      .values({
-        conversationId,
-        senderId: userId,
-        messageType,
-        content: content || null,
-        mediaUrl: mediaUrl || null,
-        thumbnailUrl: thumbnailUrl || null,
-      })
-      .returning();
+    // Generate message ID for optimistic response and database persistence
+    const messageId = crypto.randomUUID();
+    const timestamp = Date.now();
 
-    // Update conversation last message
-    await db
-      .update(conversation)
-      .set({
-        lastMessageAt: new Date(),
-        lastMessagePreview: content || (mediaUrl ? "Media" : ""),
-        updatedAt: new Date(),
-      })
-      .where(eq(conversation.id, conversationId));
+    // Queue message for async persistence
+    const queuedMessage = {
+      id: messageId,
+      conversationId,
+      senderId: userId,
+      messageType,
+      content: content || null,
+      mediaUrl: mediaUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
+      timestamp,
+    };
 
-    // Publish message to Redis for real-time updates
-    console.log("[Messages API] Publishing message to Redis:", newMessage.id, "for conversation:", conversationId);
-    await publishMessage(conversationId, newMessage);
-    console.log("[Messages API] Message published successfully");
+    // Save message immediately in the background (fire and forget)
+    // This ensures persistence happens quickly while not blocking the response
+    const savePromise = saveMessageDirectly(queuedMessage).then((savedMessage) => {
+      if (savedMessage) {
+        // Publish to Redis pub/sub after successful save
+        publishMessage(conversationId, savedMessage).catch((error) => {
+          console.error("[Messages API] Error publishing saved message to Redis pub/sub:", error);
+        });
+        return savedMessage;
+      }
+      return null;
+    }).catch((error) => {
+      console.error("[Messages API] Error saving message directly:", error);
+      // If direct save fails, queue it for retry
+      queueMessageForPersistence(queuedMessage).catch((queueError) => {
+        console.error("[Messages API] Error queueing message after save failure:", queueError);
+      });
+      return null;
+    });
 
-    return NextResponse.json(newMessage, { status: 201 });
+    // Also queue the message as a backup (for reliability and retry mechanism)
+    const streamId = await queueMessageForPersistence(queuedMessage);
+
+    // Create optimistic message object for immediate response
+    const optimisticMessage = {
+      id: messageId,
+      conversationId,
+      senderId: userId,
+      messageType,
+      content: content || null,
+      mediaUrl: mediaUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
+      readAt: null,
+      createdAt: new Date(timestamp).toISOString(),
+    };
+
+    // Publish immediately to Redis pub/sub for real-time delivery
+    // This ensures the other side sees the message right away
+    publishMessage(conversationId, optimisticMessage).catch((error) => {
+      console.error("[Messages API] Error publishing optimistic message to Redis pub/sub:", error);
+    });
+
+    // Update optimistic message with saved data when available (non-blocking)
+    savePromise.then((savedMessage) => {
+      if (savedMessage) {
+        console.log("[Messages API] Message saved successfully:", savedMessage.id);
+      }
+    });
+
+    console.log("[Messages API] Message queued successfully, streamId:", streamId);
+    return NextResponse.json(optimisticMessage, { status: 201 });
   } catch (error) {
     console.error("Error sending message:", error);
     return NextResponse.json(

@@ -26,6 +26,9 @@ export function ExclusivePostOverlay({
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const pathname = usePathname()
 
+  const currentOriginUrl =
+    typeof window !== "undefined" ? window.location.href : pathname || "/"
+
   return (
     <>
       <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10 backdrop-blur-sm">
@@ -62,7 +65,7 @@ export function ExclusivePostOverlay({
         amount={price}
         title="Purchase Exclusive Post"
         description="Unlock this exclusive content by purchasing it"
-        originUrl={pathname || undefined}
+        originUrl={currentOriginUrl}
         onSuccess={() => {
           setShowPaymentModal(false)
           onPurchaseComplete?.()
