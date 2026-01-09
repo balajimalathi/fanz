@@ -468,6 +468,7 @@ export class PaymentService {
             .update(subscriptions)
             .set({
               status: "active",
+              price: membershipRecord.monthlyRecurringFee,
               currentPeriodStart: now,
               currentPeriodEnd: periodEnd,
               updatedAt: new Date(),
@@ -478,6 +479,7 @@ export class PaymentService {
           await db.insert(subscriptions).values({
             customerId: customer.id,
             planId: transaction.entityId,
+            price: membershipRecord.monthlyRecurringFee,
             status: "active",
             currentPeriodStart: now,
             currentPeriodEnd: periodEnd,

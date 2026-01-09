@@ -137,7 +137,9 @@ export async function POST(
       .where(eq(conversation.id, conversationId));
 
     // Publish message to Redis for real-time updates
+    console.log("[Messages API] Publishing message to Redis:", newMessage.id, "for conversation:", conversationId);
     await publishMessage(conversationId, newMessage);
+    console.log("[Messages API] Message published successfully");
 
     return NextResponse.json(newMessage, { status: 201 });
   } catch (error) {

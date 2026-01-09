@@ -86,6 +86,7 @@ export async function GET(
         try {
           // Create Redis subscriber
           subscriber = createSubscriberClient();
+          console.log("[SSE Stream] Created Redis subscriber for conversation:", conversationId);
 
           // Subscribe to conversation channel for messages
           await subscribeToConversation(
@@ -93,12 +94,14 @@ export async function GET(
             conversationId,
             (message) => {
               try {
+                console.log("[SSE Stream] Received message via Redis:", message?.id || "unknown");
                 sendEvent("message", message);
               } catch (error) {
-                console.error("Error sending message via SSE:", error);
+                console.error("[SSE Stream] Error sending message via SSE:", error);
               }
             }
           );
+          console.log("[SSE Stream] Subscribed to conversation channel");
 
           // Subscribe to typing events
           await subscribeToTypingEvents(
@@ -106,18 +109,24 @@ export async function GET(
             conversationId,
             (typingEvent) => {
               try {
+                console.log("[SSE Stream] Received typing event via Redis:", typingEvent);
                 // Only send typing event if it's from the other user
                 if (typingEvent.userId !== userId) {
+                  console.log("[SSE Stream] Sending typing event to client for user:", typingEvent.userName);
                   sendEvent("typing", typingEvent);
+                } else {
+                  console.log("[SSE Stream] Ignoring typing event from self");
                 }
               } catch (error) {
-                console.error("Error sending typing event via SSE:", error);
+                console.error("[SSE Stream] Error sending typing event via SSE:", error);
               }
             }
           );
+          console.log("[SSE Stream] Subscribed to typing events channel");
 
           // Send connection confirmation
           sendEvent("connected", { conversationId });
+          console.log("[SSE Stream] SSE connection established");
 
           // Send heartbeat to keep connection alive
           heartbeatInterval = setInterval(() => {

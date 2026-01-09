@@ -63,10 +63,14 @@ export async function GET(request: NextRequest) {
             where: (m, { eq: eqOp }) => eqOp(m.id, sub.planId as any),
           });
 
+          // Use stored price if available, otherwise fallback to membership price (for backward compatibility)
+          const subscriptionPrice = sub.price ?? membershipRecord?.monthlyRecurringFee ?? null;
+
           return {
             id: sub.id,
             planId: sub.planId,
             status: sub.status,
+            price: subscriptionPrice,
             currentPeriodStart: sub.currentPeriodStart,
             currentPeriodEnd: sub.currentPeriodEnd,
             createdAt: sub.createdAt,
@@ -86,6 +90,7 @@ export async function GET(request: NextRequest) {
             id: sub.id,
             planId: sub.planId,
             status: sub.status,
+            price: sub.price ?? null,
             currentPeriodStart: sub.currentPeriodStart,
             currentPeriodEnd: sub.currentPeriodEnd,
             createdAt: sub.createdAt,

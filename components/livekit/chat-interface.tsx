@@ -65,10 +65,16 @@ export function ChatInterface({
   useEffect(() => {
     const fetchMessages = async () => {
       try {
+        console.log("[ChatInterface] Fetching initial messages for conversation:", conversationId);
         const response = await fetch(`/api/conversations/${conversationId}/messages`);
         if (!response.ok) throw new Error("Failed to fetch messages");
         const data = await response.json();
-        setMessages(data);
+        // Ensure messages are sorted by createdAt (oldest first)
+        const sortedMessages = [...data].sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        console.log("[ChatInterface] Fetched", sortedMessages.length, "messages");
+        setMessages(sortedMessages);
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
@@ -107,13 +113,21 @@ export function ChatInterface({
         eventSource.addEventListener("message", (event) => {
           try {
             const newMessage: Message = JSON.parse(event.data);
+            console.log("[ChatInterface] Received message via SSE:", newMessage);
             // Only add message if it doesn't already exist (prevent duplicates)
             setMessages((prev) => {
               const exists = prev.some((msg) => msg.id === newMessage.id);
               if (exists) {
+                console.log("[ChatInterface] Message already exists, skipping:", newMessage.id);
                 return prev;
               }
-              return [...prev, newMessage];
+              // Add new message and sort by createdAt to ensure correct order
+              const updated = [...prev, newMessage];
+              updated.sort((a, b) => 
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              );
+              console.log("[ChatInterface] Added new message, total messages:", updated.length);
+              return updated;
             });
           } catch (error) {
             console.error("Error parsing SSE message:", error);
@@ -127,8 +141,10 @@ export function ChatInterface({
         eventSource.addEventListener("typing", (event) => {
           try {
             const typingEvent: { userId: string; userName: string; timestamp: number } = JSON.parse(event.data);
+            console.log("[ChatInterface] Received typing event via SSE:", typingEvent);
             // Only show typing indicator for other users
             if (typingEvent.userId !== currentUserId) {
+              console.log("[ChatInterface] Setting typing indicator for:", typingEvent.userName);
               setTypingUser({
                 userId: typingEvent.userId,
                 userName: typingEvent.userName,
@@ -141,8 +157,11 @@ export function ChatInterface({
               
               // Set timeout to clear typing indicator
               typingTimeoutRef.current = setTimeout(() => {
+                console.log("[ChatInterface] Clearing typing indicator");
                 setTypingUser(null);
               }, typingTimeoutDelay);
+            } else {
+              console.log("[ChatInterface] Ignoring typing event from self");
             }
           } catch (error) {
             console.error("Error parsing SSE typing event:", error);
@@ -284,12 +303,18 @@ export function ChatInterface({
 
     typingDebounceRef.current = setTimeout(async () => {
       try {
-        await fetch(`/api/conversations/${conversationId}/typing`, {
+        console.log("[ChatInterface] Sending typing event");
+        const response = await fetch(`/api/conversations/${conversationId}/typing`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
         });
+        if (!response.ok) {
+          console.error("[ChatInterface] Failed to send typing event:", response.status, response.statusText);
+        } else {
+          console.log("[ChatInterface] Typing event sent successfully");
+        }
       } catch (error) {
         console.error("Error sending typing event:", error);
       }
@@ -679,13 +704,19 @@ export function ChatInterface({
       if (!response.ok) throw new Error("Failed to send message");
 
       const newMessage = await response.json();
+      console.log("[ChatInterface] Message sent successfully:", newMessage);
       // Message will be added via SSE, but add it optimistically for immediate UI update
       setMessages((prev) => {
         const exists = prev.some((msg) => msg.id === newMessage.id);
         if (exists) {
           return prev;
         }
-        return [...prev, newMessage];
+        // Add new message and sort by createdAt to ensure correct order
+        const updated = [...prev, newMessage];
+        updated.sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        return updated;
       });
     } catch (error) {
       console.error("Error sending message:", error);

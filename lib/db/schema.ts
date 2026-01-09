@@ -226,6 +226,7 @@ export const subscriptions = pgTable("subscriptions", {
     .notNull()
     .references(() => customers.id, { onDelete: "cascade" }),
   planId: varchar("plan_id", { length: 255 }).notNull(), // membershipId as string
+  price: integer("price"), // Stored in smallest currency unit (subunits), nullable for backward compatibility
   status: varchar("status", { length: 50 }).notNull().default("active"),
   currentPeriodStart: timestamp("current_period_start"),
   currentPeriodEnd: timestamp("current_period_end"),

@@ -232,6 +232,13 @@
       "when": 1767897375285,
       "tag": "0032_sad_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1767937455600,
+      "tag": "0033_safe_white_queen",
+      "breakpoints": true
     }
   ]
 }

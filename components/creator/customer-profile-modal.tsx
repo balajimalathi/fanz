@@ -8,10 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, User, Mail, Calendar, CreditCard } from "lucide-react"
+import { Loader2, User, Mail, Calendar, CreditCard, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 
@@ -24,6 +25,7 @@ interface Subscription {
   id: string
   planId: string
   status: string
+  price?: number | null
   currentPeriodStart: string | null
   currentPeriodEnd: string | null
   createdAt: string
@@ -49,6 +51,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState<string | null>(null)
   
   const currency = currencyLoading ? "USD" : creatorCurrency
 
@@ -115,6 +118,48 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
       default:
         return "outline"
     }
+  }
+
+  const isSubscriptionActive = (subscription: Subscription) => {
+    if (subscription.status !== "active") return false
+    if (!subscription.currentPeriodEnd) return true
+    return new Date(subscription.currentPeriodEnd) > new Date()
+  }
+
+  const handleCancelSubscription = async (subscription: Subscription) => {
+    if (!window.confirm(`Are you sure you want to cancel your subscription to "${subscription.membership?.title || 'this membership'}"? You will continue to have access until ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the end of the current period'}.`)) {
+      return
+    }
+
+    setCancellingSubscriptionId(subscription.id)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/subscriptions/${subscription.id}/cancel`, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to cancel subscription" }))
+        throw new Error(errorData.error || "Failed to cancel subscription")
+      }
+
+      // Refresh profile data after successful cancellation
+      await fetchProfile()
+    } catch (err) {
+      console.error("Error cancelling subscription:", err)
+      setError(err instanceof Error ? err.message : "Failed to cancel subscription")
+    } finally {
+      setCancellingSubscriptionId(null)
+    }
+  }
+
+  const getSubscriptionPrice = (subscription: Subscription): number => {
+    // Use stored price if available, otherwise fallback to membership price
+    if (subscription.price !== null && subscription.price !== undefined) {
+      return subscription.price
+    }
+    return subscription.membership?.monthlyRecurringFee ?? 0
   }
 
   return (
@@ -209,7 +254,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                                 <div>
                                   <p className="text-muted-foreground">Monthly Fee</p>
                                   <p className="font-medium">
-                                    {formatCurrencyUtil(subscription.membership.monthlyRecurringFee * 100, currency)}
+                                    {formatCurrencyUtil(getSubscriptionPrice(subscription), currency)}
                                   </p>
                                 </div>
                                 <div>
@@ -230,6 +275,29 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                                       </p>
                                     </div>
                                   </div>
+                                </div>
+                              )}
+                              {isSubscriptionActive(subscription) && (
+                                <div className="pt-2">
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleCancelSubscription(subscription)}
+                                    disabled={cancellingSubscriptionId === subscription.id}
+                                    className="w-full"
+                                  >
+                                    {cancellingSubscriptionId === subscription.id ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Cancelling...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <X className="h-4 w-4 mr-2" />
+                                        Cancel Subscription
+                                      </>
+                                    )}
+                                  </Button>
                                 </div>
                               )}
                             </>

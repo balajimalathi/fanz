@@ -320,30 +320,37 @@ export function CallStateProvider({
   const endCall = useCallback(async (callId: string) => {
     try {
       console.log("[CallStateProvider] Ending call:", callId);
+      
+      // Clear active call immediately for better UX
+      setActiveCall(null);
+      setIsCalling(false);
+      
       const response = await fetch(`/api/calls/${callId}/end`, {
         method: "POST",
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        // If call is already ended, that's fine - just log it
+        if (errorData.error?.includes("Current status: ended")) {
+          console.log("[CallStateProvider] Call was already ended");
+          return;
+        }
         console.error("[CallStateProvider] Failed to end call", {
           status: response.status,
           statusText: response.statusText,
           error: errorData,
         });
-        throw new Error(errorData.error || "Failed to end call");
+        // Don't throw error if call is already ended
+        if (!errorData.error?.includes("ended")) {
+          throw new Error(errorData.error || "Failed to end call");
+        }
+      } else {
+        console.log("[CallStateProvider] Call ended successfully");
       }
-
-      // Clear active call immediately
-      setActiveCall(null);
-      setIsCalling(false);
-      console.log("[CallStateProvider] Call ended successfully");
     } catch (error) {
       console.error("[CallStateProvider] Error ending call:", error);
-      // Clear active call even on error to prevent stuck state
-      setActiveCall(null);
-      setIsCalling(false);
-      throw error;
+      // Call state already cleared above, no need to clear again
     }
   }, []);
 

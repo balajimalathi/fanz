@@ -50,9 +50,12 @@ export async function publishMessage(
   try {
     const publisher = getPublisherClient();
     const channel = `conversation:${conversationId}`;
-    await publisher.publish(channel, JSON.stringify(message));
+    const messageStr = JSON.stringify(message);
+    console.log("[Redis Pub/Sub] Publishing message to channel:", channel);
+    const subscribers = await publisher.publish(channel, messageStr);
+    console.log("[Redis Pub/Sub] Message published, subscribers notified:", subscribers);
   } catch (error) {
-    console.error("Error publishing message to Redis:", error);
+    console.error("[Redis Pub/Sub] Error publishing message to Redis:", error);
     // Don't throw - graceful degradation
   }
 }
@@ -72,7 +75,9 @@ export async function subscribeToConversation(
     const channel = `conversation:${conversationId}`;
     await subscriber.subscribe(channel);
     
-    subscriber.on("message", (receivedChannel, message) => {
+    // Create a handler that filters by channel
+    // Multiple handlers can coexist - Redis fires "message" for all subscribed channels
+    const messageHandler = (receivedChannel: string, message: string) => {
       if (receivedChannel === channel) {
         try {
           const parsedMessage = JSON.parse(message);
@@ -81,7 +86,10 @@ export async function subscribeToConversation(
           console.error("Error parsing Redis message:", error);
         }
       }
-    });
+    };
+    
+    // Add handler - can coexist with typing events handler
+    subscriber.on("message", messageHandler);
   } catch (error) {
     console.error("Error subscribing to Redis channel:", error);
     throw error;
@@ -136,9 +144,12 @@ export async function publishTypingEvent(
       userName,
       timestamp: Date.now(),
     };
-    await publisher.publish(channel, JSON.stringify(typingEvent));
+    const messageStr = JSON.stringify(typingEvent);
+    console.log("[Redis Pub/Sub] Publishing typing event to channel:", channel, "for user:", userName);
+    const subscribers = await publisher.publish(channel, messageStr);
+    console.log("[Redis Pub/Sub] Typing event published, subscribers notified:", subscribers);
   } catch (error) {
-    console.error("Error publishing typing event to Redis:", error);
+    console.error("[Redis Pub/Sub] Error publishing typing event to Redis:", error);
     // Don't throw - graceful degradation
   }
 }
@@ -158,7 +169,9 @@ export async function subscribeToTypingEvents(
     const channel = `conversation:${conversationId}:typing`;
     await subscriber.subscribe(channel);
     
-    subscriber.on("message", (receivedChannel, message) => {
+    // Create a handler that processes both message channels
+    // This handler will be used alongside the conversation message handler
+    const messageHandler = (receivedChannel: string, message: string) => {
       if (receivedChannel === channel) {
         try {
           const parsedEvent = JSON.parse(message);
@@ -167,7 +180,11 @@ export async function subscribeToTypingEvents(
           console.error("Error parsing Redis typing event:", error);
         }
       }
-    });
+    };
+    
+    // Add handler - this will work alongside the conversation message handler
+    // since Redis fires "message" events for all subscribed channels
+    subscriber.on("message", messageHandler);
   } catch (error) {
     console.error("Error subscribing to typing events:", error);
     throw error;
