@@ -49,10 +49,17 @@ export default async function PagePage({
   }
 
   const images = await Promise.all(
-    page.images.map(async (src: string) => ({
-      src,
-      blurDataURL: await getBlurDataURL(src),
-    })),
+    page.images.map(async (src: string) => {
+      // Extract filename without extension for alt text
+      const filename = src.split("/").pop() || "";
+      const alt = filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+      
+      return {
+        src,
+        alt,
+        blurDataURL: await getBlurDataURL(src),
+      };
+    }),
   );
 
   return (
