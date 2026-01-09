@@ -69,7 +69,12 @@ export function CallStateProvider({
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [isCalling, setIsCalling] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
+  const baseReconnectDelay = 1000; // 1 second
 
   // Debug logging for user ID
   useEffect(() => {
@@ -115,18 +120,44 @@ export function CallStateProvider({
       // Close existing connection if any
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+
+      // Clear any pending reconnection attempts
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
 
       try {
+        console.log("[CallStateProvider] Attempting to connect SSE", {
+          currentUserId,
+          attempt: reconnectAttemptsRef.current + 1,
+          maxAttempts: maxReconnectAttempts,
+        });
+
         const eventSource = new EventSource("/api/calls/stream");
         eventSourceRef.current = eventSource;
 
         eventSource.onopen = () => {
-          console.log("[CallStateProvider] Call events SSE connected", { currentUserId });
+          console.log("[CallStateProvider] Call events SSE connected", {
+            currentUserId,
+            readyState: eventSource.readyState,
+          });
+          setIsConnected(true);
+          reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
         };
 
         eventSource.addEventListener("connected", (event) => {
-          console.log("[CallStateProvider] SSE connected event:", event);
+          console.log("[CallStateProvider] SSE connected event received:", event);
+          setIsConnected(true);
+          reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
+        });
+
+        eventSource.addEventListener("heartbeat", () => {
+          // Heartbeat received, connection is alive
+          setIsConnected(true);
+          reconnectAttemptsRef.current = 0; // Reset attempts on successful heartbeat
         });
 
         eventSource.addEventListener("incoming_call", async (event) => {
@@ -231,26 +262,133 @@ export function CallStateProvider({
           }
         });
 
-        eventSource.addEventListener("error", (error) => {
-          console.error("[CallStateProvider] Call events SSE error:", error);
+        eventSource.addEventListener("error", (event) => {
+          console.error("[CallStateProvider] Call events SSE error event:", {
+            type: event.type,
+            readyState: eventSource.readyState,
+            isConnected,
+            attempt: reconnectAttemptsRef.current + 1,
+            error: event,
+          });
+          setIsConnected(false);
+          
+          // Check if connection is closed or failed
+          if (eventSource.readyState === EventSource.CLOSED) {
+            console.log("[CallStateProvider] SSE connection closed, attempting reconnection");
+            eventSource.close();
+            
+            // Attempt reconnection with exponential backoff
+            // Only if we haven't exceeded max attempts and there's no pending reconnection
+            if (
+              reconnectAttemptsRef.current < maxReconnectAttempts &&
+              !reconnectTimeoutRef.current
+            ) {
+              const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
+              reconnectAttemptsRef.current++;
+              
+              console.log("[CallStateProvider] Scheduling reconnection", {
+                attempt: reconnectAttemptsRef.current,
+                delay,
+                maxAttempts: maxReconnectAttempts,
+              });
+
+              reconnectTimeoutRef.current = setTimeout(() => {
+                reconnectTimeoutRef.current = null;
+                connectSSE();
+              }, delay);
+            } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+              console.error("[CallStateProvider] Max reconnection attempts reached", {
+                attempts: reconnectAttemptsRef.current,
+                maxAttempts: maxReconnectAttempts,
+              });
+            }
+          }
         });
 
         eventSource.onerror = (error) => {
-          console.error("[CallStateProvider] Call events SSE connection error:", error);
-          // Don't close immediately - SSE will auto-reconnect
+          console.error("[CallStateProvider] Call events SSE connection error:", {
+            readyState: eventSource.readyState,
+            isConnected,
+            attempt: reconnectAttemptsRef.current + 1,
+            error: error,
+            errorType: error?.type,
+            errorTarget: error?.target,
+          });
+          setIsConnected(false);
+          
+          // EventSource.onerror fires for various reasons
+          // If readyState is CLOSED, we need to reconnect
+          if (eventSource.readyState === EventSource.CLOSED) {
+            // Only attempt reconnection if we haven't exceeded max attempts
+            // and there's no pending reconnection
+            if (
+              reconnectAttemptsRef.current < maxReconnectAttempts &&
+              !reconnectTimeoutRef.current
+            ) {
+              const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
+              reconnectAttemptsRef.current++;
+              
+              console.log("[CallStateProvider] Scheduling reconnection from onerror", {
+                attempt: reconnectAttemptsRef.current,
+                delay,
+                maxAttempts: maxReconnectAttempts,
+              });
+
+              reconnectTimeoutRef.current = setTimeout(() => {
+                reconnectTimeoutRef.current = null;
+                connectSSE();
+              }, delay);
+            }
+          }
         };
       } catch (error) {
-        console.error("Error setting up call events SSE:", error);
+        console.error("[CallStateProvider] Error setting up call events SSE:", {
+          error,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined,
+          currentUserId,
+          attempt: reconnectAttemptsRef.current + 1,
+        });
+        setIsConnected(false);
+        
+        // Attempt reconnection for setup errors
+        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+          const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
+          reconnectAttemptsRef.current++;
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
+            connectSSE();
+          }, delay);
+        }
       }
     };
 
     connectSSE();
 
+    // Cleanup on unmount or when dependencies change
     return () => {
+      console.log("[CallStateProvider] Cleaning up SSE connection", {
+        currentUserId,
+        isConnected,
+        reconnectAttempts: reconnectAttemptsRef.current,
+      });
+
+      // Clear reconnection timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Close EventSource connection
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
+
+      // Reset connection state
+      setIsConnected(false);
+      reconnectAttemptsRef.current = 0;
     };
   }, [currentUserId, fetchUserInfo, activeCall]);
 
