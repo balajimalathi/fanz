@@ -3,7 +3,6 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { authClient } from "@/lib/auth/auth-client"
 
 async function VerifyEmailContent() {
   const session = await auth.api.getSession({

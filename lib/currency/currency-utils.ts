@@ -9,7 +9,7 @@ import { BASE_CURRENCY } from "./currency-config";
  * Currency metadata
  * Decimal places and formatting information for each currency
  */
-export const CURRENCY_METADATA: Record<
+const CURRENCY_METADATA: Record<
   string,
   {
     symbol: string;
@@ -21,7 +21,7 @@ export const CURRENCY_METADATA: Record<
   USD: { symbol: "$", name: "US Dollar", decimals: 2, symbolPosition: "before" },
   EUR: { symbol: "€", name: "Euro", decimals: 2, symbolPosition: "before" },
   GBP: { symbol: "£", name: "British Pound", decimals: 2, symbolPosition: "before" },
-  INR: { symbol: "$", name: "Indian Rupee", decimals: 2, symbolPosition: "before" },
+  INR: { symbol: "₹", name: "Indian Rupee", decimals: 2, symbolPosition: "before" },
   CAD: { symbol: "C$", name: "Canadian Dollar", decimals: 2, symbolPosition: "before" },
   AUD: { symbol: "A$", name: "Australian Dollar", decimals: 2, symbolPosition: "before" },
   JPY: { symbol: "¥", name: "Japanese Yen", decimals: 0, symbolPosition: "before" },
@@ -38,7 +38,7 @@ export const CURRENCY_METADATA: Record<
 /**
  * Get currency metadata
  */
-export function getCurrencyMetadata(currency: string) {
+function getCurrencyMetadata(currency: string) {
   return (
     CURRENCY_METADATA[currency.toUpperCase()] || {
       symbol: currency,

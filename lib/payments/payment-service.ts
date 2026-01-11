@@ -12,14 +12,12 @@ import {
   liveStream,
   liveStreamPurchase,
   creator,
-  userCurrencyPreference,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { GatewayService } from "./gateway/gateway-service";
 import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
-import { convertToBaseCurrency, getExchangeRate } from "@/lib/currency/exchange-rate-service";
 import { BASE_CURRENCY } from "@/lib/currency/currency-config";
 import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
@@ -79,14 +77,7 @@ export class PaymentService {
         };
       }
 
-      // Get user's currency preference
-      let userCurrency = request.currency;
-      if (!userCurrency) {
-        const userPref = await db.query.userCurrencyPreference.findFirst({
-          where: (ucp, { eq: eqOp }) => eqOp(ucp.userId, request.userId),
-        });
-        userCurrency = userPref?.currency || BASE_CURRENCY;
-      }
+      // Currency will be determined from creator's currency (no user preference needed)
 
       // Get entity details and calculate amount
       let amount: number;
@@ -245,34 +236,17 @@ export class PaymentService {
           };
       }
 
-      // Convert amount from creator's currency to user's currency if different
-      let paymentAmount = amount;
-      let exchangeRate: number | null = null;
+      // Use creator's currency for payment (no conversion)
+      const paymentAmount = amount;
       
-      if (creatorCurrency !== userCurrency) {
-        // Convert from creator's currency to user's currency
-        const { convertAmount } = await import("@/lib/currency/exchange-rate-service");
-        paymentAmount = await convertAmount(amount, creatorCurrency, userCurrency);
-        
-        // Get exchange rate for storage
-        const rateResult = await getExchangeRate(creatorCurrency, userCurrency);
-        exchangeRate = rateResult.rate;
-      }
-
-      // Convert payment amount to base currency for internal calculations
-      const baseAmount = await convertToBaseCurrency(paymentAmount, userCurrency);
-      const split = calculateSplitPayment(baseAmount);
-
-      // Get exchange rate to base currency
-      const baseRateResult = await getExchangeRate(userCurrency, BASE_CURRENCY);
-      const baseExchangeRate = baseRateResult.rate;
+      // Calculate split in creator's currency (assuming 1:1 with base currency for now)
+      const split = calculateSplitPayment(amount);
 
       // Build metadata with duration and originUrl for all payment types
       const metadata: Record<string, unknown> = {
         type: request.type,
         entityId: request.entityId,
         creatorCurrency,
-        userCurrency,
       };
 
       // Store originUrl for all payment types
@@ -293,11 +267,11 @@ export class PaymentService {
           creatorId,
           type: request.type,
           entityId: request.entityId,
-          amount: paymentAmount, // Amount in user's currency subunits
-          originalCurrency: userCurrency,
-          baseCurrency: BASE_CURRENCY,
-          convertedAmount: baseAmount, // Amount in base currency subunits
-          exchangeRate: baseExchangeRate.toString(),
+          amount: paymentAmount, // Amount in creator's currency subunits
+          originalCurrency: creatorCurrency,
+          baseCurrency: creatorCurrency, // Use creator currency as base
+          convertedAmount: paymentAmount, // Same as amount (no conversion)
+          exchangeRate: "1.0", // No conversion
           platformFee: split.platformFee,
           creatorAmount: split.creatorAmount,
           status: "pending",
@@ -319,8 +293,8 @@ export class PaymentService {
 
       // Initiate payment with gateway
       const gatewayResponse = await GatewayService.initiatePayment({
-        amount: paymentAmount, // Amount in user's currency subunits
-        currency: userCurrency,
+        amount: paymentAmount, // Amount in creator's currency subunits
+        currency: creatorCurrency,
         orderId,
         customerId: request.userId,
         customerEmail: user.email,

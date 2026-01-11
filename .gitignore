@@ -47,3 +47,5 @@ RAILWAY-SETUP.md
 /tmp
 
 /logs
+
+.cursor/debug.log

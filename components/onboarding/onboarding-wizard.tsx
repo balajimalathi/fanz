@@ -294,7 +294,7 @@ export function OnboardingWizard() {
               )}
               <p className="text-sm text-muted-foreground">
                 This is the currency you'll use when setting prices for your content, memberships, and services.
-                Payment gateways will automatically convert prices to your fans' local currencies when they make payments.
+                All your earnings and payouts will be displayed in this currency.
               </p>
             </div>
           </div>

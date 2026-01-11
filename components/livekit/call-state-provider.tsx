@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useSession } from "@/lib/auth/auth-client";
 import { CallEvent } from "@/lib/utils/redis-pubsub";
-import { logger } from "@/lib/logger";
 
 export interface IncomingCall {
   callId: string;
@@ -80,9 +79,9 @@ export function CallStateProvider({
   // Debug logging for user ID
   useEffect(() => {
     if (currentUserId) {
-      logger.info("[CallStateProvider] Current user ID:", currentUserId);
+      console.info("[CallStateProvider] Current user ID:", currentUserId);
     } else {
-      logger.info("[CallStateProvider] No user ID available (user not logged in)");
+      console.info("[CallStateProvider] No user ID available (user not logged in)");
     }
   }, [currentUserId]);
 
@@ -106,7 +105,7 @@ export function CallStateProvider({
       // Fallback - return placeholder
       return { name: "User", image: null };
     } catch (error) {
-      logger.error("Error fetching user info:", error);
+      console.error("Error fetching user info:", error);
       return { name: "User", image: null };
     }
   }, []);
@@ -134,7 +133,7 @@ export function CallStateProvider({
       }
 
       try {
-        logger.info("[CallStateProvider] Attempting to connect SSE", {
+        console.info("[CallStateProvider] Attempting to connect SSE", {
           currentUserId,
           attempt: reconnectAttemptsRef.current + 1,
           maxAttempts: maxReconnectAttempts,
@@ -151,7 +150,7 @@ export function CallStateProvider({
           // #region agent log
           fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:142',message:'onopen fired',data:{readyState:eventSource.readyState,currentIsConnected:isConnected,reconnectAttempts:reconnectAttemptsRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'G'})}).catch(()=>{});
           // #endregion
-          logger.info("[CallStateProvider] Call events SSE HTTP connection opened", {
+          console.info("[CallStateProvider] Call events SSE HTTP connection opened", {
             currentUserId,
             readyState: eventSource.readyState,
           });
@@ -164,7 +163,7 @@ export function CallStateProvider({
           // #region agent log
           fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:151',message:'connected event received from server',data:{readyState:eventSource.readyState,hasEventData:!!event?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'F'})}).catch(()=>{});
           // #endregion
-          logger.info("[CallStateProvider] SSE connected event received:", event);
+          console.info("[CallStateProvider] SSE connected event received:", event);
           setIsConnected(true);
           reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
         });
@@ -177,9 +176,9 @@ export function CallStateProvider({
 
         eventSource.addEventListener("incoming_call", async (event) => {
           try {
-            logger.info("[CallStateProvider] Received incoming_call event:", event);
+            console.info("[CallStateProvider] Received incoming_call event:", event);
             const callEvent: CallEvent = JSON.parse(event.data);
-            logger.info("[CallStateProvider] Parsed call event:", {
+            console.info("[CallStateProvider] Parsed call event:", {
               callId: callEvent.callId,
               receiverId: callEvent.receiverId,
               currentUserId,
@@ -188,11 +187,11 @@ export function CallStateProvider({
             
             // Only handle incoming calls for this user
             if (callEvent.receiverId !== currentUserId) {
-              logger.info("[CallStateProvider] Call event receiverId doesn't match currentUserId, ignoring");
+              console.info("[CallStateProvider] Call event receiverId doesn't match currentUserId, ignoring");
               return;
             }
 
-            logger.info("[CallStateProvider] Processing incoming call for current user");
+            console.info("[CallStateProvider] Processing incoming call for current user");
             // Fetch caller information
             const userInfo = await fetchUserInfo(callEvent.callerId, callEvent.conversationId);
             
@@ -205,17 +204,17 @@ export function CallStateProvider({
               callType: callEvent.callType,
             };
             
-            logger.info("[CallStateProvider] Setting incoming call:", incomingCallData);
+            console.info("[CallStateProvider] Setting incoming call:", incomingCallData);
             setIncomingCall(incomingCallData);
           } catch (error) {
-            logger.error("[CallStateProvider] Error handling incoming_call event:", error);
+            console.error("[CallStateProvider] Error handling incoming_call event:", error);
           }
         });
 
         eventSource.addEventListener("call_accepted", async (event) => {
           try {
             const callEvent: CallEvent = JSON.parse(event.data);
-            logger.info("[CallStateProvider] Received call_accepted event:", callEvent);
+            console.info("[CallStateProvider] Received call_accepted event:", callEvent);
             
             // Clear incoming call if it matches (for receiver)
             setIncomingCall((current) => {
@@ -228,7 +227,7 @@ export function CallStateProvider({
             
             // If we're the caller and don't have activeCall set, we need to ensure it's set
             if (callEvent.callerId === currentUserId && !activeCall) {
-              logger.info("[CallStateProvider] Caller received call_accepted, ensuring activeCall is set");
+              console.info("[CallStateProvider] Caller received call_accepted, ensuring activeCall is set");
               // The caller should already have activeCall set from initiate, but if not, we need to fetch it
               // For now, we'll just log - the caller should have set it on initiate
               // If activeCall is missing, it might have been cleared, so we should restore it
@@ -238,10 +237,10 @@ export function CallStateProvider({
             // If we're the receiver and just accepted, activeCall should already be set by acceptCall
             // But ensure it's still there
             if (callEvent.receiverId === currentUserId) {
-              logger.info("[CallStateProvider] Receiver - call accepted, activeCall should be set");
+              console.info("[CallStateProvider] Receiver - call accepted, activeCall should be set");
             }
           } catch (error) {
-            logger.error("[CallStateProvider] Error handling call_accepted event:", error);
+            console.error("[CallStateProvider] Error handling call_accepted event:", error);
           }
         });
 
@@ -257,7 +256,7 @@ export function CallStateProvider({
             });
             setIsCalling(false);
           } catch (error) {
-            logger.error("Error handling call_rejected event:", error);
+            console.error("Error handling call_rejected event:", error);
           }
         });
 
@@ -273,7 +272,7 @@ export function CallStateProvider({
             });
             setIsCalling(false);
           } catch (error) {
-            logger.error("Error handling call_ended event:", error);
+            console.error("Error handling call_ended event:", error);
           }
         });
 
@@ -284,7 +283,7 @@ export function CallStateProvider({
           // #region agent log
           fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:278',message:'error event handler fired',data:{type:event.type,readyState:eventSource.readyState,isConnected,reconnectAttempts:reconnectAttemptsRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
           // #endregion
-          logger.error("[CallStateProvider] Call events SSE error event:", {
+          console.error("[CallStateProvider] Call events SSE error event:", {
             type: event.type,
             readyState: eventSource.readyState,
             isConnected,
@@ -311,7 +310,7 @@ export function CallStateProvider({
           // and we haven't already scheduled a reconnection for this error sequence
           // The hasPendingReconnect check prevents duplicate reconnection attempts
           if (isNotOpen && !reconnectTimeoutRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
-            logger.info("[CallStateProvider] SSE connection closed/failed, attempting reconnection");
+            console.info("[CallStateProvider] SSE connection closed/failed, attempting reconnection");
             
             // Close the connection explicitly to ensure clean state
             if (eventSourceRef.current === eventSource) {
@@ -328,7 +327,7 @@ export function CallStateProvider({
             // #region agent log
             fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:301',message:'scheduling reconnection',data:{attempt:reconnectAttemptsRef.current,delay,maxAttempts:maxReconnectAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'E'})}).catch(()=>{});
             // #endregion
-            logger.info("[CallStateProvider] Scheduling reconnection", {
+            console.info("[CallStateProvider] Scheduling reconnection", {
               attempt: reconnectAttemptsRef.current,
               delay,
               maxAttempts: maxReconnectAttempts,
@@ -339,14 +338,14 @@ export function CallStateProvider({
               connectSSE();
             }, delay);
           } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-            logger.error("[CallStateProvider] Max reconnection attempts reached", {
+            console.error("[CallStateProvider] Max reconnection attempts reached", {
               attempts: reconnectAttemptsRef.current,
               maxAttempts: maxReconnectAttempts,
             });
           }
         });
       } catch (error) {
-        logger.error("[CallStateProvider] Error setting up call events SSE:", {
+        console.error("[CallStateProvider] Error setting up call events SSE:", {
           error,
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : undefined,
@@ -372,7 +371,7 @@ export function CallStateProvider({
 
     // Cleanup on unmount or when dependencies change
     return () => {
-      logger.info("[CallStateProvider] Cleaning up SSE connection", {
+      console.info("[CallStateProvider] Cleaning up SSE connection", {
         currentUserId,
         isConnected,
         reconnectAttempts: reconnectAttemptsRef.current,
@@ -416,7 +415,7 @@ export function CallStateProvider({
 
       // Validate token exists and is a string
       if (!data.token || typeof data.token !== "string") {
-        logger.error("[Call State] Invalid token in accept call response:", data.token);
+        console.error("[Call State] Invalid token in accept call response:", data.token);
         throw new Error("Invalid token received from server");
       }
 
@@ -437,7 +436,7 @@ export function CallStateProvider({
 
       setIncomingCall(null);
     } catch (error) {
-      logger.error("Error accepting call:", error);
+      console.error("Error accepting call:", error);
       throw error;
     }
   }, [incomingCall]);
@@ -454,14 +453,14 @@ export function CallStateProvider({
 
       setIncomingCall(null);
     } catch (error) {
-      logger.error("Error rejecting call:", error);
+      console.error("Error rejecting call:", error);
       throw error;
     }
   }, []);
 
   const endCall = useCallback(async (callId: string) => {
     try {
-      logger.info("[CallStateProvider] Ending call:", callId);
+      console.info("[CallStateProvider] Ending call:", callId);
       
       // Clear active call immediately for better UX
       setActiveCall(null);
@@ -475,10 +474,10 @@ export function CallStateProvider({
         const errorData = await response.json().catch(() => ({}));
         // If call is already ended, that's fine - just log it
         if (errorData.error?.includes("Current status: ended")) {
-          logger.info("[CallStateProvider] Call was already ended");
+          console.info("[CallStateProvider] Call was already ended");
           return;
         }
-        logger.error("[CallStateProvider] Failed to end call", {
+        console.error("[CallStateProvider] Failed to end call", {
           status: response.status,
           statusText: response.statusText,
           error: errorData,
@@ -488,10 +487,10 @@ export function CallStateProvider({
           throw new Error(errorData.error || "Failed to end call");
         }
       } else {
-        logger.info("[CallStateProvider] Call ended successfully");
+        console.info("[CallStateProvider] Call ended successfully");
       }
     } catch (error) {
-      logger.error("[CallStateProvider] Error ending call:", error);
+      console.error("[CallStateProvider] Error ending call:", error);
       // Call state already cleared above, no need to clear again
     }
   }, []);
