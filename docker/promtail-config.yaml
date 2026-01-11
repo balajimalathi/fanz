@@ -1,0 +1,67 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape console logs from Next.js application
+  - job_name: nextjs-console
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nextjs
+          app: desifans
+          environment: production
+          __path__: /var/log/app/console.log
+
+    pipeline_stages:
+      # Extract timestamp, level, location, and message from first line
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[(?P<level>LOG|ERROR|WARN|INFO|DEBUG)\](?: \[(?P<location>[^\]]+)\])? (?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      - labels:
+          level:
+          location:
+          job:
+          app:
+          environment:
+      # Output stage to ensure all lines (including stack traces) are included
+      - output:
+          source: message
+
+  # Scrape error logs specifically
+  - job_name: nextjs-errors
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nextjs-errors
+          app: desifans
+          log_type: error
+          environment: production
+          __path__: /var/log/app/error.log
+
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[(?P<level>ERROR)\](?: \[(?P<location>[^\]]+)\])? (?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      - labels:
+          level:
+          location:
+          job:
+          app:
+          log_type:
+          environment:
+      - output:
+          source: message

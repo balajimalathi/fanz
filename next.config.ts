@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     optimizePackageImports: ["lucide-react"],
-    middlewareClientMaxBodySize: "500mb",
+    proxyClientMaxBodySize: "500mb", // Renamed from middlewareClientMaxBodySize
   },
   turbopack: {},
   serverExternalPackages: ["sharp"],
@@ -92,6 +92,8 @@ const nextConfig: NextConfig = {
     // Allow localhost HTTP and WebSocket for development (subdomain support)
     connectSrc.push("http://localhost:3000", "https://localhost:3000");
     connectSrc.push("ws://localhost:8080", "wss://localhost:8080");
+    // Allow debug logging endpoint for development
+    connectSrc.push("http://127.0.0.1:7245");
 
     const cspValue = [
       "default-src 'self'",

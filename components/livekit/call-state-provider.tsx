@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useSession } from "@/lib/auth/auth-client";
 import { CallEvent } from "@/lib/utils/redis-pubsub";
+import { logger } from "@/lib/logger";
 
 export interface IncomingCall {
   callId: string;
@@ -79,9 +80,9 @@ export function CallStateProvider({
   // Debug logging for user ID
   useEffect(() => {
     if (currentUserId) {
-      console.log("[CallStateProvider] Current user ID:", currentUserId);
+      logger.info("[CallStateProvider] Current user ID:", currentUserId);
     } else {
-      console.log("[CallStateProvider] No user ID available (user not logged in)");
+      logger.info("[CallStateProvider] No user ID available (user not logged in)");
     }
   }, [currentUserId]);
 
@@ -105,7 +106,7 @@ export function CallStateProvider({
       // Fallback - return placeholder
       return { name: "User", image: null };
     } catch (error) {
-      console.error("Error fetching user info:", error);
+      logger.error("Error fetching user info:", error);
       return { name: "User", image: null };
     }
   }, []);
@@ -117,6 +118,9 @@ export function CallStateProvider({
     }
 
     const connectSSE = () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:119',message:'connectSSE called',data:{hasExistingConnection:!!eventSourceRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current,reconnectAttempts:reconnectAttemptsRef.current,currentUserId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A,E'})}).catch(()=>{});
+      // #endregion
       // Close existing connection if any
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
@@ -130,7 +134,7 @@ export function CallStateProvider({
       }
 
       try {
-        console.log("[CallStateProvider] Attempting to connect SSE", {
+        logger.info("[CallStateProvider] Attempting to connect SSE", {
           currentUserId,
           attempt: reconnectAttemptsRef.current + 1,
           maxAttempts: maxReconnectAttempts,
@@ -139,17 +143,28 @@ export function CallStateProvider({
         const eventSource = new EventSource("/api/calls/stream");
         eventSourceRef.current = eventSource;
 
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:139',message:'EventSource created',data:{readyStateBeforeOpen:eventSource.readyState,hasOnOpen:!!eventSource.onopen,hasErrorListeners:false},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A,B,C'})}).catch(()=>{});
+        // #endregion
+
         eventSource.onopen = () => {
-          console.log("[CallStateProvider] Call events SSE connected", {
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:142',message:'onopen fired',data:{readyState:eventSource.readyState,currentIsConnected:isConnected,reconnectAttempts:reconnectAttemptsRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'G'})}).catch(()=>{});
+          // #endregion
+          logger.info("[CallStateProvider] Call events SSE HTTP connection opened", {
             currentUserId,
             readyState: eventSource.readyState,
           });
+          // Note: Don't reset reconnectAttempts here - onopen only indicates HTTP connection opened,
+          // not server-side readiness. Wait for "connected" event or heartbeat to confirm server is ready.
           setIsConnected(true);
-          reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
         };
 
         eventSource.addEventListener("connected", (event) => {
-          console.log("[CallStateProvider] SSE connected event received:", event);
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:151',message:'connected event received from server',data:{readyState:eventSource.readyState,hasEventData:!!event?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'F'})}).catch(()=>{});
+          // #endregion
+          logger.info("[CallStateProvider] SSE connected event received:", event);
           setIsConnected(true);
           reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
         });
@@ -162,9 +177,9 @@ export function CallStateProvider({
 
         eventSource.addEventListener("incoming_call", async (event) => {
           try {
-            console.log("[CallStateProvider] Received incoming_call event:", event);
+            logger.info("[CallStateProvider] Received incoming_call event:", event);
             const callEvent: CallEvent = JSON.parse(event.data);
-            console.log("[CallStateProvider] Parsed call event:", {
+            logger.info("[CallStateProvider] Parsed call event:", {
               callId: callEvent.callId,
               receiverId: callEvent.receiverId,
               currentUserId,
@@ -173,11 +188,11 @@ export function CallStateProvider({
             
             // Only handle incoming calls for this user
             if (callEvent.receiverId !== currentUserId) {
-              console.log("[CallStateProvider] Call event receiverId doesn't match currentUserId, ignoring");
+              logger.info("[CallStateProvider] Call event receiverId doesn't match currentUserId, ignoring");
               return;
             }
 
-            console.log("[CallStateProvider] Processing incoming call for current user");
+            logger.info("[CallStateProvider] Processing incoming call for current user");
             // Fetch caller information
             const userInfo = await fetchUserInfo(callEvent.callerId, callEvent.conversationId);
             
@@ -190,17 +205,17 @@ export function CallStateProvider({
               callType: callEvent.callType,
             };
             
-            console.log("[CallStateProvider] Setting incoming call:", incomingCallData);
+            logger.info("[CallStateProvider] Setting incoming call:", incomingCallData);
             setIncomingCall(incomingCallData);
           } catch (error) {
-            console.error("[CallStateProvider] Error handling incoming_call event:", error);
+            logger.error("[CallStateProvider] Error handling incoming_call event:", error);
           }
         });
 
         eventSource.addEventListener("call_accepted", async (event) => {
           try {
             const callEvent: CallEvent = JSON.parse(event.data);
-            console.log("[CallStateProvider] Received call_accepted event:", callEvent);
+            logger.info("[CallStateProvider] Received call_accepted event:", callEvent);
             
             // Clear incoming call if it matches (for receiver)
             setIncomingCall((current) => {
@@ -213,7 +228,7 @@ export function CallStateProvider({
             
             // If we're the caller and don't have activeCall set, we need to ensure it's set
             if (callEvent.callerId === currentUserId && !activeCall) {
-              console.log("[CallStateProvider] Caller received call_accepted, ensuring activeCall is set");
+              logger.info("[CallStateProvider] Caller received call_accepted, ensuring activeCall is set");
               // The caller should already have activeCall set from initiate, but if not, we need to fetch it
               // For now, we'll just log - the caller should have set it on initiate
               // If activeCall is missing, it might have been cleared, so we should restore it
@@ -223,10 +238,10 @@ export function CallStateProvider({
             // If we're the receiver and just accepted, activeCall should already be set by acceptCall
             // But ensure it's still there
             if (callEvent.receiverId === currentUserId) {
-              console.log("[CallStateProvider] Receiver - call accepted, activeCall should be set");
+              logger.info("[CallStateProvider] Receiver - call accepted, activeCall should be set");
             }
           } catch (error) {
-            console.error("[CallStateProvider] Error handling call_accepted event:", error);
+            logger.error("[CallStateProvider] Error handling call_accepted event:", error);
           }
         });
 
@@ -242,7 +257,7 @@ export function CallStateProvider({
             });
             setIsCalling(false);
           } catch (error) {
-            console.error("Error handling call_rejected event:", error);
+            logger.error("Error handling call_rejected event:", error);
           }
         });
 
@@ -258,12 +273,18 @@ export function CallStateProvider({
             });
             setIsCalling(false);
           } catch (error) {
-            console.error("Error handling call_ended event:", error);
+            logger.error("Error handling call_ended event:", error);
           }
         });
 
+        // Use a single error handler to avoid duplicate error handling
+        // We use addEventListener("error") instead of onerror to be consistent with other event listeners
+        // Note: Both addEventListener("error") and onerror fire for the same error events, so we only use one
         eventSource.addEventListener("error", (event) => {
-          console.error("[CallStateProvider] Call events SSE error event:", {
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:278',message:'error event handler fired',data:{type:event.type,readyState:eventSource.readyState,isConnected,reconnectAttempts:reconnectAttemptsRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          logger.error("[CallStateProvider] Call events SSE error event:", {
             type: event.type,
             readyState: eventSource.readyState,
             isConnected,
@@ -272,77 +293,60 @@ export function CallStateProvider({
           });
           setIsConnected(false);
           
-          // Check if connection is closed or failed
-          if (eventSource.readyState === EventSource.CLOSED) {
-            console.log("[CallStateProvider] SSE connection closed, attempting reconnection");
-            eventSource.close();
+          // EventSource errors can occur at different readyStates:
+          // - readyState 0 (CONNECTING): Initial state or connection closed (browser-dependent)
+          // - readyState 1 (OPEN): Connection established but then failed
+          // - readyState 2 (CLOSED): Connection explicitly closed
+          // Based on logs: errors fire twice - first with readyState: 1, then with readyState: 0
+          // We should only reconnect when the connection is actually closed (readyState !== OPEN)
+          // Use a flag check to prevent duplicate reconnection attempts
+          const currentReadyState = eventSource.readyState;
+          const isNotOpen = currentReadyState !== EventSource.OPEN; // Not OPEN means closed or connecting
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:292',message:'error handler - checking reconnection conditions',data:{readyState:currentReadyState,eventSourceOPEN:EventSource.OPEN,eventSourceCLOSED:EventSource.CLOSED,isNotOpen,reconnectAttempts:reconnectAttemptsRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current,willReconnect:isNotOpen && reconnectAttemptsRef.current < maxReconnectAttempts && !reconnectTimeoutRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          
+          // Only attempt reconnection if connection is not OPEN (closed or failed) 
+          // and we haven't already scheduled a reconnection for this error sequence
+          // The hasPendingReconnect check prevents duplicate reconnection attempts
+          if (isNotOpen && !reconnectTimeoutRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
+            logger.info("[CallStateProvider] SSE connection closed/failed, attempting reconnection");
             
-            // Attempt reconnection with exponential backoff
-            // Only if we haven't exceeded max attempts and there's no pending reconnection
-            if (
-              reconnectAttemptsRef.current < maxReconnectAttempts &&
-              !reconnectTimeoutRef.current
-            ) {
-              const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
-              reconnectAttemptsRef.current++;
-              
-              console.log("[CallStateProvider] Scheduling reconnection", {
-                attempt: reconnectAttemptsRef.current,
-                delay,
-                maxAttempts: maxReconnectAttempts,
-              });
-
-              reconnectTimeoutRef.current = setTimeout(() => {
-                reconnectTimeoutRef.current = null;
-                connectSSE();
-              }, delay);
-            } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-              console.error("[CallStateProvider] Max reconnection attempts reached", {
-                attempts: reconnectAttemptsRef.current,
-                maxAttempts: maxReconnectAttempts,
-              });
+            // Close the connection explicitly to ensure clean state
+            if (eventSourceRef.current === eventSource) {
+              try {
+                eventSource.close();
+              } catch (e) {
+                // Connection may already be closed
+              }
             }
+            
+            const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
+            reconnectAttemptsRef.current++;
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:301',message:'scheduling reconnection',data:{attempt:reconnectAttemptsRef.current,delay,maxAttempts:maxReconnectAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+            logger.info("[CallStateProvider] Scheduling reconnection", {
+              attempt: reconnectAttemptsRef.current,
+              delay,
+              maxAttempts: maxReconnectAttempts,
+            });
+
+            reconnectTimeoutRef.current = setTimeout(() => {
+              reconnectTimeoutRef.current = null;
+              connectSSE();
+            }, delay);
+          } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+            logger.error("[CallStateProvider] Max reconnection attempts reached", {
+              attempts: reconnectAttemptsRef.current,
+              maxAttempts: maxReconnectAttempts,
+            });
           }
         });
-
-        eventSource.onerror = (error) => {
-          console.error("[CallStateProvider] Call events SSE connection error:", {
-            readyState: eventSource.readyState,
-            isConnected,
-            attempt: reconnectAttemptsRef.current + 1,
-            error: error,
-            errorType: error?.type,
-            errorTarget: error?.target,
-          });
-          setIsConnected(false);
-          
-          // EventSource.onerror fires for various reasons
-          // If readyState is CLOSED, we need to reconnect
-          if (eventSource.readyState === EventSource.CLOSED) {
-            // Only attempt reconnection if we haven't exceeded max attempts
-            // and there's no pending reconnection
-            if (
-              reconnectAttemptsRef.current < maxReconnectAttempts &&
-              !reconnectTimeoutRef.current
-            ) {
-              const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
-              reconnectAttemptsRef.current++;
-              
-              console.log("[CallStateProvider] Scheduling reconnection from onerror", {
-                attempt: reconnectAttemptsRef.current,
-                delay,
-                maxAttempts: maxReconnectAttempts,
-              });
-
-              reconnectTimeoutRef.current = setTimeout(() => {
-                reconnectTimeoutRef.current = null;
-                connectSSE();
-              }, delay);
-            }
-          }
-        };
       } catch (error) {
-        console.error("[CallStateProvider] Error setting up call events SSE:", {
+        logger.error("[CallStateProvider] Error setting up call events SSE:", {
           error,
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : undefined,
@@ -368,7 +372,7 @@ export function CallStateProvider({
 
     // Cleanup on unmount or when dependencies change
     return () => {
-      console.log("[CallStateProvider] Cleaning up SSE connection", {
+      logger.info("[CallStateProvider] Cleaning up SSE connection", {
         currentUserId,
         isConnected,
         reconnectAttempts: reconnectAttemptsRef.current,
@@ -412,7 +416,7 @@ export function CallStateProvider({
 
       // Validate token exists and is a string
       if (!data.token || typeof data.token !== "string") {
-        console.error("[Call State] Invalid token in accept call response:", data.token);
+        logger.error("[Call State] Invalid token in accept call response:", data.token);
         throw new Error("Invalid token received from server");
       }
 
@@ -433,7 +437,7 @@ export function CallStateProvider({
 
       setIncomingCall(null);
     } catch (error) {
-      console.error("Error accepting call:", error);
+      logger.error("Error accepting call:", error);
       throw error;
     }
   }, [incomingCall]);
@@ -450,14 +454,14 @@ export function CallStateProvider({
 
       setIncomingCall(null);
     } catch (error) {
-      console.error("Error rejecting call:", error);
+      logger.error("Error rejecting call:", error);
       throw error;
     }
   }, []);
 
   const endCall = useCallback(async (callId: string) => {
     try {
-      console.log("[CallStateProvider] Ending call:", callId);
+      logger.info("[CallStateProvider] Ending call:", callId);
       
       // Clear active call immediately for better UX
       setActiveCall(null);
@@ -471,10 +475,10 @@ export function CallStateProvider({
         const errorData = await response.json().catch(() => ({}));
         // If call is already ended, that's fine - just log it
         if (errorData.error?.includes("Current status: ended")) {
-          console.log("[CallStateProvider] Call was already ended");
+          logger.info("[CallStateProvider] Call was already ended");
           return;
         }
-        console.error("[CallStateProvider] Failed to end call", {
+        logger.error("[CallStateProvider] Failed to end call", {
           status: response.status,
           statusText: response.statusText,
           error: errorData,
@@ -484,10 +488,10 @@ export function CallStateProvider({
           throw new Error(errorData.error || "Failed to end call");
         }
       } else {
-        console.log("[CallStateProvider] Call ended successfully");
+        logger.info("[CallStateProvider] Call ended successfully");
       }
     } catch (error) {
-      console.error("[CallStateProvider] Error ending call:", error);
+      logger.error("[CallStateProvider] Error ending call:", error);
       // Call state already cleared above, no need to clear again
     }
   }, []);
