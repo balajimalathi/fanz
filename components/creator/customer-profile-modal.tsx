@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, User, Mail, Calendar, CreditCard, X } from "lucide-react"
+import { Loader2, User, Mail, Calendar, CreditCard, X, Receipt, Wallet } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -46,10 +46,39 @@ interface CustomerProfile {
   subscriptions: Subscription[]
 }
 
+interface PaymentTransaction {
+  id: string
+  type: string
+  status: string
+  amount: number
+  originalCurrency: string | null
+  baseCurrency: string | null
+  convertedAmount: number | null
+  gatewayTransactionId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface WalletTransaction {
+  id: string
+  type: string
+  amount: number
+  description: string | null
+  paymentTransactionId: string | null
+  createdAt: string
+}
+
+interface TransactionsData {
+  paymentTransactions: PaymentTransaction[]
+  walletTransactions: WalletTransaction[]
+}
+
 export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModalProps) {
   const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  const [transactions, setTransactions] = useState<TransactionsData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState<string | null>(null)
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
@@ -60,9 +89,11 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
   useEffect(() => {
     if (open) {
       fetchProfile()
+      fetchTransactions()
     } else {
       // Reset state when modal closes
       setProfile(null)
+      setTransactions(null)
       setError(null)
     }
   }, [open])
@@ -92,6 +123,27 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
       setError(err instanceof Error ? err.message : "Failed to load profile")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchTransactions = async () => {
+    setIsLoadingTransactions(true)
+    try {
+      const response = await fetch("/api/customer/transactions?limit=50")
+      if (!response.ok) {
+        if (response.status === 401) {
+          return
+        }
+        throw new Error("Failed to fetch transactions")
+      }
+
+      const data = await response.json()
+      setTransactions(data)
+    } catch (err) {
+      console.error("Error fetching transactions:", err)
+      // Don't show error for transactions, just log it
+    } finally {
+      setIsLoadingTransactions(false)
     }
   }
 
@@ -167,6 +219,50 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
       return subscription.price
     }
     return subscription.membership?.monthlyRecurringFee ?? 0
+  }
+
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return "N/A"
+    try {
+      return new Date(dateString).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    } catch {
+      return "Invalid date"
+    }
+  }
+
+  const getPaymentTransactionStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+        return "default"
+      case "failed":
+      case "cancelled":
+        return "destructive"
+      case "processing":
+        return "secondary"
+      case "pending":
+        return "outline"
+      default:
+        return "outline"
+    }
+  }
+
+  const getWalletTransactionTypeVariant = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "purchase":
+        return "default"
+      case "refund":
+        return "secondary"
+      case "usage":
+        return "outline"
+      default:
+        return "outline"
+    }
   }
 
   return (
@@ -321,6 +417,140 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                               </p>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Payment Transactions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Payment Transactions
+                </CardTitle>
+                <CardDescription>
+                  {transactions?.paymentTransactions.length === 0
+                    ? "No payment transactions yet"
+                    : `${transactions?.paymentTransactions.length || 0} transaction${(transactions?.paymentTransactions.length || 0) !== 1 ? "s" : ""}`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingTransactions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                    <span className="text-sm text-muted-foreground">Loading transactions...</span>
+                  </div>
+                ) : transactions?.paymentTransactions.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    <p>No payment transactions found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {transactions?.paymentTransactions.map((transaction, index) => (
+                      <div key={transaction.id}>
+                        {index > 0 && <Separator className="my-4" />}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium capitalize">{transaction.type}</p>
+                                <Badge variant={getPaymentTransactionStatusVariant(transaction.status)}>
+                                  {transaction.status}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDateTime(transaction.createdAt)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold">
+                                {formatCurrencyUtil(
+                                  transaction.convertedAmount 
+                                    ? transaction.convertedAmount / 100 
+                                    : transaction.amount / 100,
+                                  transaction.baseCurrency || transaction.originalCurrency || currency
+                                )}
+                              </p>
+                              {transaction.originalCurrency && transaction.baseCurrency && 
+                               transaction.originalCurrency !== transaction.baseCurrency && (
+                                <p className="text-xs text-muted-foreground">
+                                  {formatCurrencyUtil(transaction.amount / 100, transaction.originalCurrency)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {transaction.gatewayTransactionId && (
+                            <p className="text-xs text-muted-foreground">
+                              Transaction ID: {transaction.gatewayTransactionId}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Wallet Transactions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Wallet Transactions
+                </CardTitle>
+                <CardDescription>
+                  {transactions?.walletTransactions.length === 0
+                    ? "No wallet transactions yet"
+                    : `${transactions?.walletTransactions.length || 0} transaction${(transactions?.walletTransactions.length || 0) !== 1 ? "s" : ""}`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingTransactions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                    <span className="text-sm text-muted-foreground">Loading transactions...</span>
+                  </div>
+                ) : transactions?.walletTransactions.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    <p>No wallet transactions found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {transactions?.walletTransactions.map((transaction, index) => (
+                      <div key={transaction.id}>
+                        {index > 0 && <Separator className="my-4" />}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium capitalize">{transaction.type}</p>
+                                <Badge variant={getWalletTransactionTypeVariant(transaction.type)}>
+                                  {transaction.type}
+                                </Badge>
+                              </div>
+                              {transaction.description && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {transaction.description}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDateTime(transaction.createdAt)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-sm font-semibold ${
+                                transaction.amount >= 0 ? "text-green-600" : "text-red-600"
+                              }`}>
+                                {transaction.amount >= 0 ? "+" : ""}
+                                {formatCurrencyUtil(Math.abs(transaction.amount) / 100, currency)}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
