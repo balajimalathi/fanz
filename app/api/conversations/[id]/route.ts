@@ -65,6 +65,7 @@ export async function GET(
       otherUserName: otherUser?.name || "Unknown",
       otherUserImage: otherUser?.image || null,
       creatorDisplayName: otherCreator?.displayName || null,
+      creatorUsername: otherCreator?.username || null,
       lastMessageAt: conv.lastMessageAt,
       lastMessagePreview: conv.lastMessagePreview,
       createdAt: conv.createdAt,

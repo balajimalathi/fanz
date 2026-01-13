@@ -2,6 +2,7 @@
 
 import { ProfileCard } from "./profile-card"
 import { ServiceCard } from "./service-card"
+import { PricingCard } from "./pricing-card"
 import { MembershipCard } from "./membership-card"
  
 interface CreatorManagementPageProps {
@@ -30,6 +31,9 @@ export function CreatorManagementPage({
 
       {/* Services Section */}
       <ServiceCard />
+
+      {/* Pricing Section */}
+      <PricingCard />
 
       {/* Memberships Section */}
       <MembershipCard />

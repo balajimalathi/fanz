@@ -72,6 +72,8 @@ async function persistMessageToDatabase(
       content: messageData.content,
       mediaUrl: messageData.mediaUrl,
       thumbnailUrl: messageData.thumbnailUrl,
+      coinsPending: messageData.coinsPending ?? null,
+      coinsDeducted: messageData.coinsDeducted ?? false,
       // Use the timestamp from the message to ensure consistent ordering
       // This prevents DB defaultNow() from creating a different timestamp
       createdAt: new Date(messageData.timestamp),

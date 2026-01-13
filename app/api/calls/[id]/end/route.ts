@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { call } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { publishCallEvent } from "@/lib/utils/redis-pubsub";
+import { CallMeteringService } from "@/lib/services/call-metering-service";
 
 export async function POST(
   request: NextRequest,
@@ -66,6 +67,16 @@ export async function POST(
       );
     }
 
+    // Finalize metering if call was active
+    if (callRecord.meteringActive) {
+      try {
+        await CallMeteringService.finalizeCallMetering(callId);
+      } catch (error) {
+        console.error("Error finalizing call metering:", error);
+        // Continue with ending call even if metering finalization fails
+      }
+    }
+
     // Calculate duration if call was accepted
     let duration: number | null = null;
     if (callRecord.status === "accepted" && callRecord.startedAt) {
@@ -80,6 +91,7 @@ export async function POST(
         status: "ended",
         endedAt: new Date(),
         duration,
+        meteringActive: false,
       })
       .where(eq(call.id, callId));
 

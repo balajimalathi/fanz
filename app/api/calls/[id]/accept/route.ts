@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
-import { call, user } from "@/lib/db/schema";
+import { call, user, conversation } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateAccessToken } from "@/lib/livekit/token";
 import { env } from "@/env";
 import { publishCallEvent } from "@/lib/utils/redis-pubsub";
+import { CallMeteringService } from "@/lib/services/call-metering-service";
 
 export async function POST(
   request: NextRequest,
@@ -62,14 +63,48 @@ export async function POST(
 
     const participantName = userRecord?.name || session.user.email || "Unknown";
 
-    // Update call status to accepted
+    // Get conversation to determine if caller is fan
+    const conv = await db.query.conversation.findFirst({
+      where: (c, { eq: eqOp }) => eqOp(c.id, callRecord.conversationId || ""),
+    });
+
+    // Update call status to accepted and mark metering as active
     await db
       .update(call)
       .set({
         status: "accepted",
         startedAt: new Date(),
+        meteringActive: true,
       })
       .where(eq(call.id, callId));
+
+    // Initialize metering if caller is fan (fan pays for calls)
+    if (conv && callRecord.callerId === conv.fanId) {
+      try {
+        await CallMeteringService.initializeCallMetering(
+          callId,
+          callRecord.callerId,
+          conv.creatorId,
+          callRecord.callType as "audio" | "video"
+        );
+      } catch (error) {
+        console.error("Error initializing call metering:", error);
+        // If metering fails, end the call
+        await db
+          .update(call)
+          .set({
+            status: "ended",
+            endedAt: new Date(),
+            meteringActive: false,
+          })
+          .where(eq(call.id, callId));
+
+        return NextResponse.json(
+          { error: "Failed to initialize call metering. Insufficient balance." },
+          { status: 402 }
+        );
+      }
+    }
 
     // Generate LiveKit token for receiver
     const token = await generateAccessToken({

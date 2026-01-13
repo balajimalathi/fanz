@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { AudioCallView } from "./audio-call-view";
 import { VideoCallView } from "./video-call-view";
@@ -16,8 +17,58 @@ interface ActiveCallViewProps {
 
 export function ActiveCallView({ activeCall, onCallEnd }: ActiveCallViewProps) {
   const tokenString = typeof activeCall.token === "string" ? activeCall.token : String(activeCall.token);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Send heartbeat every 30 seconds when call is active
+  useEffect(() => {
+    if (!activeCall.callId) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        const response = await fetch(`/api/calls/${activeCall.callId}/heartbeat`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          
+          // If should cutoff (insufficient balance), end the call
+          if (response.status === 402 || data.shouldCutoff) {
+            console.log("[Call Heartbeat] Insufficient balance, ending call");
+            handleEndCall();
+            return;
+          }
+        } else {
+          const data = await response.json();
+          // Update balance display if needed (can be added later)
+          if (data.remainingBalance !== undefined) {
+            // Balance updated, could trigger a UI update
+          }
+        }
+      } catch (error) {
+        console.error("[Call Heartbeat] Error sending heartbeat:", error);
+      }
+    };
+
+    // Send first heartbeat immediately, then every 30 seconds
+    sendHeartbeat();
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+
+    return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+    };
+  }, [activeCall.callId]);
 
   const handleEndCall = async () => {
+    // Clear heartbeat interval
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+
     try {
       // Call the end API
       await fetch(`/api/calls/${activeCall.callId}/end`, {

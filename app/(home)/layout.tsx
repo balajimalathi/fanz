@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/sidebar"
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper"
 import { checkBannedUser } from "@/lib/utils/check-banned-user"
+import { WalletBalanceDisplay } from "@/components/wallet-balance-display"
+import { CreatorOnlineHeartbeat } from "@/components/creator-online-heartbeat"
 
 export default async function layout({
   children,
@@ -24,6 +26,7 @@ export default async function layout({
 
   return (
     <CallGlobalWrapper>
+      <CreatorOnlineHeartbeat />
       <SidebarProvider
         style={
           {
@@ -43,8 +46,8 @@ export default async function layout({
               />
               <DynamicBreadcrumb />
             </div>
-            <div className="ml-auto px-3">
-              {/* <NavActions /> */}
+            <div className="ml-auto px-3 flex items-center gap-2">
+              {/* <WalletBalanceDisplay /> */}
               <ThemeToggle />
             </div>
           </div>

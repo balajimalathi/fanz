@@ -10,6 +10,10 @@ import {
   processQueuedMessages,
 } from "@/lib/services/message-queue";
 import { publishMessage } from "@/lib/utils/redis-pubsub";
+import { CreatorOnlineStatusService } from "@/lib/services/creator-online-status-service";
+import { CreatorPricingService } from "@/lib/services/creator-pricing-service";
+import { DMChargeService } from "@/lib/services/dm-charge-service";
+import { WalletService } from "@/lib/wallet/wallet-service";
 
 // GET - List messages for a conversation
 export async function GET(
@@ -115,6 +119,54 @@ export async function POST(
       );
     }
 
+    // Check if fan is sending message (need to check creator online status and pricing)
+    const isFan = conv.fanId === userId;
+    const isCreator = conv.creatorId === userId;
+
+    let coinsPending: number | null = null;
+
+    if (isFan) {
+      // Fan sending message - check if creator is online
+      const creatorOnline = await CreatorOnlineStatusService.isCreatorOnline(
+        conv.creatorId
+      );
+
+      if (!creatorOnline) {
+        return NextResponse.json(
+          { error: "Creator is offline. DM features are disabled." },
+          { status: 400 }
+        );
+      }
+
+      // Get pricing for message type
+      const price = await CreatorPricingService.getDmPrice(
+        conv.creatorId,
+        messageType as "text" | "image" | "video"
+      );
+
+      if (price > 0) {
+        // Check balance (preview only, don't deduct yet)
+        const balance = await WalletService.getBalance(userId);
+        if (balance < price) {
+          return NextResponse.json(
+            { error: "Insufficient balance" },
+            { status: 400 }
+          );
+        }
+
+        // Set pending coins (will be deducted when creator replies)
+        coinsPending = price;
+      }
+    } else if (isCreator) {
+      // Creator sending message - process pending charges from fan messages
+      try {
+        await DMChargeService.processPendingCharges(conversationId, userId);
+      } catch (error) {
+        console.error("Error processing pending DM charges:", error);
+        // Don't block creator's message if charge processing fails
+      }
+    }
+
     // Generate message ID for optimistic response and database persistence
     const messageId = crypto.randomUUID();
     const timestamp = Date.now();
@@ -128,6 +180,8 @@ export async function POST(
       content: content || null,
       mediaUrl: mediaUrl || null,
       thumbnailUrl: thumbnailUrl || null,
+      coinsPending,
+      coinsDeducted: false,
       timestamp,
     };
 
@@ -173,6 +227,8 @@ export async function POST(
       mediaUrl: mediaUrl || null,
       thumbnailUrl: thumbnailUrl || null,
       readAt: null,
+      coinsPending: coinsPending,
+      coinsDeducted: false,
       createdAt: new Date(timestamp).toISOString(),
     };
 
