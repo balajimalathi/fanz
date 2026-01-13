@@ -1,11 +1,9 @@
 // Define the menu items for landing page navigation
 export const mainMenu = {
   features: "/#features",
-  "use cases": "/#use-cases",
+  "how it works": "/#how-it-works",
   pricing: "/#pricing",
   faq: "/#faq",
-  docs: "/docs",
-  blog: "/posts",
 };
 
 export const contentMenu = {

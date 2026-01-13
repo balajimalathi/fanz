@@ -1,73 +1,96 @@
-"use client";
-
-import { Container } from "@/components/craft";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { AnimatedSection, fadeIn } from "./animations";
-import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Section, Container } from "@/components/craft";
+import {
+  CheckCircle,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 
-export const HeroSection = () => {
+const valueProps = [
+  "Launch your page in under 5 minutes",
+  "Keep 90% of every payment",
+  "Subscriptions, tips, exclusive content - your way",
+  "Direct messaging and live calls with fans",
+  "Get paid weekly to your bank",
+];
+
+export function HeroSection() {
   return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 min-h-[90vh] flex items-center">
-      <Container>
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Main Headline */}
-          <AnimatedSection variant={fadeIn} className="mb-8">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight mb-6 leading-tight">
-              The platform for{" "}
-              <span className="text-primary">Creators</span>
-              <br />
-              and global audiences
-            </h1>
-          </AnimatedSection>
+    <Section className="pt-24 md:pt-32 pb-16 md:pb-24 relative overflow-hidden">
+      {/* Background gradient */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[800px] -z-10 bg-primary/10 rounded-full blur-3xl opacity-30" />
 
-          {/* Subheading */}
-          <AnimatedSection className="mb-12">
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Monetize your content, connect with fans, and build your creator
-              business on a platform designed for you.
-            </p>
-          </AnimatedSection>
+      <Container className="flex flex-col items-center text-center">
+        {/* Eyebrow */}
+        <Badge
+          variant="secondary"
+          className="mb-6 px-4 py-2 text-sm font-medium gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          For creators who want more than likes
+        </Badge>
 
-          {/* CTA Buttons */}
-          <AnimatedSection className="mb-16">
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="rounded-lg px-8 py-6 text-base h-auto font-medium"
-                asChild
-              >
-                <Link href="/signup">
-                  Start Creating
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-lg px-8 py-6 text-base h-auto font-medium"
-                asChild
-              >
-                <Link href="/home">
-                  Explore Creators
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
+        {/* Headline */}
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight max-w-4xl mb-6">
+          Turn Your Passion Into Income.{" "}
+          <span className="text-primary">Connect Deeper With Your Fans.</span>
+        </h1>
+
+        {/* Subheadline */}
+        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-8">
+          The creator platform that puts you first. Build your community, share
+          exclusive content, and earn on your terms.
+        </p>
+
+        {/* Value bullets */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 text-left max-w-2xl">
+          {valueProps.map((prop, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+              <span className="text-sm md:text-base text-muted-foreground">
+                {prop}
+              </span>
             </div>
-          </AnimatedSection>
+          ))}
+        </div>
 
-          {/* Hero Video/Image Placeholder */}
-          <AnimatedSection variant={fadeIn} className="mt-20">
-            <div className="relative w-full rounded-2xl overflow-hidden border bg-muted/30 aspect-video flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
-              <p className="text-muted-foreground text-lg z-10">
-                Hero Video Placeholder
-              </p>
-            </div>
-          </AnimatedSection>
+        {/* CTA */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <Button asChild size="lg" className="text-base px-8 gap-2">
+            <Link href="/signup">
+              Start Creating - It&apos;s Free
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="text-base px-8">
+            <Link href="#how-it-works">See How It Works</Link>
+          </Button>
+        </div>
+
+        {/* Friction remover */}
+        <p className="text-sm text-muted-foreground">
+          No fees until you earn. Cancel anytime.
+        </p>
+
+        {/* Social proof placeholder */}
+        <div className="mt-12 flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex -space-x-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/60 to-primary border-2 border-background"
+              />
+            ))}
+          </div>
+          <span>
+            Join <strong className="text-foreground">1,000+</strong> creators
+            already earning on Exclusivz
+          </span>
         </div>
       </Container>
-    </section>
+    </Section>
   );
-};
+}
