@@ -14,38 +14,35 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, entityId, returnUrl, duration, originUrl, currency } = body;
+    const { planType, creatorId, originUrl } = body;
 
-    if (!type || !entityId) {
+    if (!planType || !creatorId) {
       return NextResponse.json(
-        { error: "Type and entityId are required" },
+        { error: "Plan type and creator ID are required" },
         { status: 400 }
       );
     }
 
-    if (!["membership", "exclusive_post", "service", "live_stream", "wallet_credit"].includes(type)) {
-      return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
+    // Validate plan type
+    if (!["starter", "favorite", "vip"].includes(planType)) {
+      return NextResponse.json(
+        { error: "Invalid plan type. Must be 'starter', 'favorite', or 'vip'" },
+        { status: 400 }
+      );
     }
 
-    // Validate duration for membership type
-    if (type === "membership" && duration) {
-      const validDurations = [1, 3, 6, 12];
-      if (!validDurations.includes(duration)) {
-        return NextResponse.json(
-          { error: "Invalid duration. Must be 1, 3, 6, or 12 months." },
-          { status: 400 }
-        );
-      }
-    }
+    // Get origin URL from request or use current page
+    const currentOriginUrl = originUrl || (typeof window !== "undefined" ? window.location.href : "/");
 
+    // Initiate payment using PaymentService
+    // For wallet_credit, entityId is the plan type
     const result = await PaymentService.initiatePayment({
       userId: session.user.id,
-      type: type as "membership" | "exclusive_post" | "service" | "live_stream",
-      entityId,
-      returnUrl,
-      duration,
-      originUrl,
-      currency,
+      type: "wallet_credit",
+      entityId: planType, // Plan type: 'starter', 'favorite', or 'vip'
+      creatorId: creatorId, // Creator whose page they were on
+      originUrl: currentOriginUrl,
+      currency: "INR", // Wallet credits are always in INR
     });
 
     if (!result.success) {
@@ -57,11 +54,10 @@ export async function POST(request: NextRequest) {
       paymentUrl: result.paymentUrl,
     });
   } catch (error) {
-    console.error("Error initiating payment:", error);
+    console.error("Error initiating credit purchase:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
-

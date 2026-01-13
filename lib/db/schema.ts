@@ -72,7 +72,7 @@ export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
 export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive", "free"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
-export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream"]);
+export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "service"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
 export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
@@ -542,6 +542,7 @@ export const report = pgTable("report", {
 
 export const disputeStatusEnum = pgEnum("dispute_status", ["open", "investigating", "resolved", "closed"]);
 export const disputeTypeEnum = pgEnum("dispute_type", ["transaction", "payout", "refund", "service", "other"]);
+export const fanWalletTransactionTypeEnum = pgEnum("fan_wallet_transaction_type", ["purchase", "usage", "refund"]);
 
 export const dispute = pgTable("dispute", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -564,4 +565,29 @@ export const dispute = pgTable("dispute", {
     .references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const fanWallet = pgTable("fan_wallet", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" })
+    .unique(),
+  balance: integer("balance").notNull().default(0), // Current credit balance in coins
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const fanWalletTransaction = pgTable("fan_wallet_transaction", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  type: fanWalletTransactionTypeEnum("type").notNull(),
+  amount: integer("amount").notNull(), // Positive for purchase/refund, negative for usage
+  description: text("description"),
+  paymentTransactionId: uuid("payment_transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });

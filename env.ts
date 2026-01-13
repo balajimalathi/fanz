@@ -38,6 +38,16 @@ export const env = createEnv({
     // LiveKit Cloud
     LIVEKIT_API_KEY: z.string().min(1),
     LIVEKIT_API_SECRET: z.string().min(1),
+    // Fan Wallet Credit Plans
+    FAN_WALLET_STARTER_COINS: z.string().regex(/^\d+$/).transform(Number).default("200"),
+    FAN_WALLET_STARTER_PRICE: z.string().regex(/^\d+$/).transform(Number).default("9900"), // 99 in paise
+    FAN_WALLET_STARTER_BONUS: z.string().regex(/^\d+$/).transform(Number).default("50"),
+    FAN_WALLET_FAVORITE_COINS: z.string().regex(/^\d+$/).transform(Number).default("1300"),
+    FAN_WALLET_FAVORITE_PRICE: z.string().regex(/^\d+$/).transform(Number).default("89900"), // 899 in paise
+    FAN_WALLET_FAVORITE_BONUS: z.string().regex(/^\d+$/).transform(Number).default("300"), 
+    FAN_WALLET_VIP_COINS: z.string().regex(/^\d+$/).transform(Number).default("9000"),
+    FAN_WALLET_VIP_PRICE: z.string().regex(/^\d+$/).transform(Number).default("449900"), // 4499 in paise
+    FAN_WALLET_VIP_BONUS: z.string().regex(/^\d+$/).transform(Number).default("3000"),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -82,6 +92,15 @@ export const env = createEnv({
     EXCHANGE_RATE_API_KEY: process.env.EXCHANGE_RATE_API_KEY,
     LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
     LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
+    FAN_WALLET_STARTER_COINS: process.env.FAN_WALLET_STARTER_COINS,
+    FAN_WALLET_STARTER_PRICE: process.env.FAN_WALLET_STARTER_PRICE,
+    FAN_WALLET_STARTER_BONUS: process.env.FAN_WALLET_STARTER_BONUS,
+    FAN_WALLET_FAVORITE_COINS: process.env.FAN_WALLET_FAVORITE_COINS,
+    FAN_WALLET_FAVORITE_PRICE: process.env.FAN_WALLET_FAVORITE_PRICE,
+    FAN_WALLET_FAVORITE_BONUS: process.env.FAN_WALLET_FAVORITE_BONUS,
+    FAN_WALLET_VIP_COINS: process.env.FAN_WALLET_VIP_COINS,
+    FAN_WALLET_VIP_PRICE: process.env.FAN_WALLET_VIP_PRICE,
+    FAN_WALLET_VIP_BONUS: process.env.FAN_WALLET_VIP_BONUS,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,

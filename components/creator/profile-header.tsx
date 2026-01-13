@@ -13,6 +13,7 @@ import { PWAInstallButton } from "@/components/push/pwa-install-button"
 import { LiveIndicator } from "@/components/livekit/live-indicator"
 import { useLiveHandler } from "@/app/(app)/u/[username]/_components/live-handler-context"
 import { ReportCreatorDialog } from "@/components/report/report-creator-dialog"
+import { FanCreditsDisplay } from "./fan-credits-display"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -96,6 +97,7 @@ export function ProfileHeader({
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {isAuthenticated && <FanCreditsDisplay creatorId={creatorId} />}
               <FollowButton creatorId={creatorId} /> 
               {isAuthenticated && (
                 <>

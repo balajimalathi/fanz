@@ -21,16 +21,17 @@ import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membershi
 import { BASE_CURRENCY } from "@/lib/currency/currency-config";
 import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
-export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream";
+export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream" | "wallet_credit";
 
 export interface InitiatePaymentRequest {
   userId: string;
   type: PaymentType;
-  entityId: string; // membershipId, postId, or serviceId
+  entityId: string; // membershipId, postId, serviceId, or planType for wallet_credit
   returnUrl?: string;
   duration?: number; // Duration in months (for membership subscriptions)
   originUrl?: string; // Origin URL for redirect after payment
   currency?: string; // User's preferred currency (ISO 4217). If not provided, will be detected.
+  creatorId?: string; // Creator ID (required for wallet_credit type)
 }
 
 export interface PaymentResult {
@@ -229,6 +230,75 @@ export class PaymentService {
           break;
         }
 
+        case "wallet_credit": {
+          // entityId contains the plan type: 'starter', 'favorite', or 'vip'
+          const planType = request.entityId;
+          const { env } = await import("@/env");
+
+          let planCoins: number;
+          let planPrice: number;
+          let planBonus: number;
+
+          switch (planType) {
+            case "starter":
+              planCoins = env.FAN_WALLET_STARTER_COINS;
+              planPrice = env.FAN_WALLET_STARTER_PRICE;
+              planBonus = env.FAN_WALLET_STARTER_BONUS;
+              break;
+            case "favorite":
+              planCoins = env.FAN_WALLET_FAVORITE_COINS;
+              planPrice = env.FAN_WALLET_FAVORITE_PRICE;
+              planBonus = env.FAN_WALLET_FAVORITE_BONUS;
+              break;
+            case "vip":
+              planCoins = env.FAN_WALLET_VIP_COINS;
+              planPrice = env.FAN_WALLET_VIP_PRICE;
+              planBonus = env.FAN_WALLET_VIP_BONUS;
+              break;
+            default:
+              return {
+                success: false,
+                error: "Invalid credit plan type",
+              };
+          }
+
+          // For wallet credits, creatorId is required (the creator whose page they were on)
+          if (!request.creatorId) {
+            return {
+              success: false,
+              error: "Creator ID is required for wallet credit purchase",
+            };
+          }
+
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, request.creatorId!),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
+          amount = planPrice; // Price in paise
+          creatorId = request.creatorId; // Creator whose page they were on
+          
+          // For wallet_credit, we use a placeholder UUID for entityId since it's required to be UUID
+          // The actual plan type is stored in metadata and fanWalletTransaction
+          // Using a deterministic UUID based on "wallet_credit" prefix
+          const { randomUUID } = await import("crypto");
+          const placeholderEntityId = randomUUID(); // Generate a UUID for the entityId field
+          orderId = `wallet_credit_${planType}_${Date.now()}`;
+
+          // Store plan details in metadata for later use
+          (request as any).planMetadata = {
+            planType,
+            coins: planCoins,
+            bonus: planBonus,
+            totalCoins: planCoins + planBonus,
+          };
+          
+          // Store the placeholder entityId so we can use it in the insert
+          (request as any).placeholderEntityId = placeholderEntityId;
+          break;
+        }
+
         default:
           return {
             success: false,
@@ -259,6 +329,17 @@ export class PaymentService {
         metadata.duration = request.duration;
       }
 
+      // Store plan metadata for wallet credit purchases
+      if (request.type === "wallet_credit" && (request as any).planMetadata) {
+        metadata.planMetadata = (request as any).planMetadata;
+      }
+
+      // For wallet_credit, use placeholder entityId; for others, use the actual entityId
+      const entityIdForInsert = 
+        request.type === "wallet_credit" 
+          ? (request as any).placeholderEntityId || request.entityId
+          : request.entityId;
+
       // Create payment transaction
       const [transaction] = await db
         .insert(paymentTransaction)
@@ -266,7 +347,7 @@ export class PaymentService {
           userId: request.userId,
           creatorId,
           type: request.type,
-          entityId: request.entityId,
+          entityId: entityIdForInsert,
           amount: paymentAmount, // Amount in creator's currency subunits
           originalCurrency: creatorCurrency,
           baseCurrency: creatorCurrency, // Use creator currency as base
@@ -557,6 +638,36 @@ export class PaymentService {
             link: `/home/live`,
           });
         }
+        break;
+      }
+
+      case "wallet_credit": {
+        // Add credits to user's wallet via fanWalletTransaction
+        const planMetadata = transaction.metadata?.planMetadata as {
+          planType: string;
+          coins: number;
+          bonus: number;
+          totalCoins: number;
+        } | undefined;
+
+        if (!planMetadata) {
+          console.error("Plan metadata not found for wallet credit transaction");
+          return;
+        }
+
+        const { WalletService } = await import("@/lib/wallet/wallet-service");
+        await WalletService.addCredits(
+          transaction.userId,
+          planMetadata.totalCoins, // Add base coins + bonus
+          transaction.id, // Link to payment transaction
+          `Purchased ${planMetadata.totalCoins} credits (${planMetadata.coins} + ${planMetadata.bonus} bonus) via ${planMetadata.planType} plan`,
+          {
+            planType: planMetadata.planType,
+            baseCoins: planMetadata.coins,
+            bonusCoins: planMetadata.bonus,
+            paymentTransactionId: transaction.id,
+          }
+        );
         break;
       }
     }

@@ -72,11 +72,18 @@ export async function GET(request: NextRequest) {
         } else if (transaction.type === "service") {
           redirectUrl.searchParams.set("serviceId", transaction.entityId);
           redirectUrl.searchParams.set("transactionId", transaction.id);
-        } else if (transaction.type === "exclusive_post") {
-          redirectUrl.searchParams.set("postId", transaction.entityId);
-          redirectUrl.searchParams.set("transactionId", transaction.id);
-        }
-        return NextResponse.redirect(redirectUrl);
+            } else if (transaction.type === "exclusive_post") {
+              redirectUrl.searchParams.set("postId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (transaction.type === "wallet_credit") {
+              // Get plan type from metadata instead of entityId
+              const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+              if (planMetadata?.planType) {
+                redirectUrl.searchParams.set("planType", planMetadata.planType);
+              }
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            }
+            return NextResponse.redirect(redirectUrl);
       }
       return NextResponse.redirect(new URL("/payment-success", request.url));
     }
@@ -115,6 +122,13 @@ export async function GET(request: NextRequest) {
               redirectUrl.searchParams.set("transactionId", transaction.id);
             } else if (transaction.type === "live_stream") {
               redirectUrl.searchParams.set("streamId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (transaction.type === "wallet_credit") {
+              // Get plan type from metadata instead of entityId
+              const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+              if (planMetadata?.planType) {
+                redirectUrl.searchParams.set("planType", planMetadata.planType);
+              }
               redirectUrl.searchParams.set("transactionId", transaction.id);
             }
             return NextResponse.redirect(redirectUrl);
@@ -157,6 +171,13 @@ export async function GET(request: NextRequest) {
             redirectUrl.searchParams.set("transactionId", transaction.id);
           } else if (transaction.type === "exclusive_post") {
             redirectUrl.searchParams.set("postId", transaction.entityId);
+            redirectUrl.searchParams.set("transactionId", transaction.id);
+          } else if (transaction.type === "wallet_credit") {
+            // Get plan type from metadata instead of entityId
+            const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+            if (planMetadata?.planType) {
+              redirectUrl.searchParams.set("planType", planMetadata.planType);
+            }
             redirectUrl.searchParams.set("transactionId", transaction.id);
           }
           return NextResponse.redirect(redirectUrl);
