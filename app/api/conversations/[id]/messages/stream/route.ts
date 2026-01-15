@@ -13,6 +13,20 @@ import {
   closeSubscriberClient,
 } from "@/lib/utils/redis-pubsub";
 
+// Message type for Redis pub/sub
+interface ConversationMessage {
+  id?: string;
+  conversationId?: string;
+  senderId?: string;
+  messageType?: string;
+  content?: string | null;
+  mediaUrl?: string | null;
+  thumbnailUrl?: string | null;
+  readAt?: string | null;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
 // GET - SSE stream endpoint for real-time messages
 export async function GET(
   request: NextRequest,
@@ -94,7 +108,8 @@ export async function GET(
             conversationId,
             (message) => {
               try {
-                console.log("[SSE Stream] Received message via Redis:", message?.id || "unknown");
+                const msg = message as ConversationMessage;
+                console.log("[SSE Stream] Received message via Redis:", msg?.id || "unknown");
                 sendEvent("message", message);
               } catch (error) {
                 console.error("[SSE Stream] Error sending message via SSE:", error);

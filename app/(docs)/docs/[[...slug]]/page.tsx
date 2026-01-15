@@ -64,10 +64,17 @@ export default async function DocPage({ params }: DocPageProps) {
   const toc = await getTableOfContents(doc.body.raw);
 
   const images = await Promise.all(
-    doc.images.map(async (src: string) => ({
-      src,
-      blurDataURL: await getBlurDataURL(src),
-    })),
+    doc.images.map(async (src: string) => {
+      // Extract filename without extension for alt text
+      const filename = src.split("/").pop() || "";
+      const alt = filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+      
+      return {
+        src,
+        alt,
+        blurDataURL: await getBlurDataURL(src),
+      };
+    }),
   );
 
   return (

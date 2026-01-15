@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth/auth-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Loader2 } from "lucide-react";
  * It redirects users back to their original subdomain if they initiated
  * the OAuth flow from a subdomain.
  */
-export default function OAuthCallbackPage() {
+function OAuthCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session, isPending } = useSession();
@@ -37,7 +37,8 @@ export default function OAuthCallbackPage() {
         // Override return URL if user is admin and returnUrl is not an admin route
         // This ensures admins always go to admin dashboard unless explicitly going elsewhere
         let finalReturnUrl = returnUrl;
-        if (session.user.role === "admin" && !returnUrl.startsWith("/admin")) {
+        const userWithRole = session.user as typeof session.user & { role?: string };
+        if (userWithRole.role === "admin" && !returnUrl.startsWith("/admin")) {
           finalReturnUrl = "/admin";
         }
 
@@ -65,7 +66,8 @@ export default function OAuthCallbackPage() {
     // If authenticated but no return URL, redirect based on role
     if (session?.user && !returnUrl) {
       // Check if user is admin and redirect to admin dashboard
-      if (session.user.role === "admin") {
+      const userWithRole = session.user as typeof session.user & { role?: string };
+      if (userWithRole.role === "admin") {
         router.push("/admin");
       } else {
         router.push("/home");
@@ -128,4 +130,24 @@ function isValidReturnUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+export default function OAuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Completing Sign In...</CardTitle>
+            <CardDescription>Please wait while we redirect you.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <OAuthCallbackContent />
+    </Suspense>
+  );
 }

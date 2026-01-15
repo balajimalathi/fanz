@@ -340,13 +340,19 @@ export class PaymentService {
           ? (request as any).placeholderEntityId || request.entityId
           : request.entityId;
 
+      // Map PaymentType to database enum value
+      // The database enum only supports "membership" and "service"
+      // The actual type is stored in metadata for reference
+      const dbType: "membership" | "service" = 
+        request.type === "membership" ? "membership" : "service";
+
       // Create payment transaction
       const [transaction] = await db
         .insert(paymentTransaction)
         .values({
           userId: request.userId,
           creatorId,
-          type: request.type,
+          type: dbType,
           entityId: entityIdForInsert,
           amount: paymentAmount, // Amount in creator's currency subunits
           originalCurrency: creatorCurrency,
@@ -465,7 +471,10 @@ export class PaymentService {
    * Grant access based on payment type
    */
   private static async grantAccess(transaction: typeof paymentTransaction.$inferSelect): Promise<void> {
-    switch (transaction.type) {
+    // Get actual payment type from metadata (since DB enum only stores "membership" or "service")
+    const actualType = (transaction.metadata?.type as PaymentType) || transaction.type;
+    
+    switch (actualType) {
       case "membership": {
         // Create or update subscription
         const membershipRecord = await db.query.membership.findFirst({

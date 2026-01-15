@@ -49,3 +49,7 @@ RAILWAY-SETUP.md
 /logs
 
 .cursor/debug.log
+
+# Sitemaps
+sitemap.xml
+sitemap-*.xml
