@@ -12,18 +12,13 @@ import {
 } from "@/components/ui/sidebar"
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper"
 import { checkBannedUser } from "@/lib/utils/check-banned-user"
-import { WalletBalanceDisplay } from "@/components/wallet-balance-display"
-import { CreatorOnlineHeartbeat } from "@/components/creator-online-heartbeat"
 
 export default async function layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Check if user is banned (redirects to /suspended if banned)
-  // This runs before rendering any protected home routes
-  await checkBannedUser()
-
+  // Banned user check is now handled in middleware
   return (
     <CallGlobalWrapper>
       <CreatorOnlineHeartbeat />

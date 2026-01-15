@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
         price: env.FAN_WALLET_STARTER_PRICE,
         bonus: env.FAN_WALLET_STARTER_BONUS,
         totalCoins: env.FAN_WALLET_STARTER_COINS + env.FAN_WALLET_STARTER_BONUS,
-        discount: env.FAN_WALLET_STARTER_DISCOUNT,
       },
       {
         id: "favorite",
@@ -20,7 +19,6 @@ export async function GET(request: NextRequest) {
         price: env.FAN_WALLET_FAVORITE_PRICE,
         bonus: env.FAN_WALLET_FAVORITE_BONUS,
         totalCoins: env.FAN_WALLET_FAVORITE_COINS + env.FAN_WALLET_FAVORITE_BONUS,
-        popular: env.FAN_WALLET_FAVORITE_POPULAR,
       },
       {
         id: "vip",

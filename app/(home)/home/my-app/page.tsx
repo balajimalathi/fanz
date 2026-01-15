@@ -5,7 +5,8 @@ import { db } from "@/lib/db/client"
 import { creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { CreatorManagementPage } from "@/components/creator/creator-management-page"
-import { checkBannedUser } from "@/lib/utils/check-banned-user"
+
+export const dynamic = 'force-dynamic';
 
 export default async function MyAppPage() {
   const session = await auth.api.getSession({
@@ -16,9 +17,7 @@ export default async function MyAppPage() {
     redirect("/login")
   }
 
-  // Check if user is banned (redirects to /suspended if banned)
-  await checkBannedUser()
-
+  // Banned user check is now handled in middleware
   // Get creator record
   const creatorRecord = await db.query.creator.findFirst({
     where: (c, { eq: eqOp }) => eqOp(c.id, session.user.id),

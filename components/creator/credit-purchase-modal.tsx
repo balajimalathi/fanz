@@ -22,9 +22,7 @@ interface CreditPlan {
   coins: number
   price: number // in paise
   bonus: number
-  totalCoins: number
-  discount?: string
-  popular?: boolean
+  totalCoins: number | string
 }
 
 interface CreditPurchaseModalProps {
@@ -83,7 +81,6 @@ export function CreditPurchaseModal({
       price: 9900, // ₹99 in paise
       bonus: 50,
       totalCoins: 250,
-      discount: "75% OFF first-time",
     },
     {
       id: "favorite",
@@ -92,7 +89,6 @@ export function CreditPurchaseModal({
       price: 89900, // ₹899 in paise
       bonus: 300,
       totalCoins: 1600,
-      popular: true,
     },
     {
       id: "vip",
@@ -188,35 +184,20 @@ export function CreditPurchaseModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {displayPlans.map((plan) => {
               const isStarter = plan.id === "starter"
-              const showDiscount = isStarter && isFirstPurchase && plan.discount
+              const showDiscount = isStarter && isFirstPurchase
 
               return (
                 <div
                   key={plan.id}
-                  className={`relative border rounded-lg p-6 transition-all ${
-                    plan.popular
-                      ? "border-primary bg-primary/5 shadow-md scale-105"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                  className={`relative border rounded-lg p-6 transition-all`}
                 >
-                  {plan.popular && (
                     <Badge
                       className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground"
                       variant="default"
                     >
                       <Sparkles className="h-3 w-3 mr-1" />
-                      MOST POPULAR
-                    </Badge>
-                  )}
-
-                  {showDiscount && (
-                    <Badge
-                      className="absolute -top-3 right-4 bg-orange-500 text-white"
-                      variant="default"
-                    >
-                      {plan.discount}
-                    </Badge>
-                  )}
+                    MOST POPULAR
+                  </Badge> 
 
                   <div className="space-y-4">
                     <div>
@@ -256,7 +237,7 @@ export function CreditPurchaseModal({
                       onClick={() => handlePurchase(plan)}
                       disabled={isProcessing}
                       className="w-full"
-                      variant={plan.popular ? "default" : "outline"}
+                      variant="default"
                     >
                       {isProcessing && selectedPlan?.id === plan.id ? (
                         <>

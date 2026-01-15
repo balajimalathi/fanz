@@ -2,6 +2,40 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
+ * Check if user is banned by making an internal API call
+ * This is needed because middleware runs in Edge runtime and can't access the database directly
+ */
+async function checkBannedUser(request: NextRequest): Promise<boolean> {
+  try {
+    // Create an internal request to check banned status
+    // Use the request's origin to construct the absolute URL
+    const baseUrl = request.nextUrl.origin;
+    const checkUrl = `${baseUrl}/api/auth/check-banned`;
+    
+    const response = await fetch(checkUrl, {
+      method: "GET",
+      headers: {
+        // Forward all cookies to maintain session
+        Cookie: request.headers.get("cookie") || "",
+        // Forward host header for proper routing
+        Host: request.headers.get("host") || "",
+      },
+    });
+
+    if (response.status === 403 || response.status === 200) {
+      const data = await response.json();
+      return data.banned === true;
+    }
+
+    return false;
+  } catch (error) {
+    // On error, fail open (don't block access)
+    console.error("Error checking banned user in middleware:", error);
+    return false;
+  }
+}
+
+/**
  * Extract subdomain from hostname
  * Handles both production (subdomain.example.com), localhost (subdomain.localhost:3000),
  * tunnel URLs (subdomain.tunnel-domain.srv.us), and skndan.cloud domain
@@ -133,8 +167,14 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon.ico") ||
       pathname === "/sw.js" ||
-      pathname.startsWith("/manifest.json")
+      pathname.startsWith("/manifest.json") ||
+      pathname.startsWith("/api")
     ) {
+      return NextResponse.next();
+    }
+
+    // Skip banned check for suspended page itself
+    if (pathname === "/suspended") {
       return NextResponse.next();
     }
 
@@ -184,6 +224,12 @@ export async function middleware(request: NextRequest) {
 
       return NextResponse.redirect(loginUrl);
     }
+
+    // Check if user is banned
+    const isBanned = await checkBannedUser(request);
+    if (isBanned) {
+      return NextResponse.redirect(new URL("/suspended", request.url));
+    }
   }
 
   // Protect routes starting with /home
@@ -193,8 +239,14 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon.ico") ||
       pathname === "/sw.js" ||
-      pathname.startsWith("/manifest.json")
+      pathname.startsWith("/manifest.json") ||
+      pathname.startsWith("/api")
     ) {
+      return NextResponse.next();
+    }
+
+    // Skip banned check for suspended page itself
+    if (pathname === "/suspended") {
       return NextResponse.next();
     }
 
@@ -245,6 +297,12 @@ export async function middleware(request: NextRequest) {
       }
 
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Check if user is banned
+    const isBanned = await checkBannedUser(request);
+    if (isBanned) {
+      return NextResponse.redirect(new URL("/suspended", request.url));
     }
   }
 

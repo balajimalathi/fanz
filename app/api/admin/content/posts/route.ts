@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
 
     if (postType) {
       // Handle comma-separated post types
-      const types = postType.split(",").filter(Boolean)
+      const validPostTypes = ["subscription", "exclusive", "free"] as const
+      const types = postType.split(",").filter(Boolean).filter((type): type is "subscription" | "exclusive" | "free" => 
+        validPostTypes.includes(type as typeof validPostTypes[number])
+      )
       if (types.length > 0) {
         whereConditions.push(inArray(post.postType, types))
       }

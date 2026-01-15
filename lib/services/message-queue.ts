@@ -45,8 +45,9 @@ async function persistMessageToDatabase(
   try {
     // Check if message already exists (by ID) to prevent duplicates
     if (messageData.id) {
+      const messageId = messageData.id; // Extract to const for type narrowing
       const existing = await db.query.chatMessage.findFirst({
-        where: (m, { eq: eqOp }) => eqOp(m.id, messageData.id),
+        where: (m, { eq: eqOp }) => eqOp(m.id, messageId),
       });
       if (existing) {
         console.log("[Message Queue] Message already exists, skipping insert:", messageData.id);

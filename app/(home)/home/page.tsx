@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { creator, user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { checkBannedUser } from "@/lib/utils/check-banned-user";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { RevenueSection } from "@/components/dashboard/revenue-section";
 import { SubscribersSection } from "@/components/dashboard/subscribers-section";
@@ -25,6 +24,8 @@ import {
 } from "@/lib/dashboard/engagement-data";
 import { Separator } from "@/components/ui/separator";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -34,9 +35,7 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  // Check if user is banned (redirects to /suspended if banned)
-  await checkBannedUser()
-
+  // Banned user check is now handled in middleware
   // Redirect admins to admin dashboard
   if (session.user.role === "admin") {
     redirect("/admin");
