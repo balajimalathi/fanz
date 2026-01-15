@@ -78,8 +78,6 @@ export const COUNTRIES = [
   "Other",
 ] as const;
 
-export type Country = typeof COUNTRIES[number];
-
 /**
  * Get all available categories
  */

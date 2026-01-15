@@ -180,7 +180,7 @@ export async function GET(
         profileImageUrl: string | null
       } | null
       caption: string | null
-      postType: "subscription" | "exclusive"
+      postType: "subscription" | "exclusive" | "free"
       price: number | null
       isPinned: boolean
       media: Array<{

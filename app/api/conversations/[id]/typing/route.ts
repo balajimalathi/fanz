@@ -53,7 +53,9 @@ export async function POST(
     const userName = userRecord?.name || "User";
 
     // Publish typing event to Redis
+    console.log("[Typing API] Publishing typing event for user:", userName, "in conversation:", conversationId);
     await publishTypingEvent(conversationId, userId, userName);
+    console.log("[Typing API] Typing event published successfully");
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

@@ -10,6 +10,8 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { RevenueMetrics, RecentTransaction } from "@/lib/dashboard/revenue-data";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { format } from "date-fns";
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency";
+import { getCurrencySymbol } from "@/lib/currency/currency-utils";
 
 interface RevenueSectionProps {
   revenueMetrics: RevenueMetrics;
@@ -22,6 +24,10 @@ export function RevenueSection({
   recentTransactions,
   chartData,
 }: RevenueSectionProps) {
+  const { currency: creatorCurrency, loading } = useCreatorCurrency();
+  const currency = loading ? "USD" : creatorCurrency;
+  const currencySymbol = getCurrencySymbol(currency);
+
   const chartConfig = {
     revenue: {
       label: "Revenue",
@@ -29,10 +35,14 @@ export function RevenueSection({
     },
   };
 
-  // Format chart data for display
+  // Format chart data for display - amounts are in subunits, need to convert based on currency decimals
+  const { getCurrencyDecimals } = require("@/lib/currency/currency-utils");
+  const decimals = getCurrencyDecimals(currency);
+  const divisor = Math.pow(10, decimals);
+  
   const formattedChartData = chartData.map((item) => ({
     date: format(new Date(item.date), "MMM dd"),
-    revenue: item.revenue / 100, // Convert paise to rupees
+    revenue: item.revenue / divisor, // Convert subunits to display format
   }));
 
   return (
@@ -47,25 +57,25 @@ export function RevenueSection({
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total Revenue</span>
               <span className="text-lg font-semibold">
-                {formatCurrency(revenueMetrics.totalRevenue)}
+                {formatCurrency(revenueMetrics.totalRevenue, currency)}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">This Month</span>
               <span className="text-base font-medium">
-                {formatCurrency(revenueMetrics.thisMonthRevenue)}
+                {formatCurrency(revenueMetrics.thisMonthRevenue, currency)}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">This Week</span>
               <span className="text-base font-medium">
-                {formatCurrency(revenueMetrics.thisWeekRevenue)}
+                {formatCurrency(revenueMetrics.thisWeekRevenue, currency)}
               </span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="text-sm font-medium">Pending Payout</span>
               <span className="text-lg font-semibold text-orange-600">
-                {formatCurrency(revenueMetrics.pendingPayoutAmount)}
+                {formatCurrency(revenueMetrics.pendingPayoutAmount, currency)}
               </span>
             </div>
           </div>
@@ -91,7 +101,7 @@ export function RevenueSection({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => `₹${value}`}
+                tickFormatter={(value) => `${currencySymbol}${value}`}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Line

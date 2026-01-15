@@ -7,6 +7,7 @@ import {
   user,
 } from "@/lib/db/schema"
 import { eq, and, gte, lte, desc, inArray } from "drizzle-orm"
+import { BASE_CURRENCY } from "@/lib/currency/currency-config"
 
 export interface CreatePayoutRequest {
   creatorId: string
@@ -50,21 +51,29 @@ export class PayoutService {
         }
       }
 
-      // Calculate totals
-      const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0)
-      const totalPlatformFee = transactions.reduce((sum, t) => sum + t.platformFee, 0)
-      const netAmount = transactions.reduce((sum, t) => sum + t.creatorAmount, 0)
+      // Calculate totals in base currency (USD) - all amounts are already in base currency
+      const totalAmountBase = transactions.reduce(
+        (sum, t) => sum + (t.convertedAmount || t.amount), 
+        0
+      )
+      const totalPlatformFeeBase = transactions.reduce((sum, t) => sum + t.platformFee, 0)
+      const netAmountBase = transactions.reduce((sum, t) => sum + t.creatorAmount, 0)
 
-      // Create payout record
+      // For MVP: All payouts are in USD (BASE_CURRENCY)
+      // Currency conversion will be added later when creators can change their currency
       const [newPayout] = await db
         .insert(payout)
         .values({
           creatorId: request.creatorId,
           periodStart: request.periodStart,
           periodEnd: request.periodEnd,
-          totalAmount,
-          platformFee: totalPlatformFee,
-          netAmount,
+          totalAmount: totalAmountBase, // In USD (base currency)
+          platformFee: totalPlatformFeeBase, // In USD (base currency)
+          netAmount: netAmountBase, // In USD (base currency)
+          payoutCurrency: BASE_CURRENCY, // Always USD for MVP
+          convertedFromAmount: netAmountBase,
+          convertedAmount: netAmountBase, // Same as netAmount for MVP (no conversion)
+          exchangeRate: "1.0", // No conversion for MVP
           status: "pending",
         })
         .returning()
@@ -143,7 +152,8 @@ export class PayoutService {
         }
       }
 
-      // Calculate pending amount (transactions not in completed payouts)
+      // Calculate pending amount in base currency (transactions not in completed payouts)
+      // creatorAmount is already in base currency
       const pendingAmount = completedTransactions
         .filter((t) => !paidTransactionIds.has(t.id))
         .reduce((sum, t) => sum + t.creatorAmount, 0)
@@ -315,21 +325,29 @@ export class PayoutService {
         }
       }
 
-      // Calculate totals
-      const totalAmount = availableTransactions.reduce((sum, t) => sum + t.amount, 0)
-      const totalPlatformFee = availableTransactions.reduce((sum, t) => sum + t.platformFee, 0)
-      const netAmount = availableTransactions.reduce((sum, t) => sum + t.creatorAmount, 0)
+      // Calculate totals in base currency (USD) - all amounts are already in base currency
+      const totalAmountBase = availableTransactions.reduce(
+        (sum, t) => sum + (t.convertedAmount || t.amount),
+        0
+      )
+      const totalPlatformFeeBase = availableTransactions.reduce((sum, t) => sum + t.platformFee, 0)
+      const netAmountBase = availableTransactions.reduce((sum, t) => sum + t.creatorAmount, 0)
 
-      // Create payout record
+      // For MVP: All payouts are in USD (BASE_CURRENCY)
+      // Currency conversion will be added later when creators can change their currency
       const [newPayout] = await db
         .insert(payout)
         .values({
           creatorId,
           periodStart,
           periodEnd,
-          totalAmount,
-          platformFee: totalPlatformFee,
-          netAmount,
+          totalAmount: totalAmountBase, // In USD (base currency)
+          platformFee: totalPlatformFeeBase, // In USD (base currency)
+          netAmount: netAmountBase, // In USD (base currency)
+          payoutCurrency: BASE_CURRENCY, // Always USD for MVP
+          convertedFromAmount: netAmountBase,
+          convertedAmount: netAmountBase, // Same as netAmount for MVP (no conversion)
+          exchangeRate: "1.0", // No conversion for MVP
           status: "pending",
         })
         .returning()

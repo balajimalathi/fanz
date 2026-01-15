@@ -3,7 +3,12 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { conversation, chatMessage } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, asc } from "drizzle-orm";
+import {
+  queueMessageForPersistence,
+  saveMessageDirectly,
+  processQueuedMessages,
+} from "@/lib/services/message-queue";
 import { publishMessage } from "@/lib/utils/redis-pubsub";
 
 // GET - List messages for a conversation
@@ -45,15 +50,12 @@ export async function GET(
       );
     }
 
-    // Get messages
+    // Get messages in chronological order (oldest first)
     const messages = await db.query.chatMessage.findMany({
       where: (m, { eq: eqOp }) => eqOp(m.conversationId, conversationId),
-      orderBy: [desc(chatMessage.createdAt)],
+      orderBy: [asc(chatMessage.createdAt)],
       limit: 100, // Get last 100 messages
     });
-
-    // Reverse to get chronological order (oldest first)
-    messages.reverse();
 
     return NextResponse.json(messages);
   } catch (error) {
@@ -113,33 +115,82 @@ export async function POST(
       );
     }
 
-    // Create message
-    const [newMessage] = await db
-      .insert(chatMessage)
-      .values({
-        conversationId,
-        senderId: userId,
-        messageType,
-        content: content || null,
-        mediaUrl: mediaUrl || null,
-        thumbnailUrl: thumbnailUrl || null,
-      })
-      .returning();
+    // Generate message ID for optimistic response and database persistence
+    const messageId = crypto.randomUUID();
+    const timestamp = Date.now();
 
-    // Update conversation last message
-    await db
-      .update(conversation)
-      .set({
-        lastMessageAt: new Date(),
-        lastMessagePreview: content || (mediaUrl ? "Media" : ""),
-        updatedAt: new Date(),
-      })
-      .where(eq(conversation.id, conversationId));
+    // Queue message for async persistence
+    const queuedMessage = {
+      id: messageId,
+      conversationId,
+      senderId: userId,
+      messageType,
+      content: content || null,
+      mediaUrl: mediaUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
+      timestamp,
+    };
 
-    // Publish message to Redis for real-time updates
-    await publishMessage(conversationId, newMessage);
+    // Save message immediately in the background (fire and forget)
+    // This ensures persistence happens quickly while not blocking the response
+    const savePromise = saveMessageDirectly(queuedMessage).then((savedMessage) => {
+      if (savedMessage) {
+        // Normalize createdAt to ISO string for consistent format
+        const normalizedMessage = {
+          ...savedMessage,
+          createdAt: savedMessage.createdAt instanceof Date 
+            ? savedMessage.createdAt.toISOString() 
+            : typeof savedMessage.createdAt === 'string'
+            ? savedMessage.createdAt
+            : new Date(timestamp).toISOString(),
+        };
+        // Publish to Redis pub/sub after successful save
+        publishMessage(conversationId, normalizedMessage).catch((error) => {
+          console.error("[Messages API] Error publishing saved message to Redis pub/sub:", error);
+        });
+        return savedMessage;
+      }
+      return null;
+    }).catch((error) => {
+      console.error("[Messages API] Error saving message directly:", error);
+      // If direct save fails, queue it for retry
+      queueMessageForPersistence(queuedMessage).catch((queueError) => {
+        console.error("[Messages API] Error queueing message after save failure:", queueError);
+      });
+      return null;
+    });
 
-    return NextResponse.json(newMessage, { status: 201 });
+    // Also queue the message as a backup (for reliability and retry mechanism)
+    const streamId = await queueMessageForPersistence(queuedMessage);
+
+    // Create optimistic message object for immediate response
+    const optimisticMessage = {
+      id: messageId,
+      conversationId,
+      senderId: userId,
+      messageType,
+      content: content || null,
+      mediaUrl: mediaUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
+      readAt: null,
+      createdAt: new Date(timestamp).toISOString(),
+    };
+
+    // Publish immediately to Redis pub/sub for real-time delivery
+    // This ensures the other side sees the message right away
+    publishMessage(conversationId, optimisticMessage).catch((error) => {
+      console.error("[Messages API] Error publishing optimistic message to Redis pub/sub:", error);
+    });
+
+    // Update optimistic message with saved data when available (non-blocking)
+    savePromise.then((savedMessage) => {
+      if (savedMessage) {
+        console.log("[Messages API] Message saved successfully:", savedMessage.id);
+      }
+    });
+
+    console.log("[Messages API] Message queued successfully, streamId:", streamId);
+    return NextResponse.json(optimisticMessage, { status: 201 });
   } catch (error) {
     console.error("Error sending message:", error);
     return NextResponse.json(

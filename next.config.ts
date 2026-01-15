@@ -1,8 +1,5 @@
 import type { NextConfig } from "next";
-import { withContentlayer } from "next-contentlayer2";
 
-const wordpressHostname = process.env.WORDPRESS_HOSTNAME;
-const wordpressUrl = process.env.WORDPRESS_URL;
 const r2PublicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
 
 // Extract hostname from R2 public URL
@@ -16,28 +13,6 @@ const remotePatterns: Array<{
   pathname: string;
 }> = [];
 
-if (wordpressHostname) {
-  remotePatterns.push(
-    {
-      protocol: "https",
-      hostname: wordpressHostname,
-      port: "",
-      pathname: "/**",
-    },
-    {
-      protocol: "http",
-      hostname: "65.109.132.224",
-      port: "8081",
-      pathname: "/**",
-    },
-    {
-      protocol: "https",
-      hostname: "images.unsplash.com",
-      pathname: "/**",
-    }
-  );
-}
-
 if (r2Hostname) {
   remotePatterns.push({
     protocol: "https",
@@ -48,9 +23,10 @@ if (r2Hostname) {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  reactStrictMode: true,
   experimental: {
     optimizePackageImports: ["lucide-react"],
-    middlewareClientMaxBodySize: "500mb",
+    proxyClientMaxBodySize: "500mb", // Renamed from middlewareClientMaxBodySize
   },
   turbopack: {},
   serverExternalPackages: ["sharp"],
@@ -58,15 +34,8 @@ const nextConfig: NextConfig = {
     remotePatterns,
   },
   async redirects() {
-    if (!wordpressUrl) {
-      return [];
-    }
     return [
-      {
-        source: "/admin",
-        destination: `${wordpressUrl}/wp-admin`,
-        permanent: true,
-      },
+
     ];
   },
   async headers() {
@@ -78,9 +47,9 @@ const nextConfig: NextConfig = {
       "https://www.clarity.ms",
       "https://scripts.clarity.ms",
     ];
-    
+
     const mediaSrc = ["'self'", "blob:", "data:"];
-    
+
     if (r2Hostname) {
       connectSrc.push(`https://${r2Hostname}`);
       mediaSrc.push(`https://${r2Hostname}`);
@@ -112,14 +81,20 @@ const nextConfig: NextConfig = {
         if (url.protocol === "https:") {
           connectSrc.push(`ws://${url.host}`);
         }
+        // Allow HTTP/HTTPS connections to the base URL for subdomain support
+        // This allows subdomains to connect to the base domain (e.g., skndan.localhost:3000 -> localhost:3000)
+        connectSrc.push(appUrl);
       } catch (e) {
         // Invalid URL, skip
       }
     }
-    
-    // Allow localhost WebSocket for development
+
+    // Allow localhost HTTP and WebSocket for development (subdomain support)
+    connectSrc.push("http://localhost:3000", "https://localhost:3000");
     connectSrc.push("ws://localhost:8080", "wss://localhost:8080");
-    
+    // Allow debug logging endpoint for development
+    connectSrc.push("http://127.0.0.1:7245");
+
     const cspValue = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms",
@@ -161,4 +136,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withContentlayer(nextConfig);
+export default nextConfig;

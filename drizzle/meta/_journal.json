@@ -204,6 +204,48 @@
       "when": 1767275546792,
       "tag": "0028_flat_thunderbolts",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1767370828017,
+      "tag": "0029_wonderful_lady_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1767436603905,
+      "tag": "0030_uneven_owl",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1767535906601,
+      "tag": "0031_dusty_lyja",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1767897375285,
+      "tag": "0032_sad_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1767937455600,
+      "tag": "0033_safe_white_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1768310088826,
+      "tag": "0034_odd_zemo",
+      "breakpoints": true
     }
   ]
 }

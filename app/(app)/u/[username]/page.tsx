@@ -34,20 +34,28 @@ async function getCreatorProfile(username: string) {
       orderBy: (m, { desc }) => [desc(m.createdAt)],
     })
 
-    // Convert prices from paise to rupees for display
-    const servicesWithRupees = services.map((s) => ({
+    // Get creator's preferred currency
+    const creatorCurrency = creatorRecord.currency || "USD"
+    const { getCurrencyDecimals } = await import("@/lib/currency/currency-utils")
+    const currencyDecimals = getCurrencyDecimals(creatorCurrency)
+    const currencyDivisor = Math.pow(10, currencyDecimals)
+
+    // Convert prices from subunits to display format
+    const servicesWithDisplay = services.map((s) => ({
       id: s.id,
       name: s.name,
       description: s.description,
-      price: s.price / 100, // Convert paise to rupees
+      price: s.price / currencyDivisor, // Convert subunits to display format
+      currency: creatorCurrency,
       serviceType: s.serviceType,
     }))
 
-    const membershipsWithRupees = memberships.map((m) => ({
+    const membershipsWithDisplay = memberships.map((m) => ({
       id: m.id,
       title: m.title,
       description: m.description,
-      monthlyRecurringFee: m.monthlyRecurringFee / 100, // Convert paise to rupees
+      monthlyRecurringFee: m.monthlyRecurringFee / currencyDivisor, // Convert subunits to display format
+      currency: creatorCurrency,
       coverImageUrl: m.coverImageUrl,
     }))
 
@@ -64,8 +72,8 @@ async function getCreatorProfile(username: string) {
         contentType: creatorRecord.contentType,
         categories: creatorRecord.categories,
       },
-      services: servicesWithRupees,
-      memberships: membershipsWithRupees,
+      services: servicesWithDisplay,
+      memberships: membershipsWithDisplay,
     }
   } catch (error) {
     console.error("Error fetching creator profile:", error)
@@ -149,6 +157,7 @@ export default async function Page({
                       name={service.name}
                       description={service.description}
                       price={service.price}
+                      currency={service.currency}
                       creatorId={creator.id}
                     />
                   ))}
@@ -180,6 +189,7 @@ export default async function Page({
                       title={membership.title}
                       description={membership.description}
                       monthlyRecurringFee={membership.monthlyRecurringFee}
+                      currency={membership.currency}
                       coverImageUrl={membership.coverImageUrl}
                       creatorId={creator.id}
                     />

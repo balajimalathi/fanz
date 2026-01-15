@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DollarSign,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency";
 
 interface StatCardProps {
   title: string;
@@ -76,15 +79,20 @@ export function StatsOverview({
   unreadMessages,
   pendingServiceOrders,
 }: StatsOverviewProps) {
+  const { currency: creatorCurrency, loading } = useCreatorCurrency();
+  
   // Calculate trend (simplified - comparing this month to last month)
   // In a real implementation, you'd fetch last month's revenue
   const revenueTrend = thisMonthRevenue > 0 ? { value: 0, isPositive: true } : undefined;
+
+  // Use creator currency for all revenue displays
+  const currency = loading ? "USD" : creatorCurrency;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StatCard
         title="Total Revenue"
-        value={formatCurrencyCompact(totalRevenue)}
+        value={formatCurrencyCompact(totalRevenue, currency)}
         description="All-time earnings"
         icon={DollarSign}
         trend={revenueTrend}
@@ -103,7 +111,7 @@ export function StatsOverview({
       />
       <StatCard
         title="Pending Payouts"
-        value={formatCurrencyCompact(pendingPayoutAmount)}
+        value={formatCurrencyCompact(pendingPayoutAmount, currency)}
         description="Awaiting processing"
         icon={CreditCard}
       />

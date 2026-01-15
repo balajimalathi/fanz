@@ -61,23 +61,20 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 
 export function PayoutDetailsModal({
   payoutId,
   open,
   onOpenChange,
 }: PayoutDetailsModalProps) {
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
   const [payoutDetails, setPayoutDetails] = useState<PayoutDetails | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  const currency = currencyLoading ? "USD" : creatorCurrency
 
   useEffect(() => {
     if (open && payoutId) {
@@ -151,20 +148,20 @@ export function PayoutDetailsModal({
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Total Amount</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(payoutDetails.totalAmount)}
+                    {formatCurrencyUtil(payoutDetails.totalAmount * 100, currency)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Platform Fee</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(payoutDetails.platformFee)}
+                    {formatCurrencyUtil(payoutDetails.platformFee * 100, currency)}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-sm font-semibold">Net Amount</span>
                   <span className="text-base font-bold">
-                    {formatCurrency(payoutDetails.netAmount)}
+                    {formatCurrencyUtil(payoutDetails.netAmount * 100, currency)}
                   </span>
                 </div>
               </div>
@@ -206,7 +203,7 @@ export function PayoutDetailsModal({
                         {item.transactionId.slice(0, 8)}...
                       </span>
                       <span className="text-sm font-medium">
-                        {formatCurrency(item.amount)}
+                        {formatCurrencyUtil(item.amount * 100, currency)}
                       </span>
                     </div>
                   ))}

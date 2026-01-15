@@ -11,22 +11,27 @@ import {
   notification,
   liveStream,
   liveStreamPurchase,
+  creator,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { GatewayService } from "./gateway/gateway-service";
 import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
+import { BASE_CURRENCY } from "@/lib/currency/currency-config";
+import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
-export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream";
+export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream" | "wallet_credit";
 
 export interface InitiatePaymentRequest {
   userId: string;
   type: PaymentType;
-  entityId: string; // membershipId, postId, or serviceId
+  entityId: string; // membershipId, postId, serviceId, or planType for wallet_credit
   returnUrl?: string;
   duration?: number; // Duration in months (for membership subscriptions)
   originUrl?: string; // Origin URL for redirect after payment
+  currency?: string; // User's preferred currency (ISO 4217). If not provided, will be detected.
+  creatorId?: string; // Creator ID (required for wallet_credit type)
 }
 
 export interface PaymentResult {
@@ -73,9 +78,12 @@ export class PaymentService {
         };
       }
 
+      // Currency will be determined from creator's currency (no user preference needed)
+
       // Get entity details and calculate amount
       let amount: number;
       let creatorId: string;
+      let creatorCurrency: string;
       let orderId: string;
 
       switch (request.type) {
@@ -91,14 +99,22 @@ export class PaymentService {
             };
           }
 
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, membershipRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
           // Calculate amount based on duration (bundle pricing)
-          const monthlyPrice = membershipRecord.monthlyRecurringFee; // Already in paise
+          // Amount is stored in creator's currency subunits
+          const monthlyPrice = membershipRecord.monthlyRecurringFee;
           const duration = (request.duration || 1) as BundleDuration;
           
-          // Convert to rupees for calculation, then back to paise
-          const monthlyPriceInRupees = monthlyPrice / 100;
-          const bundlePriceInRupees = calculateBundlePrice(monthlyPriceInRupees, duration);
-          amount = bundlePriceInRupees * 100; // Convert back to paise
+          // Convert to display amount for calculation
+          const creatorDecimals = getCurrencyDecimals(creatorCurrency);
+          const monthlyPriceDisplay = monthlyPrice / Math.pow(10, creatorDecimals);
+          const bundlePriceDisplay = calculateBundlePrice(monthlyPriceDisplay, duration);
+          amount = Math.round(bundlePriceDisplay * Math.pow(10, creatorDecimals));
 
           creatorId = membershipRecord.creatorId;
           orderId = `membership_${request.entityId}_${Date.now()}`;
@@ -117,6 +133,12 @@ export class PaymentService {
             };
           }
 
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, postRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
           // Check if user already purchased this post
           const existingPurchase = await db.query.postPurchase.findFirst({
             where: (pp, { eq: eqOp, and: andOp }) =>
@@ -130,7 +152,7 @@ export class PaymentService {
             };
           }
 
-          amount = postRecord.price;
+          amount = postRecord.price; // Already in creator's currency subunits
           creatorId = postRecord.creatorId;
           orderId = `post_${request.entityId}_${Date.now()}`;
           break;
@@ -148,7 +170,13 @@ export class PaymentService {
             };
           }
 
-          amount = serviceRecord.price;
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, serviceRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
+          amount = serviceRecord.price; // Already in creator's currency subunits
           creatorId = serviceRecord.creatorId;
           orderId = `service_${request.entityId}_${Date.now()}`;
           break;
@@ -165,6 +193,12 @@ export class PaymentService {
               error: "Stream not found or not available for purchase",
             };
           }
+
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, streamRecord.creatorId),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
 
           // Check if user already purchased this stream
           const existingPurchase = await db.query.liveStreamPurchase.findFirst({
@@ -190,9 +224,78 @@ export class PaymentService {
             };
           }
 
-          amount = streamRecord.price;
+          amount = streamRecord.price; // Already in creator's currency subunits
           creatorId = streamRecord.creatorId;
           orderId = `live_stream_${request.entityId}_${Date.now()}`;
+          break;
+        }
+
+        case "wallet_credit": {
+          // entityId contains the plan type: 'starter', 'favorite', or 'vip'
+          const planType = request.entityId;
+          const { env } = await import("@/env");
+
+          let planCoins: number;
+          let planPrice: number;
+          let planBonus: number;
+
+          switch (planType) {
+            case "starter":
+              planCoins = env.FAN_WALLET_STARTER_COINS;
+              planPrice = env.FAN_WALLET_STARTER_PRICE;
+              planBonus = env.FAN_WALLET_STARTER_BONUS;
+              break;
+            case "favorite":
+              planCoins = env.FAN_WALLET_FAVORITE_COINS;
+              planPrice = env.FAN_WALLET_FAVORITE_PRICE;
+              planBonus = env.FAN_WALLET_FAVORITE_BONUS;
+              break;
+            case "vip":
+              planCoins = env.FAN_WALLET_VIP_COINS;
+              planPrice = env.FAN_WALLET_VIP_PRICE;
+              planBonus = env.FAN_WALLET_VIP_BONUS;
+              break;
+            default:
+              return {
+                success: false,
+                error: "Invalid credit plan type",
+              };
+          }
+
+          // For wallet credits, creatorId is required (the creator whose page they were on)
+          if (!request.creatorId) {
+            return {
+              success: false,
+              error: "Creator ID is required for wallet credit purchase",
+            };
+          }
+
+          // Get creator to determine their currency
+          const creatorRecord = await db.query.creator.findFirst({
+            where: (c, { eq: eqOp }) => eqOp(c.id, request.creatorId!),
+          });
+          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+
+          amount = planPrice; // Price in paise
+          creatorId = request.creatorId; // Creator whose page they were on
+          
+          // For wallet_credit, we use a placeholder UUID for entityId since it's required to be UUID
+          // The actual plan type is stored in metadata and fanWalletTransaction
+          // Using a deterministic UUID based on "wallet_credit" prefix
+          const { randomUUID } = await import("crypto");
+          const placeholderEntityId = randomUUID(); // Generate a UUID for the entityId field
+          orderId = `wallet_credit_${planType}_${Date.now()}`;
+
+          // Store plan details in metadata for later use
+          (request as any).planMetadata = {
+            planType,
+            coins: planCoins,
+            bonus: planBonus,
+            totalCoins: planCoins + planBonus,
+          };
+          
+          // Store the placeholder entityId so we can use it in the insert
+          (request as any).placeholderEntityId = placeholderEntityId;
           break;
         }
 
@@ -203,13 +306,17 @@ export class PaymentService {
           };
       }
 
-      // Calculate split payment
+      // Use creator's currency for payment (no conversion)
+      const paymentAmount = amount;
+      
+      // Calculate split in creator's currency (assuming 1:1 with base currency for now)
       const split = calculateSplitPayment(amount);
 
       // Build metadata with duration and originUrl for all payment types
       const metadata: Record<string, unknown> = {
         type: request.type,
         entityId: request.entityId,
+        creatorCurrency,
       };
 
       // Store originUrl for all payment types
@@ -222,6 +329,17 @@ export class PaymentService {
         metadata.duration = request.duration;
       }
 
+      // Store plan metadata for wallet credit purchases
+      if (request.type === "wallet_credit" && (request as any).planMetadata) {
+        metadata.planMetadata = (request as any).planMetadata;
+      }
+
+      // For wallet_credit, use placeholder entityId; for others, use the actual entityId
+      const entityIdForInsert = 
+        request.type === "wallet_credit" 
+          ? (request as any).placeholderEntityId || request.entityId
+          : request.entityId;
+
       // Create payment transaction
       const [transaction] = await db
         .insert(paymentTransaction)
@@ -229,8 +347,12 @@ export class PaymentService {
           userId: request.userId,
           creatorId,
           type: request.type,
-          entityId: request.entityId,
-          amount: split.totalAmount,
+          entityId: entityIdForInsert,
+          amount: paymentAmount, // Amount in creator's currency subunits
+          originalCurrency: creatorCurrency,
+          baseCurrency: creatorCurrency, // Use creator currency as base
+          convertedAmount: paymentAmount, // Same as amount (no conversion)
+          exchangeRate: "1.0", // No conversion
           platformFee: split.platformFee,
           creatorAmount: split.creatorAmount,
           status: "pending",
@@ -252,8 +374,8 @@ export class PaymentService {
 
       // Initiate payment with gateway
       const gatewayResponse = await GatewayService.initiatePayment({
-        amount: split.totalAmount,
-        currency: "INR",
+        amount: paymentAmount, // Amount in creator's currency subunits
+        currency: creatorCurrency,
         orderId,
         customerId: request.userId,
         customerEmail: user.email,
@@ -401,6 +523,7 @@ export class PaymentService {
             .update(subscriptions)
             .set({
               status: "active",
+              price: membershipRecord.monthlyRecurringFee,
               currentPeriodStart: now,
               currentPeriodEnd: periodEnd,
               updatedAt: new Date(),
@@ -411,6 +534,7 @@ export class PaymentService {
           await db.insert(subscriptions).values({
             customerId: customer.id,
             planId: transaction.entityId,
+            price: membershipRecord.monthlyRecurringFee,
             status: "active",
             currentPeriodStart: now,
             currentPeriodEnd: periodEnd,
@@ -514,6 +638,36 @@ export class PaymentService {
             link: `/home/live`,
           });
         }
+        break;
+      }
+
+      case "wallet_credit": {
+        // Add credits to user's wallet via fanWalletTransaction
+        const planMetadata = transaction.metadata?.planMetadata as {
+          planType: string;
+          coins: number;
+          bonus: number;
+          totalCoins: number;
+        } | undefined;
+
+        if (!planMetadata) {
+          console.error("Plan metadata not found for wallet credit transaction");
+          return;
+        }
+
+        const { WalletService } = await import("@/lib/wallet/wallet-service");
+        await WalletService.addCredits(
+          transaction.userId,
+          planMetadata.totalCoins, // Add base coins + bonus
+          transaction.id, // Link to payment transaction
+          `Purchased ${planMetadata.totalCoins} credits (${planMetadata.coins} + ${planMetadata.bonus} bonus) via ${planMetadata.planType} plan`,
+          {
+            planType: planMetadata.planType,
+            baseCoins: planMetadata.coins,
+            bonusCoins: planMetadata.bonus,
+            paymentTransactionId: transaction.id,
+          }
+        );
         break;
       }
     }

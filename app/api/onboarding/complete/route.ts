@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     // Validate all required fields
     if (
       !formData.country ||
+      !formData.currency ||
       !formData.creatorType ||
       !formData.contentType ||
       !formData.username ||
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
         username: formData.username.toLowerCase(),
         displayName: formData.displayName,
         country: formData.country,
+        currency: formData.currency,
         creatorType: formData.creatorType,
         contentType: formData.contentType,
         gender: formData.gender,
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
         onboarded: true,
         usernameLocked: true,
         subdomain: subdomain,
-        onboardingStep: 8,
+        onboardingStep: 9,
         onboardingData: formData as unknown as Record<string, unknown>,
         updatedAt: new Date(),
       })

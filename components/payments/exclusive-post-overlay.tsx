@@ -5,10 +5,13 @@ import { usePathname } from "next/navigation"
 import { Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PaymentModal } from "./payment-modal"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface ExclusivePostOverlayProps {
   postId: string
-  price: number
+  price: number // Price in display format (e.g., 500 for $500)
+  currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
   caption?: string | null
   onPurchaseComplete?: () => void
 }
@@ -16,11 +19,15 @@ interface ExclusivePostOverlayProps {
 export function ExclusivePostOverlay({
   postId,
   price,
+  currency = "INR",
   caption,
   onPurchaseComplete,
 }: ExclusivePostOverlayProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const pathname = usePathname()
+
+  const currentOriginUrl =
+    typeof window !== "undefined" ? window.location.href : pathname || "/"
 
   return (
     <>
@@ -32,7 +39,13 @@ export function ExclusivePostOverlay({
             {caption && (
               <p className="text-sm text-white/80 mb-4 line-clamp-2">{caption}</p>
             )}
-            <p className="text-2xl font-bold mb-4">₹{price}</p>
+            <p className="text-2xl font-bold mb-4">
+              <PriceDisplay
+                amount={toSubunits(price, currency)}
+                originalCurrency={currency}
+                className="text-2xl font-bold"
+              />
+            </p>
             <Button
               size="lg"
               onClick={() => setShowPaymentModal(true)}
@@ -52,7 +65,7 @@ export function ExclusivePostOverlay({
         amount={price}
         title="Purchase Exclusive Post"
         description="Unlock this exclusive content by purchasing it"
-        originUrl={pathname || undefined}
+        originUrl={currentOriginUrl}
         onSuccess={() => {
           setShowPaymentModal(false)
           onPurchaseComplete?.()

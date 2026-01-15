@@ -11,13 +11,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface PaymentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   type: "membership" | "exclusive_post" | "service" | "live_stream"
   entityId: string
-  amount: number // Amount in rupees
+  amount: number // Amount in display format
+  currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
   title: string
   description?: string
   duration?: number // Duration in months (for membership subscriptions)
@@ -31,6 +34,7 @@ export function PaymentModal({
   type,
   entityId,
   amount,
+  currency = "INR",
   title,
   description,
   duration,
@@ -89,7 +93,12 @@ export function PaymentModal({
         <div className="space-y-4 mt-4">
           <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <span className="text-sm font-medium">Total Amount</span>
-            <span className="text-2xl font-bold">₹{amount.toLocaleString("en-IN")}</span>
+            <span className="text-2xl font-bold">
+              <PriceDisplay
+                amount={toSubunits(amount, currency || "INR")}
+                originalCurrency={currency || "INR"}
+              />
+            </span>
           </div>
           {duration && duration > 1 && (
             <div className="text-sm text-muted-foreground text-center">

@@ -6,6 +6,7 @@ import { liveStream } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateAccessToken } from "@/lib/livekit/token";
 import { env } from "@/env";
+import { publishLiveStreamEvent } from "@/lib/utils/redis-pubsub";
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,6 +97,16 @@ export async function POST(request: NextRequest) {
       canPublish: true,
       canSubscribe: true,
       canPublishData: true,
+    });
+
+    // Publish stream started event
+    await publishLiveStreamEvent(session.user.id, {
+      type: "stream_started",
+      creatorId: session.user.id,
+      streamId: newStream.id,
+      streamType: newStream.streamType,
+      price: newStream.price ? newStream.price / 100 : null,
+      timestamp: Date.now(),
     });
 
     return NextResponse.json({

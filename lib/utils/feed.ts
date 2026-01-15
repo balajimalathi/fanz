@@ -44,13 +44,13 @@ export function formatPostDate(date: string | Date): string {
  * This is a client-side helper - actual access control is done server-side
  */
 export function shouldShowPost(
-  postType: "subscription" | "exclusive",
+  postType: "subscription" | "exclusive" | "free",
   hasAccess: boolean
 ): boolean {
   if (postType === "subscription") {
     return hasAccess
   }
-  // Exclusive posts are always shown (with blurred preview if not purchased)
+  // Free and exclusive posts are always shown (with blurred preview if not purchased/not logged in)
   return true
 }
 

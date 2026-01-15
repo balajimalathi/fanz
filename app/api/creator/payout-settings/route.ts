@@ -5,6 +5,19 @@ import { db } from "@/lib/db/client"
 import { creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 
+import { payoutSettingsSchema } from "@/lib/validations/creator"
+
+// GET - Fetch payout settings
+/**
+ * @summary Get payout settings
+ * @description Retrieves the payout settings for the authenticated creator.
+ * @tags Creator, Payments
+ * @security BearerAuth
+ * @returns {object} 200 - Payout settings
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 404 - Creator not found
+ * @returns {object} 500 - Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -38,6 +51,21 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST - Update payout settings
+/**
+ * @summary Update payout settings
+ * @description Updates the payout settings for the authenticated creator.
+ * @tags Creator, Payments
+ * @security BearerAuth
+ * @param {object} request.body.required - Payout settings
+ * @property {number} [minimumThreshold] - Minimum payout threshold in rupees
+ * @property {boolean} [automaticPayout] - Enable automatic payouts
+ * @returns {object} 200 - Success with updated settings
+ * @returns {object} 400 - Validation failed
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 404 - Creator not found
+ * @returns {object} 500 - Internal server error
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -49,21 +77,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { minimumThreshold, automaticPayout } = body
 
-    if (minimumThreshold !== undefined && (typeof minimumThreshold !== "number" || minimumThreshold < 0)) {
+    // Validate input with Zod
+    const validationResult = payoutSettingsSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Invalid minimum threshold" },
+        {
+          error: "Validation failed",
+          details: validationResult.error.errors,
+        },
         { status: 400 }
       )
     }
 
-    if (automaticPayout !== undefined && typeof automaticPayout !== "boolean") {
-      return NextResponse.json(
-        { error: "Invalid automatic payout value" },
-        { status: 400 }
-      )
-    }
+    const { minimumThreshold, automaticPayout } = validationResult.data
 
     const creatorRecord = await db.query.creator.findFirst({
       where: (c, { eq: eqOp }) => eqOp(c.id, session.user.id),

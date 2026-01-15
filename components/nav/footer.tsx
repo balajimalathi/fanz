@@ -1,8 +1,4 @@
-import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { FloatingNav } from "@/components/nav/floating-nav";
-import { Button } from "@/components/ui/button";
-
-import { mainMenu, contentMenu } from "@/menu.config";
+import { mainMenu } from "@/menu.config";
 import Logo from "@/public/logo.svg";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,7 +14,7 @@ const Footer = () => {
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src={Logo}
-                alt="Falustic"
+                alt="Exclusivz"
                 className="dark:invert"
                 width={32}
                 height={20}
@@ -26,38 +22,32 @@ const Footer = () => {
               <span className="font-semibold">{siteConfig.site_name}</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Extract structured data from AI Assistant and push to your favorite databases in one click.
+              A creator-first platform for creators and global audiences. Monetize your content with subscriptions, tips, and exclusive content sharing.
             </p>
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <h3 className="font-medium text-base mb-2">Product</h3>
-            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="#features">
-              Features
-            </Link>
-            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="#use-cases">
-              Use Cases
-            </Link>
-            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="#pricing">
-              Pricing
-            </Link>
-            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="#faq">
-              FAQ
-            </Link>
-          </div>
-          <div className="flex flex-col gap-2 text-sm">
-            <h3 className="font-medium text-base mb-2">Resources</h3>
-            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="/posts">
-              Blog
-            </Link>
-            {Object.entries(contentMenu).map(([key, href]) => (
+            {Object.entries(mainMenu).map(([key, href]) => (
               <Link
-                className="text-muted-foreground hover:text-foreground transition-colors"
                 key={href}
+                className="text-muted-foreground hover:text-foreground transition-colors capitalize"
                 href={href}
               >
-                {key.charAt(0).toUpperCase() + key.slice(1)}
+                {key}
               </Link>
             ))}
+          </div>
+          <div className="flex flex-col gap-2 text-sm">
+            <h3 className="font-medium text-base mb-2">Creators</h3>
+            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="/signup">
+              Start Creating
+            </Link>
+            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="/login">
+              Creator Login
+            </Link>
+            <Link className="text-muted-foreground hover:text-foreground transition-colors" href="/#how-it-works">
+              How It Works
+            </Link>
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <h3 className="font-medium text-base mb-2">Legal</h3>
@@ -74,11 +64,11 @@ const Footer = () => {
         </Container>
         <Container className="border-t not-prose flex flex-col md:flex-row md:gap-2 gap-6 justify-between md:items-center pt-8">
           <p className="text-sm text-muted-foreground">
-            © 2025 Falustic. All rights reserved.
+            © {new Date().getFullYear()} {siteConfig.site_name}. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <a
-              href="https://twitter.com/aidataextractor"
+              href="https://twitter.com/exclusivz"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -86,12 +76,12 @@ const Footer = () => {
               Twitter
             </a>
             <a
-              href="https://discord.gg/aidataextractor"
+              href="https://instagram.com/exclusivz"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              Discord
+              Instagram
             </a>
           </div>
         </Container>

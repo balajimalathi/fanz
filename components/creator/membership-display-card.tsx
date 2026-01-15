@@ -10,12 +10,15 @@ import { cn } from "@/lib/utils"
 import { useSession } from "@/lib/auth/auth-client"
 import { MembershipSelectionModal } from "@/components/payments/membership-selection-modal"
 import { CheckCircle2 } from "lucide-react"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface MembershipDisplayCardProps {
   id: string
   title: string
   description: string
-  monthlyRecurringFee: number
+  monthlyRecurringFee: number // Price in display format
+  currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
   coverImageUrl: string | null
   creatorId: string
 }
@@ -25,6 +28,7 @@ export function MembershipDisplayCard({
   title,
   description,
   monthlyRecurringFee,
+  currency = "INR",
   coverImageUrl,
   creatorId,
 }: MembershipDisplayCardProps) {
@@ -110,7 +114,11 @@ export function MembershipDisplayCard({
             </div>
             <div className="pt-2 border-t">
               <p className="text-primary font-semibold text-lg">
-                Rs. {monthlyRecurringFee.toLocaleString("en-IN")}/month
+                <PriceDisplay
+                  amount={toSubunits(monthlyRecurringFee, currency)}
+                  originalCurrency={currency}
+                />
+                <span className="text-sm font-normal text-muted-foreground">/month</span>
               </p>
             </div>
           </div>
@@ -159,6 +167,7 @@ export function MembershipDisplayCard({
             title,
             description,
             monthlyRecurringFee,
+            currency,
             coverImageUrl,
           },
         ]}

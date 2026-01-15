@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://fancopy.com
+Host: https://exclusivz.com
 
 # Sitemaps
-Sitemap: https://fancopy.com/sitemap.xml
+Sitemap: https://exclusivz.com/sitemap.xml

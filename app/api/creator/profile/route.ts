@@ -5,8 +5,20 @@ import { db } from "@/lib/db/client"
 import { creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { validateUsernameFormat, isReservedSubdomain } from "@/lib/onboarding/validation-client"
+import { updateCreatorProfileSchema } from "@/lib/validations/creator"
 
 // GET - Fetch creator profile data
+/**
+ * @summary Fetch creator profile
+ * @description Retrieves the profile information for the authenticated creator.
+ * @tags Creator
+ * @security BearerAuth
+ * @returns {object} 200 - Creator profile data
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 404 - Creator not found
+ * @returns {object} 500 - Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -56,6 +68,22 @@ export async function GET(request: NextRequest) {
 }
 
 // PATCH - Update creator profile
+/**
+ * @summary Update creator profile
+ * @description Updates the profile information for the authenticated creator.
+ * @tags Creator
+ * @security BearerAuth
+ * @param {object} request.body.required - The profile update data
+ * @property {string} [username] - The new username (must be unique and valid format)
+ * @property {string} [displayName] - The new display name
+ * @property {string} [bio] - The new bio
+ * @returns {object} 200 - Updated creator profile data
+ * @returns {object} 400 - Validation failed or username unavailable
+ * @returns {object} 401 - Unauthorized
+ * @returns {object} 403 - Forbidden
+ * @returns {object} 404 - Creator not found
+ * @returns {object} 500 - Internal server error
+ */
 export async function PATCH(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -78,11 +106,20 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { username, displayName, bio } = body as {
-      username?: string
-      displayName?: string
-      bio?: string
+
+    // Validate input with Zod
+    const validationResult = updateCreatorProfileSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: validationResult.error.errors,
+        },
+        { status: 400 }
+      )
     }
+
+    const { username, displayName, bio } = validationResult.data
 
     // Fetch current creator record
     const creatorRecord = await db.query.creator.findFirst({
@@ -105,73 +142,39 @@ export async function PATCH(request: NextRequest) {
       updatedAt: new Date(),
     }
 
-    // Validate and update displayName
-    if (displayName !== undefined) {
-      if (!displayName || displayName.trim().length === 0) {
-        return NextResponse.json(
-          { error: "Display name is required" },
-          { status: 400 }
-        )
-      }
-      if (displayName.length > 100) {
-        return NextResponse.json(
-          { error: "Display name must be less than 100 characters" },
-          { status: 400 }
-        )
-      }
-      updateData.displayName = displayName.trim()
+    if (displayName) {
+      updateData.displayName = displayName
     }
 
-    // Validate and update bio
     if (bio !== undefined) {
-      if (bio.length > 500) {
-        return NextResponse.json(
-          { error: "Bio must be less than 500 characters" },
-          { status: 400 }
-        )
-      }
-      updateData.bio = bio.trim() || null
+      updateData.bio = bio || null
     }
 
-    // Validate and update username (only if not locked)
-    if (username !== undefined) {
-      if (creatorRecord.usernameLocked) {
-        return NextResponse.json(
-          { error: "Username is locked and cannot be changed" },
-          { status: 400 }
-        )
+    // Validate and update username (only if provided and not locked)
+    if (username) {
+      // If username hasn't changed, ignore
+      if (username.toLowerCase() !== creatorRecord.username?.toLowerCase()) {
+        if (creatorRecord.usernameLocked) {
+          return NextResponse.json(
+            { error: "Username is locked and cannot be changed" },
+            { status: 400 }
+          )
+        }
+
+        // Uniqueness check (case-insensitive)
+        const existingCreator = await db.query.creator.findFirst({
+          where: (c, { eq: eqOp }) => eqOp(c.username, username.toLowerCase()),
+        })
+
+        if (existingCreator && existingCreator.id !== session.user.id) {
+          return NextResponse.json(
+            { error: "This username is already taken" },
+            { status: 400 }
+          )
+        }
+
+        updateData.username = username.toLowerCase()
       }
-
-      // Format validation
-      const formatCheck = validateUsernameFormat(username)
-      if (!formatCheck.valid) {
-        return NextResponse.json(
-          { error: formatCheck.error },
-          { status: 400 }
-        )
-      }
-
-      // Reserved subdomain check
-      if (isReservedSubdomain(username)) {
-        return NextResponse.json(
-          { error: "This username is reserved and cannot be used" },
-          { status: 400 }
-        )
-      }
-
-      // Uniqueness check (case-insensitive)
-      const existingCreator = await db.query.creator.findFirst({
-        where: (c, { eq: eqOp }) => eqOp(c.username, username.toLowerCase()),
-      })
-
-      if (existingCreator && existingCreator.id !== session.user.id) {
-        return NextResponse.json(
-          { error: "This username is already taken" },
-          { status: 400 }
-        )
-      }
-
-      updateData.username = username.toLowerCase()
     }
 
     // Update creator record

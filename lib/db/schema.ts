@@ -1,5 +1,6 @@
 import {
   boolean,
+  decimal,
   integer,
   jsonb,
   pgEnum,
@@ -68,10 +69,10 @@ export const verification = pgTable("verification", {
 
 export const creatorTypeEnum = pgEnum("creator_type", ["ai", "human"]);
 export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
-export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive"]);
+export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive", "free"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
-export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream"]);
+export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "service"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
 export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
@@ -99,6 +100,7 @@ export const creator = pgTable("creator", {
   profileImageUrl: text("profile_image_url"),
   profileCoverUrl: text("profile_cover_url"),
   bio: text("bio"),
+  currency: varchar("currency", { length: 3 }).default("USD"), // ISO 4217 currency code - creator's currency for pricing and payouts
   bankAccountDetails: jsonb("bank_account_details").$type<{
     pan?: string;
     accountNumber?: string;
@@ -224,6 +226,7 @@ export const subscriptions = pgTable("subscriptions", {
     .notNull()
     .references(() => customers.id, { onDelete: "cascade" }),
   planId: varchar("plan_id", { length: 255 }).notNull(), // membershipId as string
+  price: integer("price"), // Stored in smallest currency unit (subunits), nullable for backward compatibility
   status: varchar("status", { length: 50 }).notNull().default("active"),
   currentPeriodStart: timestamp("current_period_start"),
   currentPeriodEnd: timestamp("current_period_end"),
@@ -320,9 +323,14 @@ export const paymentTransaction = pgTable("payment_transaction", {
     .references(() => creator.id, { onDelete: "cascade" }),
   type: paymentTransactionTypeEnum("type").notNull(),
   entityId: uuid("entity_id").notNull(), // membershipId, postId, or serviceId
-  amount: integer("amount").notNull(), // Stored in paise
-  platformFee: integer("platform_fee").notNull(), // 10% in paise
-  creatorAmount: integer("creator_amount").notNull(), // 90% in paise
+  amount: integer("amount").notNull(), // Stored in smallest currency unit of originalCurrency
+  originalCurrency: varchar("original_currency", { length: 3 }).default("INR"), // Fan's payment currency (ISO 4217)
+  baseCurrency: varchar("base_currency", { length: 3 }).default("USD"), // Platform base currency (ISO 4217)
+  convertedAmount: integer("converted_amount"), // Amount in base currency subunits
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }), // Rate used for conversion
+  processorFee: integer("processor_fee"), // Gateway forex fee if applicable
+  platformFee: integer("platform_fee").notNull(), // 10% in base currency subunits
+  creatorAmount: integer("creator_amount").notNull(), // 90% in base currency subunits
   status: paymentTransactionStatusEnum("status").notNull().default("pending"),
   gatewayTransactionId: text("gateway_transaction_id"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
@@ -377,9 +385,14 @@ export const payout = pgTable("payout", {
     .references(() => creator.id, { onDelete: "cascade" }),
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
-  totalAmount: integer("total_amount").notNull(), // Sum of all transactions in paise
-  platformFee: integer("platform_fee").notNull(), // Total platform fee in paise
-  netAmount: integer("net_amount").notNull(), // Amount to be paid to creator in paise
+  totalAmount: integer("total_amount").notNull(), // Sum of all transactions in base currency subunits
+  platformFee: integer("platform_fee").notNull(), // Total platform fee in base currency subunits
+  netAmount: integer("net_amount").notNull(), // Amount to be paid to creator in base currency subunits
+  payoutCurrency: varchar("payout_currency", { length: 3 }).default("USD"), // Creator's preferred payout currency (ISO 4217)
+  convertedFromAmount: integer("converted_from_amount"), // Amount in base currency before conversion
+  convertedAmount: integer("converted_amount"), // Amount in payout currency subunits
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }), // Rate used for payout conversion
+  payoutFee: integer("payout_fee"), // Conversion/transfer fee
   status: payoutStatusEnum("status").notNull().default("pending"),
   processedAt: timestamp("processed_at"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
@@ -480,3 +493,101 @@ export const liveStreamPurchase = pgTable("live_stream_purchase", {
 }, (table) => ({
   uniqueUserStream: { unique: { columns: [table.userId, table.liveStreamId] } },
 }));
+
+export const exchangeRates = pgTable("exchange_rates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fromCurrency: varchar("from_currency", { length: 3 }).notNull(),
+  toCurrency: varchar("to_currency", { length: 3 }).notNull(),
+  rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
+  source: text("source").notNull(), // 'processor' or 'api'
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+}, (table) => ({
+  currencyPairIndex: { unique: { columns: [table.fromCurrency, table.toCurrency, table.fetchedAt] } },
+}));
+
+export const userCurrencyPreference = pgTable("user_currency_preference", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  currency: varchar("currency", { length: 3 }).notNull(), // ISO 4217 currency code
+  detectedFrom: text("detected_from").notNull(), // 'ip', 'browser', or 'manual'
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const reportStatusEnum = pgEnum("report_status", ["pending", "reviewing", "resolved", "dismissed"]);
+export const reportTypeEnum = pgEnum("report_type", ["user", "creator", "post", "comment", "message", "other"]);
+
+export const report = pgTable("report", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  reporterId: text("reporter_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  reportedUserId: text("reported_user_id")
+    .references(() => user.id, { onDelete: "set null" }),
+  reportedCreatorId: text("reported_creator_id")
+    .references(() => creator.id, { onDelete: "set null" }),
+  reportedPostId: uuid("reported_post_id")
+    .references(() => post.id, { onDelete: "set null" }),
+  reportType: reportTypeEnum("report_type").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: reportStatusEnum("status").notNull().default("pending"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: text("resolved_by")
+    .references(() => user.id, { onDelete: "set null" }),
+  resolution: text("resolution"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const disputeStatusEnum = pgEnum("dispute_status", ["open", "investigating", "resolved", "closed"]);
+export const disputeTypeEnum = pgEnum("dispute_type", ["transaction", "payout", "refund", "service", "other"]);
+export const fanWalletTransactionTypeEnum = pgEnum("fan_wallet_transaction_type", ["purchase", "usage", "refund"]);
+
+export const dispute = pgTable("dispute", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  transactionId: uuid("transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  payoutId: uuid("payout_id")
+    .references(() => payout.id, { onDelete: "set null" }),
+  creatorId: text("creator_id")
+    .references(() => creator.id, { onDelete: "set null" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  disputeType: disputeTypeEnum("dispute_type").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: disputeStatusEnum("status").notNull().default("open"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: text("resolved_by")
+    .references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const fanWallet = pgTable("fan_wallet", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" })
+    .unique(),
+  balance: integer("balance").notNull().default(0), // Current credit balance in coins
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const fanWalletTransaction = pgTable("fan_wallet_transaction", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  type: fanWalletTransactionTypeEnum("type").notNull(),
+  amount: integer("amount").notNull(), // Positive for purchase/refund, negative for usage
+  description: text("description"),
+  paymentTransactionId: uuid("payment_transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

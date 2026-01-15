@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: desifans-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - logging-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: desifans-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - logging-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: desifans-promtail
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml:ro
+      # For Windows local dev with Next.js running outside Docker:
+      # Mount the local logs directory using absolute Windows path
+      # Note: On Windows, use /c/Users/... format for Git Bash or \\wsl$\ for WSL
+      - F:/skndan/saas/goa/desifans/logs:/var/log/app:ro
+      # Alternative: Use relative path (may not work on all Windows setups)
+      # - ../logs:/var/log/app:ro
+      # For production with Next.js in Docker, use named volume instead:
+      # - app-logs:/var/log/app:ro
+      # For Ubuntu server with host directory:
+      # - /var/log/app:/var/log/app:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - logging-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:9080/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  loki-data:
+    driver: local
+  grafana-data:
+    driver: local
+  app-logs:
+    driver: local
+    name: docker_app-logs  # Named volume so it can be shared
+
+networks:
+  logging-network:
+    driver: bridge
+    name: docker_logging-network  # Named network so it can be shared

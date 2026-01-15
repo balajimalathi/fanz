@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { creator, user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { checkBannedUser } from "@/lib/utils/check-banned-user";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { RevenueSection } from "@/components/dashboard/revenue-section";
 import { SubscribersSection } from "@/components/dashboard/subscribers-section";
@@ -22,6 +23,7 @@ import {
   getEngagementMetrics,
   getRecentActivity,
 } from "@/lib/dashboard/engagement-data";
+import { Separator } from "@/components/ui/separator";
 
 export default async function HomePage() {
   const session = await auth.api.getSession({
@@ -32,9 +34,18 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  // Check if user has creator role, if not set it
-  if (session.user.role !== "creator") {
-    // Update user role to creator
+  // Check if user is banned (redirects to /suspended if banned)
+  await checkBannedUser()
+
+  // Redirect admins to admin dashboard
+  if (session.user.role === "admin") {
+    redirect("/admin");
+  }
+
+  // Check if user has creator role, if not set it (but don't override admin role)
+  if (!session.user.role || session.user.role !== "creator") {
+    // Update user role to creator only if they don't have a role or have a different non-admin role
+    // This will never run for admins since they're redirected above
     await db
       .update(user)
       .set({ role: "creator" })
@@ -92,6 +103,9 @@ export default async function HomePage() {
           Welcome back! Here's an overview of your creator account.
         </p>
       </div>
+      
+      {/* Quick Actions */}
+      <QuickActions />
 
       {/* Stats Overview */}
       <StatsOverview
@@ -103,9 +117,6 @@ export default async function HomePage() {
         unreadMessages={engagementMetrics.unreadMessages}
         pendingServiceOrders={engagementMetrics.pendingServiceOrders}
       />
-
-      {/* Quick Actions */}
-      <QuickActions />
 
       {/* Revenue Section */}
       <RevenueSection

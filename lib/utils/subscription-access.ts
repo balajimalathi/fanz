@@ -22,6 +22,11 @@ export async function hasAccessToPost(
       return false
     }
 
+    // For free posts, all logged-in users have access
+    if (postRecord.postType === "free") {
+      return true // User is logged in (userId is provided)
+    }
+
     // For exclusive posts, check if user has purchased it
     if (postRecord.postType === "exclusive") {
       const purchase = await db.query.postPurchase.findFirst({

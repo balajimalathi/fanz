@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency";
+import { getCurrencySymbol } from "@/lib/currency/currency-utils";
 
 interface StartLiveModalProps {
   open: boolean;
@@ -21,10 +23,14 @@ interface StartLiveModalProps {
 
 export function StartLiveModal({ open, onOpenChange }: StartLiveModalProps) {
   const router = useRouter();
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency();
   const [streamType, setStreamType] = useState<"free" | "follower_only" | "paid">("free");
   const [price, setPrice] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const currency = currencyLoading ? "USD" : creatorCurrency;
+  const currencySymbol = getCurrencySymbol(currency);
 
   const handleStart = async () => {
     setIsLoading(true);
@@ -145,7 +151,7 @@ export function StartLiveModal({ open, onOpenChange }: StartLiveModalProps) {
           {/* Price Input (only for paid) */}
           {streamType === "paid" && (
             <div className="space-y-2">
-              <Label htmlFor="price">Price (₹)</Label>
+              <Label htmlFor="price">Price ({currencySymbol})</Label>
               <Input
                 id="price"
                 type="number"

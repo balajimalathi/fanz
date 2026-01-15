@@ -14,6 +14,8 @@ import { LiveKitRoom } from "@livekit/components-react";
 import { LiveStreamView } from "./live-stream-view";
 import { PaymentModal } from "@/components/payments/payment-modal";
 import { env } from "@/env";
+import { PriceDisplay } from "@/components/currency/price-display";
+import { toSubunits } from "@/lib/currency/currency-utils";
 
 interface LiveViewerModalProps {
   open: boolean;
@@ -22,6 +24,7 @@ interface LiveViewerModalProps {
   creatorId: string;
   streamType: "free" | "follower_only" | "paid";
   price?: number | null;
+  currency?: string; // ISO 4217 currency code (defaults to INR for backward compatibility)
 }
 
 export function LiveViewerModal({
@@ -31,6 +34,7 @@ export function LiveViewerModal({
   creatorId,
   streamType,
   price,
+  currency = "INR",
 }: LiveViewerModalProps) {
   const [token, setToken] = useState<string | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
@@ -133,7 +137,9 @@ export function LiveViewerModal({
                     ? "Free stream"
                     : streamType === "follower_only"
                       ? "Follower-only stream"
-                      : `Paid stream - ₹${price?.toLocaleString("en-IN")}`}
+                      : price ? (
+                        <>Paid stream - <PriceDisplay amount={toSubunits(price, currency)} originalCurrency={currency} /></>
+                      ) : "Paid stream"}
                 </DialogDescription>
               </div>
               <Button variant="ghost" size="icon" onClick={handleClose}>
@@ -165,7 +171,14 @@ export function LiveViewerModal({
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center text-white p-8">
                   <p className="mb-4 text-lg">
-                    This is a paid stream. Pay ₹{price?.toLocaleString("en-IN")} to join.
+                    This is a paid stream. Pay{" "}
+                    {price && (
+                      <PriceDisplay
+                        amount={toSubunits(price, currency)}
+                        originalCurrency={currency}
+                      />
+                    )}{" "}
+                    to join.
                   </p>
                   <Button
                     onClick={() => setShowPaymentModal(true)}
@@ -201,7 +214,8 @@ export function LiveViewerModal({
           entityId={streamId}
           amount={price}
           title="Join Live Stream"
-          description={`Pay ₹${price.toLocaleString("en-IN")} to access this live stream`}
+          currency={currency}
+          description={`Pay to access this live stream`}
           originUrl={typeof window !== "undefined" ? window.location.href : ""}
           onSuccess={handlePaymentSuccess}
         />

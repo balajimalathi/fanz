@@ -5,6 +5,26 @@ import { paymentTransaction } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { GatewayService } from "@/lib/payments/gateway/gateway-service";
 
+/**
+ * Builds a redirect URL preserving the original subdomain/origin.
+ * If originUrl is absolute (starts with http:// or https://), uses it directly.
+ * Otherwise, constructs the URL relative to the request origin.
+ */
+function buildRedirectUrl(originUrl: string, request: NextRequest): URL {
+  // If originUrl is absolute, use it directly to preserve subdomain
+  if (originUrl.startsWith('http://') || originUrl.startsWith('https://')) {
+    return new URL(originUrl);
+  }
+  // If relative, try to get origin from request headers
+  const origin = request.headers.get('origin') || request.headers.get('referer');
+  if (origin) {
+    const baseUrl = new URL(origin);
+    return new URL(originUrl, baseUrl.origin);
+  }
+  // Fallback to request.url
+  return new URL(originUrl, request.url);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -42,7 +62,7 @@ export async function GET(request: NextRequest) {
       
       // Redirect to originUrl with query params if available, otherwise default success page
       if (originUrl) {
-        const redirectUrl = new URL(originUrl, request.url);
+        const redirectUrl = buildRedirectUrl(originUrl, request);
         redirectUrl.searchParams.set("status", "success");
         if (transaction.type === "membership") {
           redirectUrl.searchParams.set("membershipId", transaction.entityId);
@@ -52,11 +72,18 @@ export async function GET(request: NextRequest) {
         } else if (transaction.type === "service") {
           redirectUrl.searchParams.set("serviceId", transaction.entityId);
           redirectUrl.searchParams.set("transactionId", transaction.id);
-        } else if (transaction.type === "exclusive_post") {
-          redirectUrl.searchParams.set("postId", transaction.entityId);
-          redirectUrl.searchParams.set("transactionId", transaction.id);
-        }
-        return NextResponse.redirect(redirectUrl);
+            } else if (transaction.type === "exclusive_post") {
+              redirectUrl.searchParams.set("postId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (transaction.type === "wallet_credit") {
+              // Get plan type from metadata instead of entityId
+              const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+              if (planMetadata?.planType) {
+                redirectUrl.searchParams.set("planType", planMetadata.planType);
+              }
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            }
+            return NextResponse.redirect(redirectUrl);
       }
       return NextResponse.redirect(new URL("/payment-success", request.url));
     }
@@ -80,7 +107,7 @@ export async function GET(request: NextRequest) {
         if (paymentStatus === "completed") {
           // Redirect to originUrl with query params if available
           if (originUrl) {
-            const redirectUrl = new URL(originUrl, request.url);
+            const redirectUrl = buildRedirectUrl(originUrl, request);
             redirectUrl.searchParams.set("status", "success");
             if (transaction.type === "membership") {
               redirectUrl.searchParams.set("membershipId", transaction.entityId);
@@ -96,6 +123,13 @@ export async function GET(request: NextRequest) {
             } else if (transaction.type === "live_stream") {
               redirectUrl.searchParams.set("streamId", transaction.entityId);
               redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (transaction.type === "wallet_credit") {
+              // Get plan type from metadata instead of entityId
+              const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+              if (planMetadata?.planType) {
+                redirectUrl.searchParams.set("planType", planMetadata.planType);
+              }
+              redirectUrl.searchParams.set("transactionId", transaction.id);
             }
             return NextResponse.redirect(redirectUrl);
           }
@@ -103,7 +137,7 @@ export async function GET(request: NextRequest) {
         } else if (paymentStatus === "failed" || paymentStatus === "cancelled") {
           // Redirect to originUrl with error status if available
           if (originUrl) {
-            const redirectUrl = new URL(originUrl, request.url);
+            const redirectUrl = buildRedirectUrl(originUrl, request);
             redirectUrl.searchParams.set("status", "failed");
             return NextResponse.redirect(redirectUrl);
           }
@@ -125,7 +159,7 @@ export async function GET(request: NextRequest) {
         
         // Redirect to originUrl with query params if available
         if (originUrl) {
-          const redirectUrl = new URL(originUrl, request.url);
+          const redirectUrl = buildRedirectUrl(originUrl, request);
           redirectUrl.searchParams.set("status", "success");
           if (transaction.type === "membership") {
             redirectUrl.searchParams.set("membershipId", transaction.entityId);
@@ -138,6 +172,13 @@ export async function GET(request: NextRequest) {
           } else if (transaction.type === "exclusive_post") {
             redirectUrl.searchParams.set("postId", transaction.entityId);
             redirectUrl.searchParams.set("transactionId", transaction.id);
+          } else if (transaction.type === "wallet_credit") {
+            // Get plan type from metadata instead of entityId
+            const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+            if (planMetadata?.planType) {
+              redirectUrl.searchParams.set("planType", planMetadata.planType);
+            }
+            redirectUrl.searchParams.set("transactionId", transaction.id);
           }
           return NextResponse.redirect(redirectUrl);
         }
@@ -147,7 +188,7 @@ export async function GET(request: NextRequest) {
 
     // Redirect to originUrl with failed status if available
     if (originUrl) {
-      const redirectUrl = new URL(originUrl, request.url);
+      const redirectUrl = buildRedirectUrl(originUrl, request);
       redirectUrl.searchParams.set("status", "failed");
       return NextResponse.redirect(redirectUrl);
     }

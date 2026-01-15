@@ -28,12 +28,16 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
     setIsLoading(true)
     setError(null)
     try {
-      // Use current pathname as callback URL to return to creator page after login
-      const callbackURL = pathname || "/"
+      // Use full URL with subdomain to preserve the subdomain after login
+      // This ensures users are redirected back to the same subdomain URL
+      const callbackURL = typeof window !== "undefined" 
+        ? window.location.href 
+        : pathname || "/"
       await googleSignin(callbackURL)
       // Redirect will happen after OAuth callback
       onOpenChange(false)
     } catch (err) {
+      console.error(err)
       setError("Failed to login with Google")
       setIsLoading(false)
     }

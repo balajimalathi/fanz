@@ -45,6 +45,18 @@ export async function POST(
       );
     }
 
+    // Check if call is already ended - if so, just return success
+    if (callRecord.status === "ended") {
+      return NextResponse.json({
+        success: true,
+        call: {
+          id: callRecord.id,
+          status: "ended",
+          duration: callRecord.duration,
+        },
+      });
+    }
+
     // Check if call is in a valid state to be ended
     // Allow ending calls in initiated, ringing, or accepted status
     if (callRecord.status !== "accepted" && callRecord.status !== "ringing" && callRecord.status !== "initiated") {

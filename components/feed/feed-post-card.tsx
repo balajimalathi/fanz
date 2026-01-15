@@ -2,17 +2,27 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { Pin, Lock } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Lock, LogIn, Pin } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { PostMediaDisplay } from "@/components/post/post-media-display"
 import { LikeButton } from "@/components/feed/like-button"
 import { CommentsSection } from "@/components/feed/comments-section"
-import { formatPostDate } from "@/lib/utils/feed"
-import { cn } from "@/lib/utils"
 import { ExclusivePostOverlay } from "@/components/payments/exclusive-post-overlay"
+import { Button } from "@/components/ui/button"
+import { ReportContentDialog } from "@/components/report/report-content-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreVertical, Flag } from "lucide-react"
+import { toSubunits } from "@/lib/currency/currency-utils"
+import { formatPostDate } from "@/lib/utils/feed"
+import { PriceDisplay } from "../currency/price-display"
+import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar"
+import { Badge } from "../ui/badge"
 
 interface PostMedia {
   id: string
@@ -36,8 +46,9 @@ interface FeedPost {
   id: string
   creator: Creator | null
   caption: string | null
-  postType: "subscription" | "exclusive"
+  postType: "subscription" | "exclusive" | "free"
   price: number | null
+  priceCurrency?: string // ISO 4217 currency code
   isPinned: boolean
   media: PostMedia[]
   likeCount: number
@@ -61,6 +72,11 @@ export function FeedPostCard({
   onCommentCountChange,
 }: FeedPostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount)
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const pathname = usePathname()
+
+  // Don't show report button if user is reporting their own content
+  const canReport = currentUserId && currentUserId !== post.creator?.id
 
   const creatorLink = post.creator?.username
     ? `/u/${post.creator.username}`
@@ -70,7 +86,7 @@ export function FeedPostCard({
     <Card className="w-full">
       <CardContent className="p-0">
         {/* Header */}
-        {/* <div className="flex items-center gap-3 p-4 pb-2">
+        <div className="flex items-center gap-3 p-4 pb-2">
           <Link href={creatorLink}>
             <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
               <AvatarImage
@@ -103,11 +119,14 @@ export function FeedPostCard({
           </div>
           {post.postType === "exclusive" && post.price && (
             <Badge variant="outline">
-              ₹{post.price.toFixed(2)}
+              <PriceDisplay
+                amount={toSubunits(post.price, post.priceCurrency || "INR")}
+                originalCurrency={post.priceCurrency || "INR"}
+              />
             </Badge>
           )}
-        </div> */}
- 
+        </div>
+
         {/* Media */}
         <div className="w-full relative">
           {post.media.length > 0 ? (
@@ -122,6 +141,7 @@ export function FeedPostCard({
                 <ExclusivePostOverlay
                   postId={post.id}
                   price={post.price}
+                  currency={post.priceCurrency || "INR"}
                   caption={post.caption}
                   onPurchaseComplete={() => {
                     // Reload page to show unlocked content
@@ -134,6 +154,22 @@ export function FeedPostCard({
                   <div className="flex flex-col items-center gap-2 text-white">
                     <Lock className="h-8 w-8" />
                     <p className="text-sm font-medium">Membership Required</p>
+                  </div>
+                </div>
+              )}
+              {!post.hasAccess && post.postType === "free" && !currentUserId && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                  <div className="flex flex-col items-center gap-4 text-white px-4">
+                    <LogIn className="h-10 w-10" />
+                    <p className="text-base font-semibold">Sign in to view</p>
+                    <p className="text-sm text-white/80 text-center">
+                      This is free content available to all logged-in users
+                    </p>
+                    <Button asChild className="mt-2">
+                      <Link href={`/login?redirect=${encodeURIComponent(pathname || "/")}`}>
+                        Sign In
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -152,29 +188,55 @@ export function FeedPostCard({
         )}
         {/* Actions */}
         <div className="px-4 py-3 space-y-3 border-t">
-          <div className="flex gap-4">
-            <LikeButton
-              postId={post.id}
-              initialLiked={post.isLiked}
-              initialCount={post.likeCount}
-              disabled={!post.hasAccess}
-              onLikeChange={(liked, count) => {
-                onLikeChange?.(post.id, liked, count)
-              }}
-            />
-            <CommentsSection
-              postId={post.id}
-              initialCount={commentCount}
-              currentUserId={currentUserId}
-              disabled={!post.hasAccess}
-              onCountChange={(count) => {
-                setCommentCount(count)
-                onCommentCountChange?.(post.id, count)
-              }}
-            />
+          <div className="flex gap-4 items-center justify-between">
+            <div className="flex gap-4">
+              <LikeButton
+                postId={post.id}
+                initialLiked={post.isLiked}
+                initialCount={post.likeCount}
+                disabled={!post.hasAccess}
+                onLikeChange={(liked, count) => {
+                  onLikeChange?.(post.id, liked, count)
+                }}
+              />
+              <CommentsSection
+                postId={post.id}
+                initialCount={commentCount}
+                currentUserId={currentUserId}
+                disabled={!post.hasAccess}
+                onCountChange={(count) => {
+                  setCommentCount(count)
+                  onCommentCountChange?.(post.id, count)
+                }}
+              />
+            </div>
+            {canReport && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">More options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowReportDialog(true)}>
+                    <Flag className="mr-2 h-4 w-4" />
+                    Report
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </CardContent>
+      {canReport && (
+        <ReportContentDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          postId={post.id}
+          creatorId={post.creator?.id}
+        />
+      )}
     </Card>
   )
 }

@@ -23,6 +23,7 @@ import { ImageUpload } from "@/components/post/image-upload"
 import { VideoUpload } from "@/components/post/video-upload"
 import { FollowerSelector } from "@/components/post/follower-selector"
 import { cn } from "@/lib/utils"
+import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 
 interface Membership {
   id: string
@@ -48,7 +49,7 @@ interface VideoFile {
 export default function CreatePostPage() {
   const router = useRouter()
   const [caption, setCaption] = useState("")
-  const [postType, setPostType] = useState<"subscription" | "exclusive">("subscription")
+  const [postType, setPostType] = useState<"subscription" | "exclusive" | "free">("subscription")
   const [selectedMemberships, setSelectedMemberships] = useState<Set<string>>(new Set())
   const [price, setPrice] = useState("")
   const [images, setImages] = useState<ImageFile[]>([])
@@ -62,10 +63,12 @@ export default function CreatePostPage() {
   const [linkCopied, setLinkCopied] = useState(false)
   const [followerSelectorOpen, setFollowerSelectorOpen] = useState(false)
   const [creatorId, setCreatorId] = useState<string | null>(null)
+  const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
 
   useEffect(() => {
     fetchMemberships()
     fetchCreatorId()
+    fetchCreatorCurrency()
   }, [])
 
   const fetchMemberships = async () => {
@@ -95,6 +98,18 @@ export default function CreatePostPage() {
     }
   }
 
+  const fetchCreatorCurrency = async () => {
+    try {
+      const response = await fetch("/api/creator/currency")
+      if (response.ok) {
+        const data = await response.json()
+        setCreatorCurrency(data.currency || "USD")
+      }
+    } catch (error) {
+      console.error("Error fetching creator currency:", error)
+    }
+  }
+
   const toggleMembership = (membershipId: string) => {
     const newSelected = new Set(selectedMemberships)
     if (newSelected.has(membershipId)) {
@@ -116,6 +131,8 @@ export default function CreatePostPage() {
       return
     }
 
+    // Free posts don't require validation for price or memberships
+
     setIsPublishing(true)
 
     try {
@@ -127,9 +144,10 @@ export default function CreatePostPage() {
 
       if (postType === "subscription") {
         postData.membershipIds = Array.from(selectedMemberships)
-      } else {
+      } else if (postType === "exclusive") {
         postData.price = parseFloat(price)
       }
+      // Free posts don't need price or membershipIds
 
       const postResponse = await fetch("/api/posts", {
         method: "POST",
@@ -361,7 +379,7 @@ export default function CreatePostPage() {
             <Label className="mb-3 block">Post Type</Label>
             <RadioGroup
               value={postType}
-              onValueChange={(value) => setPostType(value as "subscription" | "exclusive")}
+              onValueChange={(value) => setPostType(value as "subscription" | "exclusive" | "free")}
               disabled={isPublishing || !!publishedPostId}
             >
               <div className="flex items-center space-x-2">
@@ -374,6 +392,12 @@ export default function CreatePostPage() {
                 <RadioGroupItem value="exclusive" id="exclusive" />
                 <Label htmlFor="exclusive" className="cursor-pointer">
                   Exclusive (one-time payment)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="free" id="free" />
+                <Label htmlFor="free" className="cursor-pointer">
+                  Free (visible to all logged-in users)
                 </Label>
               </div>
             </RadioGroup>
@@ -408,7 +432,12 @@ export default function CreatePostPage() {
                           <div>
                             <p className="font-medium">{membership.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              Rs. {membership.monthlyRecurringFee}/month
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: creatorCurrency,
+                                minimumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                                maximumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
+                              }).format(membership.monthlyRecurringFee)}/month
                             </p>
                           </div>
                           {isSelected && (
@@ -430,7 +459,7 @@ export default function CreatePostPage() {
 
           {postType === "exclusive" && (
             <div>
-              <Label htmlFor="price">Price (Rs.)</Label>
+              <Label htmlFor="price">Price ({getCurrencySymbol(creatorCurrency)})</Label>
               <Input
                 id="price"
                 type="number"
@@ -443,7 +472,7 @@ export default function CreatePostPage() {
                 disabled={isPublishing || !!publishedPostId}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Price in Indian Rupees
+                Price in {creatorCurrency}
               </p>
             </div>
           )}

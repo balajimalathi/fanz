@@ -1,6 +1,6 @@
 {
-  "name": "DesiFans",
-  "short_name": "DesiFans",
+  "name": "Creator's Club",
+  "short_name": "Creator's Club",
   "description": "Follow your favorite creators and get notified about new content",
   "start_url": "/",
   "display": "standalone",

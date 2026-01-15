@@ -5,6 +5,7 @@ export type GenderOption = "male" | "female" | "non-binary" | "prefer-not-to-say
 
 export interface OnboardingStepData {
   country?: string;
+  currency?: string;
   creatorType?: CreatorType;
   contentType?: ContentType;
   username?: string;
@@ -17,6 +18,7 @@ export interface OnboardingStepData {
 export interface OnboardingFormData extends OnboardingStepData {
   // All fields required for completion
   country: string;
+  currency: string; // ISO 4217 currency code - required for pricing
   creatorType: CreatorType;
   contentType: ContentType;
   username: string;

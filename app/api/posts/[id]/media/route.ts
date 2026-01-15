@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
-import { post, postMedia } from "@/lib/db/schema"
+import { post, postMedia, creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { uploadToR2 } from "@/lib/storage/r2"
 import { generateThumbnail, generateBlurThumbnail } from "@/lib/utils/image-processing-server"
+import { addImageWatermark, getSubdomainUrl } from "@/lib/utils/watermark"
 
 // POST - Upload media files for a post
 export async function POST(
@@ -87,13 +88,29 @@ export async function POST(
     })
     let orderIndex = existingMedia.length
 
+    // Get creator subdomain for watermarking
+    const creatorRecord = await db.query.creator.findFirst({
+      where: (c, { eq: eqOp }) => eqOp(c.id, session.user.id),
+    })
+    const subdomainUrl = getSubdomainUrl(creatorRecord?.subdomain || null)
+
     const uploadedMedia = []
 
     // Process each file
     for (const file of files) {
       // Convert file to buffer
       const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
+      let buffer: Buffer = Buffer.from(arrayBuffer)
+
+      // Apply watermark to image before uploading
+      try {
+        if (subdomainUrl) {
+          buffer = await addImageWatermark(buffer, subdomainUrl)
+        }
+      } catch (error) {
+        console.error("Error applying watermark to image:", error)
+        // Continue with original image if watermarking fails
+      }
 
       // Generate thumbnail
       let thumbnailBuffer: Buffer | null = null

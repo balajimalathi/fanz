@@ -14,6 +14,10 @@ import {
   Smartphone,
   Sparkle,
   Trash2,
+  Shield,
+  Users,
+  FileText,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react"
 
@@ -33,6 +37,10 @@ export const iconMap: Record<string, LucideIcon> = {
   MessageCircleQuestion,
   Command,
   AudioWaveform,
+  Shield,
+  Users,
+  FileText,
+  AlertTriangle,
 }
 
 // Serializable data (for server-to-client passing)

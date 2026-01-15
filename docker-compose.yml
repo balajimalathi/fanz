@@ -25,6 +25,7 @@ services:
     container_name: desifans-app
     ports:
       - "3000:3000"
+      - "4000:4000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_HOST=valkey
@@ -32,11 +33,31 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=${REDIS_DB:-0}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - LOG_DIR=/var/log/app
+      - LOKI_URL=${LOKI_URL:-http://loki:3100/loki/api/v1/push}
+      - NODE_ENV=${NODE_ENV:-production}
+    volumes:
+      # Mount log directory so Promtail can read it
+      - app-logs:/var/log/app
     depends_on:
       valkey:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - default
+      # Connect to logging network if it exists
+      - logging-network:
+          aliases:
+            - nextjs-app
 
 volumes:
   valkey-data:
+  app-logs:
+    driver: local
+    name: docker_app-logs  # Named volume so it can be shared with Promtail
+
+networks:
+  logging-network:
+    external: true
+    name: docker_logging-network
 

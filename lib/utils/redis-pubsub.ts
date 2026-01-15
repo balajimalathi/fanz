@@ -50,9 +50,12 @@ export async function publishMessage(
   try {
     const publisher = getPublisherClient();
     const channel = `conversation:${conversationId}`;
-    await publisher.publish(channel, JSON.stringify(message));
+    const messageStr = JSON.stringify(message);
+    console.log("[Redis Pub/Sub] Publishing message to channel:", channel);
+    const subscribers = await publisher.publish(channel, messageStr);
+    console.log("[Redis Pub/Sub] Message published, subscribers notified:", subscribers);
   } catch (error) {
-    console.error("Error publishing message to Redis:", error);
+    console.error("[Redis Pub/Sub] Error publishing message to Redis:", error);
     // Don't throw - graceful degradation
   }
 }
@@ -72,7 +75,9 @@ export async function subscribeToConversation(
     const channel = `conversation:${conversationId}`;
     await subscriber.subscribe(channel);
     
-    subscriber.on("message", (receivedChannel, message) => {
+    // Create a handler that filters by channel
+    // Multiple handlers can coexist - Redis fires "message" for all subscribed channels
+    const messageHandler = (receivedChannel: string, message: string) => {
       if (receivedChannel === channel) {
         try {
           const parsedMessage = JSON.parse(message);
@@ -81,7 +86,10 @@ export async function subscribeToConversation(
           console.error("Error parsing Redis message:", error);
         }
       }
-    });
+    };
+    
+    // Add handler - can coexist with typing events handler
+    subscriber.on("message", messageHandler);
   } catch (error) {
     console.error("Error subscribing to Redis channel:", error);
     throw error;
@@ -136,9 +144,12 @@ export async function publishTypingEvent(
       userName,
       timestamp: Date.now(),
     };
-    await publisher.publish(channel, JSON.stringify(typingEvent));
+    const messageStr = JSON.stringify(typingEvent);
+    console.log("[Redis Pub/Sub] Publishing typing event to channel:", channel, "for user:", userName);
+    const subscribers = await publisher.publish(channel, messageStr);
+    console.log("[Redis Pub/Sub] Typing event published, subscribers notified:", subscribers);
   } catch (error) {
-    console.error("Error publishing typing event to Redis:", error);
+    console.error("[Redis Pub/Sub] Error publishing typing event to Redis:", error);
     // Don't throw - graceful degradation
   }
 }
@@ -158,7 +169,9 @@ export async function subscribeToTypingEvents(
     const channel = `conversation:${conversationId}:typing`;
     await subscriber.subscribe(channel);
     
-    subscriber.on("message", (receivedChannel, message) => {
+    // Create a handler that processes both message channels
+    // This handler will be used alongside the conversation message handler
+    const messageHandler = (receivedChannel: string, message: string) => {
       if (receivedChannel === channel) {
         try {
           const parsedEvent = JSON.parse(message);
@@ -167,7 +180,11 @@ export async function subscribeToTypingEvents(
           console.error("Error parsing Redis typing event:", error);
         }
       }
-    });
+    };
+    
+    // Add handler - this will work alongside the conversation message handler
+    // since Redis fires "message" events for all subscribed channels
+    subscriber.on("message", messageHandler);
   } catch (error) {
     console.error("Error subscribing to typing events:", error);
     throw error;
@@ -267,5 +284,272 @@ export async function unsubscribeFromCallEvents(
   } catch (error) {
     console.error("Error unsubscribing from call events:", error);
   }
+}
+
+export interface LiveStreamEvent {
+  type: "stream_started" | "stream_ended";
+  creatorId: string;
+  streamId?: string;
+  streamType?: "free" | "follower_only" | "paid";
+  price?: number | null;
+  timestamp: number;
+}
+
+/**
+ * Publish a live stream event to Redis
+ * @param creatorId - The creator ID to publish the event for (for creator-specific channels)
+ * @param event - The live stream event object to publish
+ */
+export async function publishLiveStreamEvent(
+  creatorId: string,
+  event: LiveStreamEvent
+): Promise<void> {
+  try {
+    const publisher = getPublisherClient();
+    const channel = `live:${creatorId}`;
+    await publisher.publish(channel, JSON.stringify(event));
+    console.log("[Redis Pub/Sub] Published live stream event to channel:", channel, "event:", event.type);
+  } catch (error) {
+    console.error("Error publishing live stream event to Redis:", error);
+    // Don't throw - graceful degradation
+  }
+}
+
+/**
+ * Subscribe to live stream events for a creator
+ * @param subscriber - Redis subscriber client
+ * @param creatorId - The creator ID to subscribe to live stream events for
+ * @param callback - Callback function to handle received live stream events
+ */
+export async function subscribeToLiveStreamEvents(
+  subscriber: Redis,
+  creatorId: string,
+  callback: (event: LiveStreamEvent) => void
+): Promise<void> {
+  try {
+    const channel = `live:${creatorId}`;
+    await subscriber.subscribe(channel);
+    
+    subscriber.on("message", (receivedChannel, message) => {
+      if (receivedChannel === channel) {
+        try {
+          const parsedEvent = JSON.parse(message) as LiveStreamEvent;
+          callback(parsedEvent);
+        } catch (error) {
+          console.error("Error parsing Redis live stream event:", error);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error subscribing to live stream events:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unsubscribe from live stream events for a creator
+ * @param subscriber - Redis subscriber client
+ * @param creatorId - The creator ID to unsubscribe from
+ */
+export async function unsubscribeFromLiveStreamEvents(
+  subscriber: Redis,
+  creatorId: string
+): Promise<void> {
+  try {
+    const channel = `live:${creatorId}`;
+    await subscriber.unsubscribe(channel);
+  } catch (error) {
+    console.error("Error unsubscribing from live stream events:", error);
+  }
+}
+
+// ============================================================================
+// Redis Streams for Message Queue
+// ============================================================================
+
+export const MESSAGE_STREAM_KEY = "messages:queue";
+export const MESSAGE_CONSUMER_GROUP = "message-processors";
+export const MESSAGE_CONSUMER_NAME = "processor-1";
+
+export interface QueuedMessage {
+  id?: string; // Optional message ID (will be generated if not provided)
+  conversationId: string;
+  senderId: string;
+  messageType: string;
+  content: string | null;
+  mediaUrl: string | null;
+  thumbnailUrl: string | null;
+  timestamp: number;
+}
+
+/**
+ * Queue a message to Redis Stream for async persistence
+ * @param message - The message data to queue
+ * @returns The stream ID of the queued message
+ */
+export async function queueMessage(message: QueuedMessage): Promise<string | null> {
+  try {
+    const publisher = getPublisherClient();
+    const fields: (string | number)[] = [
+      "conversationId", message.conversationId,
+      "senderId", message.senderId,
+      "messageType", message.messageType,
+      "content", message.content || "",
+      "mediaUrl", message.mediaUrl || "",
+      "thumbnailUrl", message.thumbnailUrl || "",
+      "timestamp", message.timestamp.toString()
+    ];
+    
+    // Include message ID if provided
+    if (message.id) {
+      fields.push("messageId", message.id);
+    }
+    
+    const streamId = await publisher.xadd(
+      MESSAGE_STREAM_KEY,
+      "*", // Auto-generate stream ID
+      ...fields
+    );
+    console.log("[Redis Streams] Message queued with stream ID:", streamId);
+    return streamId;
+  } catch (error) {
+    console.error("[Redis Streams] Error queueing message:", error);
+    return null;
+  }
+}
+
+/**
+ * Create consumer group for message processing if it doesn't exist
+ * @param redis - Redis client instance
+ */
+export async function createMessageConsumerGroup(redis: Redis): Promise<void> {
+  try {
+    await redis.xgroup(
+      "CREATE",
+      MESSAGE_STREAM_KEY,
+      MESSAGE_CONSUMER_GROUP,
+      "0", // Start from beginning
+      "MKSTREAM" // Create stream if it doesn't exist
+    );
+    console.log("[Redis Streams] Consumer group created:", MESSAGE_CONSUMER_GROUP);
+  } catch (error: any) {
+    // BUSYGROUP means group already exists, which is fine
+    if (error?.message?.includes("BUSYGROUP")) {
+      console.log("[Redis Streams] Consumer group already exists");
+    } else {
+      console.error("[Redis Streams] Error creating consumer group:", error);
+      throw error;
+    }
+  }
+}
+
+/**
+ * Read messages from the stream using consumer group
+ * @param redis - Redis client instance
+ * @param count - Number of messages to read (default: 10)
+ * @returns Array of message entries with IDs
+ */
+export async function readQueuedMessages(
+  redis: Redis,
+  count: number = 10
+): Promise<Array<{ id: string; message: QueuedMessage }>> {
+  try {
+    const messages = await redis.xreadgroup(
+      "GROUP",
+      MESSAGE_CONSUMER_GROUP,
+      MESSAGE_CONSUMER_NAME,
+      "COUNT",
+      count.toString(),
+      "BLOCK",
+      "1000", // Block for 1 second if no messages
+      "STREAMS",
+      MESSAGE_STREAM_KEY,
+      ">" // Read pending messages first, then new ones
+    );
+
+    if (!messages || messages.length === 0) {
+      return [];
+    }
+
+    const results: Array<{ id: string; message: QueuedMessage }> = [];
+    // ioredis returns: [[streamName, [[id, [field1, value1, field2, value2, ...]], ...]]]
+    const streamData = messages[0];
+    if (!streamData || !Array.isArray(streamData) || streamData.length < 2) {
+      return [];
+    }
+    
+    const streamEntries = streamData[1] as Array<[string, string[]]>;
+    if (!streamEntries || !Array.isArray(streamEntries)) {
+      return [];
+    }
+
+    for (const entry of streamEntries) {
+      const [id, fieldArray] = entry;
+      if (!id || !Array.isArray(fieldArray)) {
+        continue;
+      }
+      
+      // Convert field array [field1, value1, field2, value2, ...] to object
+      const fields: Record<string, string> = {};
+      for (let i = 0; i < fieldArray.length; i += 2) {
+        const key = fieldArray[i] as string;
+        const value = fieldArray[i + 1] as string;
+        if (key && value !== undefined) {
+          fields[key] = value;
+        }
+      }
+
+      const message: QueuedMessage = {
+        id: fields.messageId || undefined,
+        conversationId: fields.conversationId,
+        senderId: fields.senderId,
+        messageType: fields.messageType,
+        content: fields.content || null,
+        mediaUrl: fields.mediaUrl || null,
+        thumbnailUrl: fields.thumbnailUrl || null,
+        timestamp: parseInt(fields.timestamp, 10),
+      };
+      results.push({ id, message });
+    }
+
+    return results;
+  } catch (error) {
+    console.error("[Redis Streams] Error reading queued messages:", error);
+    return [];
+  }
+}
+
+/**
+ * Acknowledge a processed message
+ * @param redis - Redis client instance
+ * @param messageId - The stream ID of the message to acknowledge
+ */
+export async function acknowledgeMessage(
+  redis: Redis,
+  messageId: string
+): Promise<void> {
+  try {
+    await redis.xack(
+      MESSAGE_STREAM_KEY,
+      MESSAGE_CONSUMER_GROUP,
+      messageId
+    );
+    console.log("[Redis Streams] Message acknowledged:", messageId);
+  } catch (error) {
+    console.error("[Redis Streams] Error acknowledging message:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get a Redis client for stream operations
+ * @returns A new Redis client instance
+ */
+export function getStreamClient(): Redis {
+  const client = new Redis(redisConfig);
+  client.on("error", (err) => {
+    console.error("Redis Stream Client Error:", err);
+  });
+  return client;
 }
 

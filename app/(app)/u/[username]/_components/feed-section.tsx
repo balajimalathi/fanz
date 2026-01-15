@@ -27,7 +27,7 @@ interface FeedPost {
   id: string
   creator: Creator | null
   caption: string | null
-  postType: "subscription" | "exclusive"
+  postType: "subscription" | "exclusive" | "free"
   price: number | null
   isPinned: boolean
   media: PostMedia[]
@@ -70,7 +70,9 @@ export function FeedSection({ username, creatorId, memberships = [] }: FeedSecti
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        const response = await fetch("/api/auth/session")
+        const response = await fetch("/api/auth/session", {
+          credentials: "include", // Include cookies for subdomain requests
+        })
         if (response.ok) {
           const data = await response.json()
           setCurrentUserId(data?.user?.id || null)

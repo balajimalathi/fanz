@@ -38,16 +38,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get pending payout amount
+    // Get pending payout amount (always in USD for MVP)
     const pendingAmount = await PayoutService.getPendingPayoutAmount(session.user.id)
-    const pendingAmountInRupees = pendingAmount / 100
+    const { getCurrencyDecimals, getCurrencySymbol } = await import("@/lib/currency/currency-utils")
+    const BASE_CURRENCY = "USD"
+    const decimals = getCurrencyDecimals(BASE_CURRENCY)
+    const divisor = Math.pow(10, decimals)
+    const pendingAmountDisplay = pendingAmount / divisor
     const minimumThreshold = payoutSettings.minimumThreshold || 1000
+    const currencySymbol = getCurrencySymbol(BASE_CURRENCY)
 
     // Check if minimum threshold is met
-    if (pendingAmountInRupees < minimumThreshold) {
+    if (pendingAmountDisplay < minimumThreshold) {
       return NextResponse.json(
         {
-          error: `Minimum threshold of ₹${minimumThreshold} not met. Current pending amount: ₹${pendingAmountInRupees.toFixed(2)}`,
+          error: `Minimum threshold of ${currencySymbol}${minimumThreshold} not met. Current pending amount: ${currencySymbol}${pendingAmountDisplay.toFixed(decimals === 0 ? 0 : 2)}`,
         },
         { status: 400 }
       )

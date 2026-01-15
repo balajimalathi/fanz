@@ -1,0 +1,99 @@
+{
+  "dashboard": {
+    "title": "Next.js Application Logs",
+    "tags": ["nextjs", "logs", "loki"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Logs Over Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(loki_request_duration_seconds_count{job=\"nextjs\"}[5m])",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "All Logs",
+        "type": "logs",
+        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "{job=\"nextjs\"}",
+            "refId": "A",
+            "legendFormat": "{{level}} - {{location}}"
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Logs",
+        "type": "logs",
+        "gridPos": {"h": 12, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "{job=\"nextjs\", level=\"error\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 4,
+        "title": "Log Level Distribution",
+        "type": "piechart",
+        "gridPos": {"h": 12, "w": 12, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "sum(count_over_time({job=\"nextjs\"}[5m])) by (level)",
+            "refId": "A",
+            "legendFormat": "{{level}}"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [],
+    "liveNow": false,
+    "weekStart": ""
+  }
+}

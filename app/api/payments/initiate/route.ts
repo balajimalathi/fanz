@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, entityId, returnUrl, duration, originUrl } = body;
+    const { type, entityId, returnUrl, duration, originUrl, currency } = body;
 
     if (!type || !entityId) {
       return NextResponse.json(
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["membership", "exclusive_post", "service", "live_stream"].includes(type)) {
+    if (!["membership", "exclusive_post", "service", "live_stream", "wallet_credit"].includes(type)) {
       return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
     }
 
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       returnUrl,
       duration,
       originUrl,
+      currency,
     });
 
     if (!result.success) {

@@ -25,6 +25,7 @@ export function HlsVideoPlayer({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [useFallback, setUseFallback] = useState(false)
+  const [useProxy, setUseProxy] = useState(false)
   const hlsRef = useRef<any>(null)
 
   // Fallback to original video when HLS fails
@@ -87,20 +88,57 @@ export function HlsVideoPlayer({
       return
     }
 
+    // Helper function to get the HLS URL (with proxy if needed)
+    const getHlsUrl = (originalUrl: string): string => {
+      if (useProxy) {
+        // Use proxy API route to bypass CORS
+        return `/api/hls-proxy?url=${encodeURIComponent(originalUrl)}`
+      }
+      return originalUrl
+    }
+
+    // Helper function to transform URLs in HLS playlists to use proxy
+    const transformPlaylistUrl = (url: string, baseUrl: string): string => {
+      if (useProxy) {
+        // If it's a relative URL, make it absolute first
+        const absoluteUrl = url.startsWith("http") 
+          ? url 
+          : new URL(url, baseUrl).toString()
+        return `/api/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`
+      }
+      return url
+    }
+
     // Dynamically import hls.js only on client side
     const initHls = async () => {
       try {
+        const hlsUrl = getHlsUrl(video.hlsUrl!)
+        
         // First, verify the manifest is accessible
         try {
-          const response = await fetch(video.hlsUrl!, {
+          const response = await fetch(hlsUrl, {
             method: "HEAD",
             mode: "cors",
           })
           if (!response.ok && response.status !== 0) {
             console.warn(`Manifest check returned status ${response.status}`)
           }
-        } catch (fetchError) {
+        } catch (fetchError: any) {
           console.warn("Manifest accessibility check failed (may be CORS):", fetchError)
+          
+          // If CORS error and not already using proxy, try proxy
+          // CORS errors can manifest as network errors with status 0 or CORS-related messages
+          const isCorsError = 
+            fetchError.message?.includes("CORS") ||
+            fetchError.message?.includes("blocked") ||
+            fetchError.name === "TypeError" ||
+            (fetchError.message?.includes("Failed to fetch") && !useProxy)
+          
+          if (!useProxy && isCorsError) {
+            console.log("CORS error detected, switching to proxy...")
+            setUseProxy(true)
+            return // Will retry with proxy
+          }
           // Continue anyway - might work with HLS.js
         }
 
@@ -113,13 +151,13 @@ export function HlsVideoPlayer({
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: false,
-            xhrSetup: (xhr, url) => {
+            xhrSetup: (xhr) => {
               // Enable CORS for HLS requests
               xhr.withCredentials = false
             },
           })
 
-          hls.loadSource(video.hlsUrl!)
+          hls.loadSource(hlsUrl)
           hls.attachMedia(videoRef.current)
 
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -148,6 +186,21 @@ export function HlsVideoPlayer({
                   if (retryCount < maxRetries) {
                     retryCount++
                     console.log(`Retrying HLS load (attempt ${retryCount}/${maxRetries})...`)
+                    
+                    // If CORS error and not using proxy, try proxy instead
+                    // CORS errors typically show as network errors with code 0 or manifestLoadError
+                    const isLikelyCorsError = 
+                      data.details === "manifestLoadError" || 
+                      data.response?.code === 0 ||
+                      (data.error && data.error.message?.includes("CORS"))
+                    
+                    if (!useProxy && isLikelyCorsError) {
+                      console.log("CORS error detected in HLS, switching to proxy...")
+                      hls.destroy()
+                      setUseProxy(true)
+                      return // Will retry with proxy
+                    }
+                    
                     try {
                       hls.startLoad()
                     } catch (e) {
@@ -155,7 +208,14 @@ export function HlsVideoPlayer({
                       retryCount = maxRetries // Stop retrying
                     }
                   } else {
-                    // Max retries reached - fallback to original video
+                    // Max retries reached - try proxy if not already using it
+                    if (!useProxy) {
+                      console.log("Max retries reached, trying proxy...")
+                      hls.destroy()
+                      setUseProxy(true)
+                      return // Will retry with proxy
+                    }
+                    // Max retries reached and proxy already tried - fallback to original video
                     hls.destroy()
                     activateFallback()
                   }
@@ -187,8 +247,9 @@ export function HlsVideoPlayer({
           hlsRef.current = hls
         } else if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
           // Native HLS support (Safari)
-          // Don't set crossOrigin for native HLS - let Safari handle CORS
-          videoRef.current.src = video.hlsUrl!
+          // Use proxy if enabled
+          const hlsUrl = getHlsUrl(video.hlsUrl!)
+          videoRef.current.src = hlsUrl
           
           const handleLoadedMetadata = () => {
             setIsLoading(false)
@@ -230,7 +291,7 @@ export function HlsVideoPlayer({
         hlsRef.current.destroy()
       }
     }
-  }, [video.hlsUrl, video.url, useFallback, activateFallback])
+  }, [video.hlsUrl, video.url, useFallback, useProxy, activateFallback])
 
   // Handle case when no HLS URL is available - use fallback
   useEffect(() => {
@@ -280,7 +341,7 @@ export function HlsVideoPlayer({
   }
 
   return (
-    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+    <div className="relative aspect-video bg-black rounded-lg overflow-hidden z-0">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50">
           <div className="text-center text-white">

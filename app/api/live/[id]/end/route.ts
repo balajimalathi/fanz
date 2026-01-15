@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { liveStream } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { publishLiveStreamEvent } from "@/lib/utils/redis-pubsub";
 
 export async function POST(
   request: NextRequest,
@@ -52,6 +53,13 @@ export async function POST(
         updatedAt: new Date(),
       })
       .where(eq(liveStream.id, streamId));
+
+    // Publish stream ended event
+    await publishLiveStreamEvent(stream.creatorId, {
+      type: "stream_ended",
+      creatorId: stream.creatorId,
+      timestamp: Date.now(),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
