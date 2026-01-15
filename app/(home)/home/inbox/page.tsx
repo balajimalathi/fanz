@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
 import { InboxPageClient } from "./inbox-client";
-import { checkBannedUser } from "@/lib/utils/check-banned-user";
+
+export const dynamic = 'force-dynamic';
 
 export default async function InboxPage() {
   const session = await auth.api.getSession({
@@ -13,9 +14,7 @@ export default async function InboxPage() {
     redirect("/login");
   }
 
-  // Check if user is banned (redirects to /suspended if banned)
-  await checkBannedUser()
-
+  // Banned user check is now handled in middleware
   // Check if user has creator role
   if (session.user.role !== "creator") {
     redirect("/home");

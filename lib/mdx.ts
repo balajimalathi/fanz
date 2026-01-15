@@ -1,7 +1,7 @@
 import { bundleMDX } from "mdx-bundler";
 import matter from "gray-matter";
 import { readFileSync, readdirSync, statSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import { visit } from "unist-util-visit";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypePrettyCode from "rehype-pretty-code";
@@ -118,7 +118,7 @@ async function readMdxFile<T extends Page | Doc | Release>(
     _raw: {
       sourceFilePath: filePath,
       sourceFileName: filePath.split(/[/\\]/).pop() || "",
-      sourceFileDir: filePath.substring(0, filePath.lastIndexOf(/[/\\]/)),
+      sourceFileDir: dirname(filePath),
       contentType: "mdx" as const,
       flattenedPath: slug.replace(/^\//, ""),
     },

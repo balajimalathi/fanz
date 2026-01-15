@@ -109,21 +109,24 @@ export async function GET(request: NextRequest) {
           if (originUrl) {
             const redirectUrl = buildRedirectUrl(originUrl, request);
             redirectUrl.searchParams.set("status", "success");
-            if (transaction.type === "membership") {
+            // Get actual payment type from metadata (since DB enum only stores "membership" or "service")
+            const actualType = (transaction.metadata?.type as string) || transaction.type;
+            
+            if (actualType === "membership") {
               redirectUrl.searchParams.set("membershipId", transaction.entityId);
               if (duration) {
                 redirectUrl.searchParams.set("duration", duration.toString());
               }
-            } else if (transaction.type === "service") {
+            } else if (actualType === "service") {
               redirectUrl.searchParams.set("serviceId", transaction.entityId);
               redirectUrl.searchParams.set("transactionId", transaction.id);
-            } else if (transaction.type === "exclusive_post") {
+            } else if (actualType === "exclusive_post") {
               redirectUrl.searchParams.set("postId", transaction.entityId);
               redirectUrl.searchParams.set("transactionId", transaction.id);
-            } else if (transaction.type === "live_stream") {
+            } else if (actualType === "live_stream") {
               redirectUrl.searchParams.set("streamId", transaction.entityId);
               redirectUrl.searchParams.set("transactionId", transaction.id);
-            } else if (transaction.type === "wallet_credit") {
+            } else if (actualType === "wallet_credit") {
               // Get plan type from metadata instead of entityId
               const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
               if (planMetadata?.planType) {
