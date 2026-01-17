@@ -117,9 +117,9 @@ export function CallStateProvider({
     }
 
     const connectSSE = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:119',message:'connectSSE called',data:{hasExistingConnection:!!eventSourceRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current,reconnectAttempts:reconnectAttemptsRef.current,currentUserId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A,E'})}).catch(()=>{});
-      // #endregion
+      
+      
+      
       // Close existing connection if any
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
@@ -142,14 +142,14 @@ export function CallStateProvider({
         const eventSource = new EventSource("/api/calls/stream");
         eventSourceRef.current = eventSource;
 
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:139',message:'EventSource created',data:{readyStateBeforeOpen:eventSource.readyState,hasOnOpen:!!eventSource.onopen,hasErrorListeners:false},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A,B,C'})}).catch(()=>{});
-        // #endregion
+        
+        
+        
 
         eventSource.onopen = () => {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:142',message:'onopen fired',data:{readyState:eventSource.readyState,currentIsConnected:isConnected,reconnectAttempts:reconnectAttemptsRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'G'})}).catch(()=>{});
-          // #endregion
+          
+          
+          
           console.info("[CallStateProvider] Call events SSE HTTP connection opened", {
             currentUserId,
             readyState: eventSource.readyState,
@@ -160,9 +160,9 @@ export function CallStateProvider({
         };
 
         eventSource.addEventListener("connected", (event) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:151',message:'connected event received from server',data:{readyState:eventSource.readyState,hasEventData:!!event?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'F'})}).catch(()=>{});
-          // #endregion
+          
+          
+          
           console.info("[CallStateProvider] SSE connected event received:", event);
           setIsConnected(true);
           reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
@@ -280,9 +280,9 @@ export function CallStateProvider({
         // We use addEventListener("error") instead of onerror to be consistent with other event listeners
         // Note: Both addEventListener("error") and onerror fire for the same error events, so we only use one
         eventSource.addEventListener("error", (event) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:278',message:'error event handler fired',data:{type:event.type,readyState:eventSource.readyState,isConnected,reconnectAttempts:reconnectAttemptsRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
+          
+          
+          
           console.error("[CallStateProvider] Call events SSE error event:", {
             type: event.type,
             readyState: eventSource.readyState,
@@ -302,9 +302,9 @@ export function CallStateProvider({
           const currentReadyState = eventSource.readyState;
           const isNotOpen = currentReadyState !== EventSource.OPEN; // Not OPEN means closed or connecting
           
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:292',message:'error handler - checking reconnection conditions',data:{readyState:currentReadyState,eventSourceOPEN:EventSource.OPEN,eventSourceCLOSED:EventSource.CLOSED,isNotOpen,reconnectAttempts:reconnectAttemptsRef.current,hasPendingReconnect:!!reconnectTimeoutRef.current,willReconnect:isNotOpen && reconnectAttemptsRef.current < maxReconnectAttempts && !reconnectTimeoutRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
+          
+          
+          
           
           // Only attempt reconnection if connection is not OPEN (closed or failed) 
           // and we haven't already scheduled a reconnection for this error sequence
@@ -324,9 +324,9 @@ export function CallStateProvider({
             const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
             reconnectAttemptsRef.current++;
             
-            // #region agent log
-            fetch('http://127.0.0.1:7245/ingest/57097842-b638-4791-82c0-3a4760a3ce5f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'call-state-provider.tsx:301',message:'scheduling reconnection',data:{attempt:reconnectAttemptsRef.current,delay,maxAttempts:maxReconnectAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'E'})}).catch(()=>{});
-            // #endregion
+            
+            
+            
             console.info("[CallStateProvider] Scheduling reconnection", {
               attempt: reconnectAttemptsRef.current,
               delay,

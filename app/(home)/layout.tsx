@@ -11,8 +11,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper"
-
-export const dynamic = 'force-dynamic';
+import { checkBannedUser } from "@/lib/utils/check-banned-user"
+import { CreatorOnlineHeartbeat } from "@/components/creator-online-heartbeat";
 
 export default async function layout({
   children,
@@ -22,6 +22,7 @@ export default async function layout({
   // Banned user check is now handled in middleware
   return (
     <CallGlobalWrapper>
+      <CreatorOnlineHeartbeat />
       <SidebarProvider
         style={
           {
@@ -41,8 +42,8 @@ export default async function layout({
               />
               <DynamicBreadcrumb />
             </div>
-            <div className="ml-auto px-3">
-              {/* <NavActions /> */}
+            <div className="ml-auto px-3 flex items-center gap-2">
+              {/* <WalletBalanceDisplay /> */}
               <ThemeToggle />
             </div>
           </div>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Paperclip, Mic, X, Loader2 } from "lucide-react";
+import { Send, Paperclip, Mic, X, Loader2, Coins, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { TypingIndicator } from "./typing-indicator";
 import { AudioMessagePlayer } from "./audio-message-player";
@@ -18,20 +18,26 @@ interface Message {
   mediaUrl?: string | null;
   thumbnailUrl?: string | null;
   createdAt: string;
+  coinsPending?: number | null;
+  coinsDeducted?: boolean;
 }
 
 interface ChatInterfaceProps {
   conversationId: string;
   currentUserId: string;
+  otherUserId?: string; // Other user's ID (creator if fan, fan if creator)
   otherUserName: string;
   otherUserImage?: string | null;
+  isFan?: boolean; // Whether current user is a fan (default: try to infer)
 }
 
 export function ChatInterface({
   conversationId,
   currentUserId,
+  otherUserId,
   otherUserName,
   otherUserImage,
+  isFan: isFanProp,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -45,6 +51,12 @@ export function ChatInterface({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [creatorOnline, setCreatorOnline] = useState<boolean | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [dmPricing, setDmPricing] = useState<{ text: number; image: number; video: number } | null>(null);
+  const [isFan, setIsFan] = useState<boolean | null>(isFanProp ?? null);
+  const [creatorId, setCreatorId] = useState<string | null>(null);
+  const [creatorUsername, setCreatorUsername] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -174,6 +186,103 @@ export function ChatInterface({
   };
 
 
+  // Fetch conversation info to determine creator and fan
+  useEffect(() => {
+    const fetchConversationInfo = async () => {
+      try {
+        const response = await fetch(`/api/conversations/${conversationId}`);
+        if (response.ok) {
+          const conv = await response.json();
+          const userIsFan = conv.fanId === currentUserId;
+          setIsFan(userIsFan);
+          setCreatorId(userIsFan ? conv.creatorId : null);
+          setCreatorUsername(userIsFan ? conv.creatorUsername : null);
+        }
+      } catch (error) {
+        console.error("Error fetching conversation info:", error);
+      }
+    };
+    fetchConversationInfo();
+  }, [conversationId, currentUserId]);
+
+  // Stream creator online status via SSE (if fan)
+  useEffect(() => {
+    if (!isFan || !creatorUsername) return;
+
+    // Connect to SSE stream for real-time status updates
+    const eventSource = new EventSource(`/api/creator/${creatorUsername}/online-status/stream`);
+
+    eventSource.onopen = () => {
+      console.log("Creator status stream connected");
+    };
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "status") {
+          setCreatorOnline(data.isOnline);
+        }
+      } catch (error) {
+        console.error("Error parsing creator status SSE message:", error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("Creator status SSE stream error:", error);
+      // EventSource will automatically reconnect
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [isFan, creatorUsername]);
+
+  // Fetch balance (if fan)
+  useEffect(() => {
+    if (!isFan) return;
+
+    const fetchBalance = async () => {
+      try {
+        const response = await fetch("/api/wallet/balance");
+        if (response.ok) {
+          const data = await response.json();
+          setBalance(data.balance);
+        }
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+      }
+    };
+
+    fetchBalance();
+  }, [isFan]);
+
+  // Fetch DM pricing (if fan) - get creator's pricing
+  useEffect(() => {
+    if (!isFan || !creatorUsername) return;
+
+    const fetchPricing = async () => {
+      try {
+        const response = await fetch(`/api/creator/${creatorUsername}/pricing`);
+        if (response.ok) {
+          const data = await response.json();
+          setDmPricing({
+            text: data.dmTextPrice || 0,
+            image: data.dmImagePrice || 0,
+            video: data.dmVideoPrice || 0,
+          });
+        } else {
+          // If we can't fetch, set defaults to 0
+          setDmPricing({ text: 0, image: 0, video: 0 });
+        }
+      } catch (error) {
+        console.error("Error fetching pricing:", error);
+        setDmPricing({ text: 0, image: 0, video: 0 });
+      }
+    };
+
+    fetchPricing();
+  }, [isFan, creatorUsername]);
+
   // Fetch initial messages
   useEffect(() => {
     const fetchMessages = async () => {
@@ -234,6 +343,20 @@ export function ChatInterface({
             // Normalize the message before processing
             const newMessage = normalizeMessage(rawMessage);
             console.log("[ChatInterface] Received message via SSE:", newMessage);
+            
+            // If fan and this is a creator message, refresh balance (coins may have been deducted)
+            if (isFan && newMessage.senderId !== currentUserId) {
+              // Creator replied - refresh balance
+              fetch("/api/wallet/balance")
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data.balance !== undefined) {
+                    setBalance(data.balance);
+                  }
+                })
+                .catch((err) => console.error("Error refreshing balance:", err));
+            }
+            
             // Update or add message using smart insertion
             setMessages((prev) => {
               const updated = addOrUpdateMessage(prev, newMessage, messagesMapRef.current);
@@ -556,11 +679,15 @@ export function ChatInterface({
         try {
           const { mediaUrl, thumbnailUrl, messageType } = await uploadMedia(file);
           
+          // Get browser timezone
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+          
           // Send the message
           const response = await fetch(`/api/conversations/${conversationId}/messages`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              "x-user-timezone": timezone,
             },
             body: JSON.stringify({
               content: null,
@@ -670,11 +797,15 @@ export function ChatInterface({
             const audioFile = new File([blob], "recording.webm", { type: "audio/webm" });
             const { mediaUrl, thumbnailUrl, messageType } = await uploadMedia(audioFile);
             
+            // Get browser timezone
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            
             // Send the message
             const response = await fetch(`/api/conversations/${conversationId}/messages`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
+                "x-user-timezone": timezone,
               },
               body: JSON.stringify({
                 content: null,
@@ -780,14 +911,31 @@ export function ChatInterface({
 
   // Send media message
   const sendMediaMessage = async (mediaUrl: string, thumbnailUrl: string | null, messageType: "image" | "video" | "audio", content?: string) => {
+    // If fan, check creator online status
+    if (isFan) {
+      if (creatorOnline === false) {
+        setError("Creator is offline. DM features are disabled.");
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+      if (creatorOnline === null) {
+        // Still loading, wait
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
+      // Get browser timezone
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      
       const response = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-timezone": timezone,
         },
         body: JSON.stringify({
           content: content || null,
@@ -797,10 +945,22 @@ export function ChatInterface({
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to send message");
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || "Failed to send message";
+        throw new Error(errorMessage);
+      }
 
       const newMessage = await response.json();
       setMessages((prev) => addOrUpdateMessage(prev, normalizeMessage(newMessage), messagesMapRef.current));
+
+      // Update balance if fan (coins will be deducted when creator replies)
+      if (isFan && dmPricing && balance !== null) {
+        const price = messageType === "image" ? dmPricing.image : messageType === "video" ? dmPricing.video : 0;
+        if (price > 0) {
+          // Balance will be updated when creator replies
+        }
+      }
 
       // Clear media state
       if (selectedFile) {
@@ -812,7 +972,9 @@ export function ChatInterface({
       }
     } catch (error) {
       console.error("Error sending media message:", error);
-      setError(error instanceof Error ? error.message : "Failed to send media message");
+      const errorMessage = error instanceof Error ? error.message : "Failed to send media message";
+      setError(errorMessage);
+      setTimeout(() => setError(null), 5000);
     } finally {
       setIsLoading(false);
       setUploadProgress(0);
@@ -857,6 +1019,19 @@ export function ChatInterface({
 
     if (!inputValue.trim()) return;
 
+    // If fan, check creator online status
+    if (isFan) {
+      if (creatorOnline === false) {
+        setError("Creator is offline. DM features are disabled.");
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+      if (creatorOnline === null) {
+        // Still loading, wait
+        return;
+      }
+    }
+
     // Clear typing indicator when sending message
     setTypingUser(null);
     if (typingTimeoutRef.current) {
@@ -869,12 +1044,17 @@ export function ChatInterface({
     const messageContent = inputValue.trim();
     setInputValue("");
     setIsLoading(true);
+    setError(null);
 
     try {
+      // Get browser timezone
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      
       const response = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-timezone": timezone,
         },
         body: JSON.stringify({
           content: messageContent,
@@ -882,15 +1062,32 @@ export function ChatInterface({
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to send message");
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || "Failed to send message";
+        throw new Error(errorMessage);
+      }
 
       const newMessage = await response.json();
       console.log("[ChatInterface] Message sent successfully:", newMessage);
+      
+      // Update balance if fan (coins will be deducted when creator replies)
+      if (isFan && dmPricing && balance !== null) {
+        // Preview: show pending coins (not deducted yet)
+        const price = dmPricing.text;
+        if (price > 0) {
+          // Balance will be updated when creator replies
+        }
+      }
+      
       // Message will be added via SSE, but add it optimistically for immediate UI update
       setMessages((prev) => addOrUpdateMessage(prev, normalizeMessage(newMessage), messagesMapRef.current));
     } catch (error) {
       console.error("Error sending message:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to send message";
+      setError(errorMessage);
       setInputValue(messageContent); // Restore input on error
+      setTimeout(() => setError(null), 5000);
     } finally {
       setIsLoading(false);
     }
@@ -963,15 +1160,23 @@ export function ChatInterface({
                       )}
                     </div>
                   )}
-                  <p
-                    className={`text-xs mt-1 ${
-                      isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}
-                  >
-                    {formatDistanceToNow(new Date(message.createdAt), {
-                      addSuffix: true,
-                    })}
-                  </p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p
+                      className={`text-xs ${
+                        isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                      }`}
+                    >
+                      {formatDistanceToNow(new Date(message.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </p>
+                    {isOwn && isFan && message.coinsPending && !message.coinsDeducted && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Coins className="h-3 w-3" />
+                        {message.coinsPending} coins pending
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {isOwn && (
                   <Avatar className="h-8 w-8">
@@ -991,6 +1196,32 @@ export function ChatInterface({
 
       {/* Input area */}
       <div className="border-t p-4">
+        {/* Creator offline message (for fans) */}
+        {isFan && creatorOnline === false && (
+          <div className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>Creator is offline. DM features are disabled.</span>
+          </div>
+        )}
+
+        {/* Coin cost preview (for fans when creator is online) */}
+        {isFan && creatorOnline === true && dmPricing && (
+          <div className="mb-2 text-xs text-muted-foreground flex items-center gap-1">
+            <Coins className="h-3 w-3" />
+            <span>
+              Text: {dmPricing.text} coins | Image: {dmPricing.image} coins | Video: {dmPricing.video} coins
+              {balance !== null && ` | Balance: ${balance} coins`}
+            </span>
+          </div>
+        )}
+
+        {/* Pending charge notice */}
+        {isFan && (
+          <div className="mb-2 text-xs text-muted-foreground italic">
+            Coins will be deducted when creator responds
+          </div>
+        )}
+
         {/* Error message */}
         {error && (
           <div className="mb-2 p-2 bg-destructive/10 text-destructive text-sm rounded">
@@ -1061,7 +1292,7 @@ export function ChatInterface({
             variant="ghost"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || isRecording}
+            disabled={isLoading || isRecording || (isFan && creatorOnline === false) || creatorOnline === null}
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -1071,7 +1302,7 @@ export function ChatInterface({
               variant="ghost"
               size="icon"
               onClick={startRecording}
-              disabled={isLoading || !!selectedFile}
+              disabled={isLoading || !!selectedFile || (isFan && creatorOnline === false) || creatorOnline === null}
             >
               <Mic className="h-4 w-4" />
             </Button>
@@ -1089,15 +1320,24 @@ export function ChatInterface({
           <Input
             value={inputValue}
             onChange={handleInputChange}
-            placeholder="Type a message..."
-            disabled={isLoading || isRecording}
+            placeholder={
+              isFan && creatorOnline === false
+                ? "Creator is offline..."
+                : "Type a message..."
+            }
+            disabled={
+              isLoading ||
+              isRecording ||
+              (isFan && creatorOnline === false) || creatorOnline === null // Disable if creator is offline
+            }
           />
           <Button
             type="submit"
             disabled={
               isLoading ||
               isRecording ||
-              (!inputValue.trim() && !selectedFile && !audioBlob)
+              (!inputValue.trim() && !selectedFile && !audioBlob) ||
+              (isFan && creatorOnline === false) || creatorOnline === null // Disable if creator is offline
             }
           >
             {isLoading ? (

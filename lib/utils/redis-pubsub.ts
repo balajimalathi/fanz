@@ -380,6 +380,8 @@ export interface QueuedMessage {
   mediaUrl: string | null;
   thumbnailUrl: string | null;
   timestamp: number;
+  coinsPending?: number | null; // Coins that will be deducted when creator replies
+  coinsDeducted?: boolean; // Whether coins have been deducted
 }
 
 /**
@@ -403,6 +405,16 @@ export async function queueMessage(message: QueuedMessage): Promise<string | nul
     // Include message ID if provided
     if (message.id) {
       fields.push("messageId", message.id);
+    }
+    
+    // Include coinsPending if provided
+    if (message.coinsPending !== undefined && message.coinsPending !== null) {
+      fields.push("coinsPending", message.coinsPending.toString());
+    }
+    
+    // Include coinsDeducted if provided
+    if (message.coinsDeducted !== undefined) {
+      fields.push("coinsDeducted", message.coinsDeducted ? "true" : "false");
     }
     
     const streamId = await publisher.xadd(
@@ -508,6 +520,8 @@ export async function readQueuedMessages(
         mediaUrl: fields.mediaUrl || null,
         thumbnailUrl: fields.thumbnailUrl || null,
         timestamp: parseInt(fields.timestamp, 10),
+        coinsPending: fields.coinsPending ? parseInt(fields.coinsPending, 10) : undefined,
+        coinsDeducted: fields.coinsDeducted === "true" ? true : fields.coinsDeducted === "false" ? false : undefined,
       };
       results.push({ id, message });
     }

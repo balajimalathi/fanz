@@ -8,6 +8,10 @@ import { generateAccessToken } from "@/lib/livekit/token";
 import { env } from "@/env";
 import { publishCallEvent } from "@/lib/utils/redis-pubsub";
 import { sendPushNotificationsToUsers } from "@/lib/push/fcm";
+import { CreatorPricingService } from "@/lib/services/creator-pricing-service";
+import { WalletService } from "@/lib/wallet/wallet-service";
+import { AvailabilityService } from "@/lib/services/availability-service";
+import { formatInTimeZone } from "date-fns-tz";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +69,53 @@ export async function POST(request: NextRequest) {
     // Determine caller and receiver
     const callerId = session.user.id;
     const receiverId = isCreator ? conv.fanId : conv.creatorId;
+
+    // If fan is calling, check balance and availability before initiating
+    if (isFan) {
+      // Get fan's timezone from request headers (browser timezone)
+      const fanTimezone =
+        request.headers.get("x-user-timezone") ||
+        Intl.DateTimeFormat().resolvedOptions().timeZone ||
+        "UTC";
+
+      // Check if creator is available for calls
+      const availability = await AvailabilityService.isCreatorAvailableForCalls(
+        conv.creatorId,
+        fanTimezone
+      );
+
+      if (!availability.available) {
+        let errorMessage = "Creator is not available for calls at this time.";
+        if (availability.schedule) {
+          errorMessage += ` Available hours: ${availability.schedule}`;
+        }
+        if (availability.nextAvailableTime) {
+          const nextTime = formatInTimeZone(
+            availability.nextAvailableTime,
+            fanTimezone,
+            "PPp"
+          );
+          errorMessage += ` Next available: ${nextTime}`;
+        }
+        return NextResponse.json({ error: errorMessage }, { status: 400 });
+      }
+
+      const pricePerMinute = await CreatorPricingService.getCallPricePerMinute(
+        conv.creatorId,
+        callType as "audio" | "video"
+      );
+
+      if (pricePerMinute > 0) {
+        // Check if fan has sufficient balance for at least 1 minute
+        const balance = await WalletService.getBalance(callerId);
+        if (balance < pricePerMinute) {
+          return NextResponse.json(
+            { error: "Insufficient balance to start call" },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     console.log("[Call Initiate] Checking for existing calls", {
       conversationId,

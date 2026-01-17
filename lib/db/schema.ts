@@ -72,7 +72,7 @@ export const contentTypeEnum = pgEnum("content_type", ["18+", "general"]);
 export const postTypeEnum = pgEnum("post_type", ["subscription", "exclusive", "free"]);
 export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
-export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "service"]);
+export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream", "wallet_credit"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
 export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
@@ -81,6 +81,7 @@ export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "ac
 export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
 export const liveStreamTypeEnum = pgEnum("live_stream_type", ["free", "follower_only", "paid"]);
 export const liveStreamStatusEnum = pgEnum("live_stream_status", ["active", "ended"]);
+export const conversationRequestStatusEnum = pgEnum("conversation_request_status", ["pending_request", "accepted", "rejected"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -114,6 +115,32 @@ export const creator = pgTable("creator", {
   payoutSettings: jsonb("payout_settings").$type<{
     minimumThreshold?: number;
     automaticPayout?: boolean;
+  }>(),
+  isOnline: boolean("is_online").notNull().default(false),
+  lastSeenAt: timestamp("last_seen_at"),
+  chatEnabled: boolean("chat_enabled").notNull().default(true),
+  callEnabled: boolean("call_enabled").notNull().default(true),
+  chatAvailabilitySchedule: jsonb("chat_availability_schedule").$type<{
+    enabled: boolean;
+    timezone: string; // Creator's timezone (e.g., "Asia/Kolkata", "America/New_York")
+    schedule: {
+      [day: string]: { // "monday", "tuesday", etc.
+        enabled: boolean;
+        startTime: string; // "HH:mm" format in creator's timezone
+        endTime: string; // "HH:mm" format in creator's timezone
+      };
+    };
+  }>(),
+  callAvailabilitySchedule: jsonb("call_availability_schedule").$type<{
+    enabled: boolean;
+    timezone: string; // Creator's timezone (e.g., "Asia/Kolkata", "America/New_York")
+    schedule: {
+      [day: string]: { // "monday", "tuesday", etc.
+        enabled: boolean;
+        startTime: string; // "HH:mm" format in creator's timezone
+        endTime: string; // "HH:mm" format in creator's timezone
+      };
+    };
   }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -423,6 +450,10 @@ export const conversation = pgTable("conversation", {
   isEnabled: boolean("is_enabled").notNull().default(true),
   lastMessageAt: timestamp("last_message_at"),
   lastMessagePreview: text("last_message_preview"),
+  requestStatus: conversationRequestStatusEnum("request_status").notNull().default("pending_request"),
+  requestedAt: timestamp("requested_at"),
+  acceptedAt: timestamp("accepted_at"),
+  rejectedAt: timestamp("rejected_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
@@ -442,6 +473,9 @@ export const chatMessage = pgTable("chat_message", {
   mediaUrl: text("media_url"),
   thumbnailUrl: text("thumbnail_url"),
   readAt: timestamp("read_at"),
+  coinsPending: integer("coins_pending"), // Coins that will be deducted when creator replies
+  coinsDeducted: boolean("coins_deducted").notNull().default(false), // Whether coins have been deducted
+  deductedAt: timestamp("deducted_at"), // When coins were deducted
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -461,6 +495,10 @@ export const call = pgTable("call", {
   startedAt: timestamp("started_at"),
   endedAt: timestamp("ended_at"),
   duration: integer("duration"), // Duration in seconds
+  coinsReserved: integer("coins_reserved"), // Coins reserved at call start
+  coinsSpent: integer("coins_spent").default(0), // Coins actually spent during call
+  lastHeartbeatAt: timestamp("last_heartbeat_at"), // Timestamp of last heartbeat
+  meteringActive: boolean("metering_active").notNull().default(false), // True when both parties connected
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -588,6 +626,48 @@ export const fanWalletTransaction = pgTable("fan_wallet_transaction", {
   description: text("description"),
   paymentTransactionId: uuid("payment_transaction_id")
     .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  coinValueUsd: decimal("coin_value_usd", { precision: 10, scale: 6 }),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }),
+  creatorCurrency: varchar("creator_currency", { length: 3 }),
+  linkedPurchaseTransactionId: uuid("linked_purchase_transaction_id")
+    .references((): any => fanWalletTransaction.id, { onDelete: "set null" }),
+  remainingCoins: integer("remaining_coins"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const coinEarnings = pgTable("coin_earnings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  fanWalletTransactionId: uuid("fan_wallet_transaction_id")
+    .notNull()
+    .references(() => fanWalletTransaction.id, { onDelete: "cascade" }),
+  coinsUsed: integer("coins_used").notNull(),
+  usdValue: integer("usd_value").notNull(), // In cents
+  creatorCurrency: varchar("creator_currency", { length: 3 }).notNull(),
+  creatorAmount: integer("creator_amount").notNull(), // In creator currency subunits
+  platformFee: integer("platform_fee").notNull(), // In creator currency subunits
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }).notNull(),
+  paymentTransactionId: uuid("payment_transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const creatorPricing = pgTable("creator_pricing", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" })
+    .unique(),
+  dmTextPrice: integer("dm_text_price").notNull().default(0), // Coins per text message
+  dmImagePrice: integer("dm_image_price").notNull().default(0), // Coins per image message
+  dmVideoPrice: integer("dm_video_price").notNull().default(0), // Coins per video message
+  audioCallPricePerMinute: integer("audio_call_price_per_minute").notNull().default(0), // Coins per minute for audio calls
+  videoCallPricePerMinute: integer("video_call_price_per_minute").notNull().default(0), // Coins per minute for video calls
+  liveStreamEntryPrice: integer("live_stream_entry_price").notNull().default(0), // Coins for one-time entry to paid streams
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

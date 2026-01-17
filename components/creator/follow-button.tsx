@@ -14,8 +14,7 @@ interface FollowButtonProps {
 
 export function FollowButton({ creatorId, className }: FollowButtonProps) {
   const { data: session } = useSession()
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [followerCount, setFollowerCount] = useState(0)
+  const [isFollowing, setIsFollowing] = useState(false) 
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -35,7 +34,6 @@ export function FollowButton({ creatorId, className }: FollowButtonProps) {
             try {
               const data = JSON.parse(text)
               setIsFollowing(data.following)
-              setFollowerCount(data.followerCount)
             } catch (parseError) {
               console.error("Error parsing follow status:", parseError)
             }
@@ -87,7 +85,6 @@ export function FollowButton({ creatorId, className }: FollowButtonProps) {
 
           const data = JSON.parse(text)
           setIsFollowing(data.following)
-          setFollowerCount(data.followerCount)
           
           toast.success("You are now following this creator")
         } catch (error) {
@@ -129,7 +126,6 @@ export function FollowButton({ creatorId, className }: FollowButtonProps) {
 
       const data = JSON.parse(text)
       setIsFollowing(data.following)
-      setFollowerCount(data.followerCount)
       
       toast.success(
         data.following ? "You are now following this creator" : "You unfollowed this creator"
@@ -169,19 +165,14 @@ export function FollowButton({ creatorId, className }: FollowButtonProps) {
         variant={isFollowing ? "outline" : "default"}
         className={className}
       >
-        {isUpdating ? (
+        {/* {isUpdating ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : isFollowing ? (
           <UserMinus className="mr-2 h-4 w-4" />
         ) : (
           <UserPlus className="mr-2 h-4 w-4" />
-        )}
-        {isFollowing ? "Unfollow" : "Follow"}
-        {followerCount > 0 && (
-          <span className="ml-2 text-xs opacity-70">
-            ({followerCount})
-          </span>
-        )}
+        )} */}
+        {isFollowing ? "Following" : "Follow"}
       </Button>
       <LoginModal 
         open={showLoginModal} 

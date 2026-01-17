@@ -14,6 +14,8 @@ interface CreatorPageClientProps {
   creatorName: string;
   creatorImage?: string | null;
   username: string;
+  chatEnabled?: boolean;
+  callEnabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -22,6 +24,8 @@ export function CreatorPageClient({
   creatorName,
   creatorImage,
   username,
+  chatEnabled = true,
+  callEnabled = true,
   children,
 }: CreatorPageClientProps) {
   const [showChat, setShowChat] = useState(false);
@@ -47,7 +51,7 @@ export function CreatorPageClient({
         {children}
       
       {/* Floating Chat Button */}
-      {!isCreator && (
+      {!isCreator && chatEnabled && (
         <div className="fixed bottom-4 right-4 z-40">
           <Button
             onClick={() => setShowChat(true)}
@@ -66,6 +70,7 @@ export function CreatorPageClient({
           creatorName={creatorName}
           creatorImage={creatorImage}
           username={username}
+          callEnabled={callEnabled}
           onClose={() => setShowChat(false)}
         />
       )}

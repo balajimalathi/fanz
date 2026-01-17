@@ -138,4 +138,35 @@ export class WalletService {
 
     return !!purchase;
   }
+
+  /**
+   * Reserve credits temporarily (for calls, etc.)
+   * This deducts the credits but marks them as reserved in metadata
+   */
+  static async reserveCredits(
+    userId: string,
+    amount: number,
+    description: string,
+    metadata?: Record<string, unknown>
+  ): Promise<boolean> {
+    return await this.deductCredits(userId, amount, description, {
+      ...metadata,
+      reserved: true,
+    });
+  }
+
+  /**
+   * Release reservation by refunding credits
+   */
+  static async releaseReservation(
+    userId: string,
+    amount: number,
+    description: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.addCredits(userId, amount, null, description, {
+      ...metadata,
+      refund: true,
+    });
+  }
 }

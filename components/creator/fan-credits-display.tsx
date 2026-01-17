@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Coins, Plus } from "lucide-react"
+import { Coins } from "lucide-react"
 import { CreditPurchaseModal } from "./credit-purchase-modal"
 import { useSession } from "@/lib/auth/auth-client"
 
@@ -64,24 +64,17 @@ export function FanCreditsDisplay({ creatorId }: FanCreditsDisplayProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted border">
-          <Coins className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">
-            {loading ? "..." : balance !== null ? balance.toLocaleString() : "0"}
-          </span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowPurchaseModal(true)}
-          className="flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add Credits</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowPurchaseModal(true)}
+        className="flex items-center gap-1.5 px-3 py-1.5"
+      >
+        <Coins className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium">
+          {loading ? "..." : balance !== null ? balance.toLocaleString() : "0"}
+        </span>
+      </Button>
       <CreditPurchaseModal
         open={showPurchaseModal}
         onOpenChange={setShowPurchaseModal}

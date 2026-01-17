@@ -54,9 +54,11 @@ interface FeedSectionProps {
     monthlyRecurringFee: number
     coverImageUrl?: string | null
   }>
+  /** Hide the "Posts" heading - useful when used inside tabs */
+  hideHeading?: boolean
 }
 
-export function FeedSection({ username, creatorId, memberships = [] }: FeedSectionProps) {
+export function FeedSection({ username, creatorId, memberships = [], hideHeading = false }: FeedSectionProps) {
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -205,19 +207,21 @@ export function FeedSection({ username, creatorId, memberships = [] }: FeedSecti
 
   return (
     <div className="space-y-6">
-      <div className="mb-6 sm:mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Posts</h2>
-            <p className="text-muted-foreground text-sm sm:text-base mt-1">
-              Latest posts from this creator
-            </p>
+      {!hideHeading && (
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Posts</h2>
+              <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                Latest posts from this creator
+              </p>
+            </div>
+            {/* {creatorId && memberships.length > 0 && (
+              <SubscribeButton creatorId={creatorId} memberships={memberships} />
+            )} */}
           </div>
-          {/* {creatorId && memberships.length > 0 && (
-            <SubscribeButton creatorId={creatorId} memberships={memberships} />
-          )} */}
         </div>
-      </div>
+      )}
 
       <div className="flex justify-center">
         <div className="max-w-2xl w-full space-y-6">

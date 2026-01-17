@@ -6,6 +6,8 @@ import { liveStream, liveStreamPurchase, follower, user } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm";
 import { generateAccessToken } from "@/lib/livekit/token";
 import { env } from "@/env";
+import { CreatorPricingService } from "@/lib/services/creator-pricing-service";
+import { WalletService } from "@/lib/wallet/wallet-service";
 
 export async function POST(
   request: NextRequest,
@@ -75,15 +77,61 @@ export async function POST(
       });
 
       if (!purchase) {
-        return NextResponse.json(
-          { 
-            error: "Payment required",
-            requiresPayment: true,
-            streamId: stream.id,
-            price: stream.price ? stream.price / 100 : null,
-          },
-          { status: 402 }
-        );
+        // Get entry price (use stream price if set, otherwise use creator's default)
+        let entryPrice = stream.price || 0;
+        if (!entryPrice || entryPrice === 0) {
+          entryPrice = await CreatorPricingService.getLiveStreamEntryPrice(
+            stream.creatorId
+          );
+        }
+
+        if (entryPrice > 0) {
+          // Check balance
+          const balance = await WalletService.getBalance(session.user.id);
+          if (balance < entryPrice) {
+            return NextResponse.json(
+              {
+                error: "Insufficient balance",
+                requiresPayment: true,
+                streamId: stream.id,
+                price: entryPrice,
+                balance,
+              },
+              { status: 402 }
+            );
+          }
+
+          // Deduct coins
+          const success = await WalletService.deductCredits(
+            session.user.id,
+            entryPrice,
+            `Live stream entry - ${stream.id}`,
+            {
+              streamId: stream.id,
+              creatorId: stream.creatorId,
+            }
+          );
+
+          if (!success) {
+            return NextResponse.json(
+              { error: "Failed to deduct coins" },
+              { status: 500 }
+            );
+          }
+
+          // Create purchase record
+          await db.insert(liveStreamPurchase).values({
+            liveStreamId: streamId,
+            userId: session.user.id,
+            // paymentTransactionId is null for coin purchases
+          });
+        } else {
+          // Free entry (price is 0) - just create purchase record
+          await db.insert(liveStreamPurchase).values({
+            liveStreamId: streamId,
+            userId: session.user.id,
+          });
+        }
       }
     }
 
