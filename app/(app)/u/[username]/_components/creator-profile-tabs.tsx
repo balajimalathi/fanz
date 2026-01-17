@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { FeedSection } from "./feed-section"
+import { GallerySection } from "./gallery-section"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { SupportOptionsCard } from "@/components/creator/support-options-card"
@@ -87,6 +88,7 @@ export function CreatorProfileTabs({
             <div className="flex items-center justify-between py-2">
               <TabsList>
                 <TabsTrigger value="posts">Posts</TabsTrigger>
+                <TabsTrigger value="gallery">Gallery</TabsTrigger>
                 {memberships.length > 0 && (
                   <TabsTrigger value="membership">Membership</TabsTrigger>
                 )}
@@ -129,7 +131,7 @@ export function CreatorProfileTabs({
               </div>
 
               {/* Support Card - Shows on desktop sidebar */}
-              <div className="lg:col-span-1 order-1 lg:order-2">
+              {/* <div className="lg:col-span-1 order-1 lg:order-2">
                 <div className="lg:sticky lg:top-20">
                   <SupportOptionsCard
                     creatorId={creator.id}
@@ -138,8 +140,13 @@ export function CreatorProfileTabs({
                     currency={currency}
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
+          </TabsContent>
+
+          {/* Gallery Tab */}
+          <TabsContent value="gallery" className="mt-6 focus-visible:outline-none">
+            <GallerySection username={creator.username ?? ""} />
           </TabsContent>
 
           {/* Membership Tab */}

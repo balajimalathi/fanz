@@ -14,6 +14,7 @@ import { LiveIndicator } from "@/components/livekit/live-indicator"
 import { useLiveHandler } from "@/app/(app)/u/[username]/_components/live-handler-context"
 import { ReportCreatorDialog } from "@/components/report/report-creator-dialog"
 import { FanCreditsDisplay } from "./fan-credits-display"
+import { CreatorStats } from "./creator-stats"
 
 interface ProfileHeaderProps {
   displayName: string
@@ -146,6 +147,11 @@ export function ProfileHeader({
               <FollowButton creatorId={creatorId} />
             </div>
           </div>
+        </div>
+
+        {/* Creator Stats */}
+        <div className="mb-4">
+          <CreatorStats username={username} />
         </div>
 
         {/* Bio */}
