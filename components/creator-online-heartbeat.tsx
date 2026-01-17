@@ -4,12 +4,13 @@ import { useEffect, useRef } from "react"
 import { useSession } from "@/lib/auth/auth-client"
 
 /**
- * Component that sends heartbeat to keep creator online status updated
+ * Component that maintains creator online status via SSE stream
+ * Connection open = online, connection closed = offline
  * Should be included in creator-facing pages
  */
 export function CreatorOnlineHeartbeat() {
   const { data: session } = useSession()
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
     // Only run for creators
@@ -19,57 +20,45 @@ export function CreatorOnlineHeartbeat() {
       return
     }
 
-    const sendHeartbeat = async () => {
+    // Connect to SSE stream - connection open = online, closed = offline
+    const eventSource = new EventSource("/api/creator/online-status/stream")
+    eventSourceRef.current = eventSource
+
+    eventSource.onopen = () => {
+      console.log("Creator online status stream connected")
+    }
+
+    eventSource.onmessage = (event) => {
       try {
-        await fetch("/api/creator/online-status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ isOnline: true }),
-        })
+        const data = JSON.parse(event.data)
+        if (data.type === "connected") {
+          console.log("Creator marked as online")
+        } else if (data.type === "heartbeat") {
+          // Heartbeat received, connection is alive
+        }
       } catch (error) {
-        console.error("Error sending creator heartbeat:", error)
+        console.error("Error parsing SSE message:", error)
       }
     }
 
-    // Send initial heartbeat
-    sendHeartbeat()
+    eventSource.onerror = (error) => {
+      console.error("SSE stream error:", error)
+      // EventSource will automatically reconnect
+    }
 
-    // Send heartbeat every 45 seconds (before 2 minute timeout)
-    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 45000)
-
-    // Send offline status when component unmounts or page unloads
+    // Cleanup: Close connection when component unmounts or page unloads
     const handleBeforeUnload = () => {
-      fetch("/api/creator/online-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isOnline: false }),
-      }).catch(() => {
-        // Ignore errors on unload
-      })
+      eventSource.close()
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload)
 
     return () => {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current)
-      }
       window.removeEventListener("beforeunload", handleBeforeUnload)
-      
-      // Send offline status on cleanup
-      fetch("/api/creator/online-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isOnline: false }),
-      }).catch(() => {
-        // Ignore errors on cleanup
-      })
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
     }
   }, [session?.user])
 

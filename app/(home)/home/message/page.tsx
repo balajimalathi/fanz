@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
-import { InboxPageClient } from "./message-client";
+import { InboxPageClient } from "./inbox-client";
 import { checkBannedUser } from "@/lib/utils/check-banned-user";
 
 export default async function InboxPage() {

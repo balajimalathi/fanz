@@ -1,6 +1,6 @@
 {
-  "id": "6d9034db-4259-4283-9171-1f44c3f571ea",
-  "prevId": "ea65d1af-f73a-47f0-abf6-358a3ed09736",
+  "id": "023901ee-be3b-48e1-bfcf-ec7ee9c41566",
+  "prevId": "6d9034db-4259-4283-9171-1f44c3f571ea",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -694,6 +694,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "chat_availability_schedule": {
+          "name": "chat_availability_schedule",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "call_availability_schedule": {
+          "name": "call_availability_schedule",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

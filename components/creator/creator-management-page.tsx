@@ -4,6 +4,7 @@ import { ProfileCard } from "./profile-card"
 import { ServiceCard } from "./service-card"
 import { PricingCard } from "./pricing-card"
 import { MembershipCard } from "./membership-card"
+import { FeatureSettingsCard } from "./feature-settings-card"
  
 interface CreatorManagementPageProps {
   creatorId: string
@@ -28,6 +29,9 @@ export function CreatorManagementPage({
         initialBio={initialBio}
         initialUsername={initialUsername}
       />
+
+      {/* Feature Settings Section */}
+      <FeatureSettingsCard />
 
       {/* Services Section */}
       <ServiceCard />

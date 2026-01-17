@@ -1,8 +1,6 @@
 import { db } from "@/lib/db/client";
 import { exchangeRates } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { env } from "@/env";
-import { BASE_CURRENCY } from "@/lib/currency/currency-config";
 
 export class ExchangeRateService {
   /**

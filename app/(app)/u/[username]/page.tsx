@@ -71,6 +71,8 @@ async function getCreatorProfile(username: string) {
         creatorType: creatorRecord.creatorType,
         contentType: creatorRecord.contentType,
         categories: creatorRecord.categories,
+        chatEnabled: creatorRecord.chatEnabled ?? true,
+        callEnabled: creatorRecord.callEnabled ?? true,
       },
       services: servicesWithDisplay,
       memberships: membershipsWithDisplay,
@@ -110,6 +112,8 @@ export default async function Page({
         creatorName={creator.displayName}
         creatorImage={creatorUser?.image || creator.profileImageUrl}
         username={creator.username ?? ""}
+        chatEnabled={creator.chatEnabled}
+        callEnabled={creator.callEnabled}
       >
         <div className="min-h-screen bg-background">
           {/* Profile Header */}

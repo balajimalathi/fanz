@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar"
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper"
 import { checkBannedUser } from "@/lib/utils/check-banned-user"
+import { CreatorOnlineHeartbeat } from "@/components/creator-online-heartbeat";
 
 export default async function layout({
   children,

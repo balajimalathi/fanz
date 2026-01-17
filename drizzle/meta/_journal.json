@@ -260,6 +260,20 @@
       "when": 1768315279664,
       "tag": "0036_fearless_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1768647751252,
+      "tag": "0037_known_vampiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1768648059479,
+      "tag": "0038_equal_leo",
+      "breakpoints": true
     }
   ]
 }

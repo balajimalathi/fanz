@@ -117,6 +117,30 @@ export const creator = pgTable("creator", {
   }>(),
   isOnline: boolean("is_online").notNull().default(false),
   lastSeenAt: timestamp("last_seen_at"),
+  chatEnabled: boolean("chat_enabled").notNull().default(true),
+  callEnabled: boolean("call_enabled").notNull().default(true),
+  chatAvailabilitySchedule: jsonb("chat_availability_schedule").$type<{
+    enabled: boolean;
+    timezone: string; // Creator's timezone (e.g., "Asia/Kolkata", "America/New_York")
+    schedule: {
+      [day: string]: { // "monday", "tuesday", etc.
+        enabled: boolean;
+        startTime: string; // "HH:mm" format in creator's timezone
+        endTime: string; // "HH:mm" format in creator's timezone
+      };
+    };
+  }>(),
+  callAvailabilitySchedule: jsonb("call_availability_schedule").$type<{
+    enabled: boolean;
+    timezone: string; // Creator's timezone (e.g., "Asia/Kolkata", "America/New_York")
+    schedule: {
+      [day: string]: { // "monday", "tuesday", etc.
+        enabled: boolean;
+        startTime: string; // "HH:mm" format in creator's timezone
+        endTime: string; // "HH:mm" format in creator's timezone
+      };
+    };
+  }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

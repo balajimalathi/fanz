@@ -14,6 +14,7 @@ interface CreatorChatWindowProps {
   creatorName: string;
   creatorImage?: string | null;
   username: string;
+  callEnabled?: boolean;
   onClose: () => void;
 }
 
@@ -22,6 +23,7 @@ export function CreatorChatWindow({
   creatorName,
   creatorImage,
   username,
+  callEnabled = true,
   onClose,
 }: CreatorChatWindowProps) {
   const router = useRouter();
@@ -74,10 +76,14 @@ export function CreatorChatWindow({
     if (!conversationId || !currentUserId) return;
 
     try {
+      // Get browser timezone
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      
       const response = await fetch("/api/calls/initiate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-timezone": timezone,
         },
         body: JSON.stringify({
           conversationId,
@@ -210,24 +216,26 @@ export function CreatorChatWindow({
             <p className="text-sm text-muted-foreground">Online</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => startCall("audio")}
-            disabled={!!activeCall}
-          >
-            <Phone className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => startCall("video")}
-            disabled={!!activeCall}
-          >
-            <Video className="h-4 w-4" />
-          </Button>
-        </div>
+        {callEnabled && (
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => startCall("audio")}
+              disabled={!!activeCall}
+            >
+              <Phone className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => startCall("video")}
+              disabled={!!activeCall}
+            >
+              <Video className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Chat interface */}

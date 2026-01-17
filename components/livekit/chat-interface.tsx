@@ -205,26 +205,36 @@ export function ChatInterface({
     fetchConversationInfo();
   }, [conversationId, currentUserId]);
 
-  // Fetch creator online status (if fan)
+  // Stream creator online status via SSE (if fan)
   useEffect(() => {
     if (!isFan || !creatorUsername) return;
 
-    const fetchCreatorStatus = async () => {
+    // Connect to SSE stream for real-time status updates
+    const eventSource = new EventSource(`/api/creator/${creatorUsername}/online-status/stream`);
+
+    eventSource.onopen = () => {
+      console.log("Creator status stream connected");
+    };
+
+    eventSource.onmessage = (event) => {
       try {
-        const response = await fetch(`/api/creator/${creatorUsername}/online-status`);
-        if (response.ok) {
-          const data = await response.json();
+        const data = JSON.parse(event.data);
+        if (data.type === "status") {
           setCreatorOnline(data.isOnline);
         }
       } catch (error) {
-        console.error("Error fetching creator online status:", error);
+        console.error("Error parsing creator status SSE message:", error);
       }
     };
 
-    fetchCreatorStatus();
-    // Poll every 30 seconds
-    const interval = setInterval(fetchCreatorStatus, 30000);
-    return () => clearInterval(interval);
+    eventSource.onerror = (error) => {
+      console.error("Creator status SSE stream error:", error);
+      // EventSource will automatically reconnect
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, [isFan, creatorUsername]);
 
   // Fetch balance (if fan)
@@ -669,11 +679,15 @@ export function ChatInterface({
         try {
           const { mediaUrl, thumbnailUrl, messageType } = await uploadMedia(file);
           
+          // Get browser timezone
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+          
           // Send the message
           const response = await fetch(`/api/conversations/${conversationId}/messages`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              "x-user-timezone": timezone,
             },
             body: JSON.stringify({
               content: null,
@@ -783,11 +797,15 @@ export function ChatInterface({
             const audioFile = new File([blob], "recording.webm", { type: "audio/webm" });
             const { mediaUrl, thumbnailUrl, messageType } = await uploadMedia(audioFile);
             
+            // Get browser timezone
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            
             // Send the message
             const response = await fetch(`/api/conversations/${conversationId}/messages`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
+                "x-user-timezone": timezone,
               },
               body: JSON.stringify({
                 content: null,
@@ -910,10 +928,14 @@ export function ChatInterface({
     setError(null);
 
     try {
+      // Get browser timezone
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      
       const response = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-timezone": timezone,
         },
         body: JSON.stringify({
           content: content || null,
@@ -1025,10 +1047,14 @@ export function ChatInterface({
     setError(null);
 
     try {
+      // Get browser timezone
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      
       const response = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-timezone": timezone,
         },
         body: JSON.stringify({
           content: messageContent,
@@ -1266,7 +1292,7 @@ export function ChatInterface({
             variant="ghost"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || isRecording || (isFan && creatorOnline === false)}
+            disabled={isLoading || isRecording || (isFan && creatorOnline === false) || creatorOnline === null}
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -1276,7 +1302,7 @@ export function ChatInterface({
               variant="ghost"
               size="icon"
               onClick={startRecording}
-              disabled={isLoading || !!selectedFile || (isFan && creatorOnline === false)}
+              disabled={isLoading || !!selectedFile || (isFan && creatorOnline === false) || creatorOnline === null}
             >
               <Mic className="h-4 w-4" />
             </Button>
@@ -1302,7 +1328,7 @@ export function ChatInterface({
             disabled={
               isLoading ||
               isRecording ||
-              (isFan && creatorOnline === false) // Disable if creator is offline
+              (isFan && creatorOnline === false) || creatorOnline === null // Disable if creator is offline
             }
           />
           <Button
@@ -1311,7 +1337,7 @@ export function ChatInterface({
               isLoading ||
               isRecording ||
               (!inputValue.trim() && !selectedFile && !audioBlob) ||
-              (isFan && creatorOnline === false) // Disable if creator is offline
+              (isFan && creatorOnline === false) || creatorOnline === null // Disable if creator is offline
             }
           >
             {isLoading ? (

@@ -14,6 +14,8 @@ import { CreatorOnlineStatusService } from "@/lib/services/creator-online-status
 import { CreatorPricingService } from "@/lib/services/creator-pricing-service";
 import { DMChargeService } from "@/lib/services/dm-charge-service";
 import { WalletService } from "@/lib/wallet/wallet-service";
+import { AvailabilityService } from "@/lib/services/availability-service";
+import { format } from "date-fns";
 
 // GET - List messages for a conversation
 export async function GET(
@@ -136,6 +138,34 @@ export async function POST(
           { error: "Creator is offline. DM features are disabled." },
           { status: 400 }
         );
+      }
+
+      // Get fan's timezone from request headers (browser timezone)
+      const fanTimezone =
+        request.headers.get("x-user-timezone") ||
+        Intl.DateTimeFormat().resolvedOptions().timeZone ||
+        "UTC";
+
+      // Check if creator is available for chats
+      const availability = await AvailabilityService.isCreatorAvailableForChats(
+        conv.creatorId,
+        fanTimezone
+      );
+
+      if (!availability.available) {
+        let errorMessage = "Creator is not available for chats at this time.";
+        if (availability.schedule) {
+          errorMessage += ` Available hours: ${availability.schedule}`;
+        }
+        if (availability.nextAvailableTime) {
+          const nextTime = format(
+            availability.nextAvailableTime,
+            "PPp",
+            { timeZone: fanTimezone }
+          );
+          errorMessage += ` Next available: ${nextTime}`;
+        }
+        return NextResponse.json({ error: errorMessage }, { status: 400 });
       }
 
       // Get pricing for message type
