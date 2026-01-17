@@ -75,8 +75,8 @@ export class CoinConversionService {
       const coinsFromThisPurchase = Math.min(remaining, remainingToAllocate);
 
       // Get coin value and exchange rate from purchase
-      const coinValueUSD = purchase.coinValueUSD
-        ? parseFloat(purchase.coinValueUSD)
+      const coinValueUSD = purchase.coinValueUsd
+        ? parseFloat(purchase.coinValueUsd)
         : await this.calculateCoinValueFromPurchase(purchase.id);
 
       const exchangeRate = purchase.exchangeRate

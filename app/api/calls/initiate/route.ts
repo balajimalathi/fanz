@@ -11,7 +11,7 @@ import { sendPushNotificationsToUsers } from "@/lib/push/fcm";
 import { CreatorPricingService } from "@/lib/services/creator-pricing-service";
 import { WalletService } from "@/lib/wallet/wallet-service";
 import { AvailabilityService } from "@/lib/services/availability-service";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,10 +90,10 @@ export async function POST(request: NextRequest) {
           errorMessage += ` Available hours: ${availability.schedule}`;
         }
         if (availability.nextAvailableTime) {
-          const nextTime = format(
+          const nextTime = formatInTimeZone(
             availability.nextAvailableTime,
-            "PPp",
-            { timeZone: fanTimezone }
+            fanTimezone,
+            "PPp"
           );
           errorMessage += ` Next available: ${nextTime}`;
         }

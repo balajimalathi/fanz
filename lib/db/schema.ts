@@ -81,6 +81,7 @@ export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "ac
 export const callTypeEnum = pgEnum("call_type", ["audio", "video"]);
 export const liveStreamTypeEnum = pgEnum("live_stream_type", ["free", "follower_only", "paid"]);
 export const liveStreamStatusEnum = pgEnum("live_stream_status", ["active", "ended"]);
+export const conversationRequestStatusEnum = pgEnum("conversation_request_status", ["pending_request", "accepted", "rejected"]);
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
@@ -449,6 +450,10 @@ export const conversation = pgTable("conversation", {
   isEnabled: boolean("is_enabled").notNull().default(true),
   lastMessageAt: timestamp("last_message_at"),
   lastMessagePreview: text("last_message_preview"),
+  requestStatus: conversationRequestStatusEnum("request_status").notNull().default("pending_request"),
+  requestedAt: timestamp("requested_at"),
+  acceptedAt: timestamp("accepted_at"),
+  rejectedAt: timestamp("rejected_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
@@ -619,6 +624,32 @@ export const fanWalletTransaction = pgTable("fan_wallet_transaction", {
   type: fanWalletTransactionTypeEnum("type").notNull(),
   amount: integer("amount").notNull(), // Positive for purchase/refund, negative for usage
   description: text("description"),
+  paymentTransactionId: uuid("payment_transaction_id")
+    .references(() => paymentTransaction.id, { onDelete: "set null" }),
+  coinValueUsd: decimal("coin_value_usd", { precision: 10, scale: 6 }),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }),
+  creatorCurrency: varchar("creator_currency", { length: 3 }),
+  linkedPurchaseTransactionId: uuid("linked_purchase_transaction_id")
+    .references((): any => fanWalletTransaction.id, { onDelete: "set null" }),
+  remainingCoins: integer("remaining_coins"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const coinEarnings = pgTable("coin_earnings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: text("creator_id")
+    .notNull()
+    .references(() => creator.id, { onDelete: "cascade" }),
+  fanWalletTransactionId: uuid("fan_wallet_transaction_id")
+    .notNull()
+    .references(() => fanWalletTransaction.id, { onDelete: "cascade" }),
+  coinsUsed: integer("coins_used").notNull(),
+  usdValue: integer("usd_value").notNull(), // In cents
+  creatorCurrency: varchar("creator_currency", { length: 3 }).notNull(),
+  creatorAmount: integer("creator_amount").notNull(), // In creator currency subunits
+  platformFee: integer("platform_fee").notNull(), // In creator currency subunits
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }).notNull(),
   paymentTransactionId: uuid("payment_transaction_id")
     .references(() => paymentTransaction.id, { onDelete: "set null" }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),

@@ -15,7 +15,7 @@ import { CreatorPricingService } from "@/lib/services/creator-pricing-service";
 import { DMChargeService } from "@/lib/services/dm-charge-service";
 import { WalletService } from "@/lib/wallet/wallet-service";
 import { AvailabilityService } from "@/lib/services/availability-service";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 // GET - List messages for a conversation
 export async function GET(
@@ -158,10 +158,10 @@ export async function POST(
           errorMessage += ` Available hours: ${availability.schedule}`;
         }
         if (availability.nextAvailableTime) {
-          const nextTime = format(
+          const nextTime = formatInTimeZone(
             availability.nextAvailableTime,
-            "PPp",
-            { timeZone: fanTimezone }
+            fanTimezone,
+            "PPp"
           );
           errorMessage += ` Next available: ${nextTime}`;
         }
