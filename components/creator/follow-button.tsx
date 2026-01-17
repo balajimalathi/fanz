@@ -176,7 +176,7 @@ export function FollowButton({ creatorId, className }: FollowButtonProps) {
         ) : (
           <UserPlus className="mr-2 h-4 w-4" />
         )}
-        {isFollowing ? "Unfollow" : "Follow"}
+        {isFollowing ? "Following" : "Follow"}
         {followerCount > 0 && (
           <span className="ml-2 text-xs opacity-70">
             ({followerCount})

@@ -48,6 +48,14 @@ export function ProfileHeader({
     .toUpperCase()
     .slice(0, 2)
 
+  // Get user's initials for avatar fallback
+  const userInitials = session?.user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "U"
+
   return (
     <div className="relative w-full">
       {/* Cover Image */}
@@ -63,6 +71,41 @@ export function ProfileHeader({
         ) : (
           <div className="w-full h-full bg-linear-to-br from-primary/20 to-primary/5" />
         )}
+
+        {/* Utility Actions - Floating on cover image (top-right) */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          {isAuthenticated && (
+            <>
+              <NotificationPermission />
+              <PWAInstallButton />
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(true)}
+                className="h-9 w-9 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background border-2 border-background/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
+                <Avatar className="h-full w-full">
+                  {session?.user?.image ? (
+                    <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
+                  ) : (
+                    <AvatarFallback className="text-xs font-semibold bg-muted">
+                      {userInitials}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </button>
+            </>
+          )}
+          {canReport && (
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => setShowReportDialog(true)}
+              className="h-9 w-9 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
+            >
+              <Flag className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Profile Section */}
@@ -80,7 +123,7 @@ export function ProfileHeader({
           </Avatar>
         </div>
 
-        {/* Name and Username */}
+        {/* Name, Username and Primary Actions */}
         <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -96,33 +139,11 @@ export function ProfileHeader({
                 <LiveIndicator creatorId={creatorId} onClick={liveHandler.onLiveClick} />
               )}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            
+            {/* Primary Actions - Follow and Credits */}
+            <div className="flex items-center gap-2">
               {isAuthenticated && <FanCreditsDisplay creatorId={creatorId} />}
-              <FollowButton creatorId={creatorId} /> 
-              {isAuthenticated && (
-                <>
-                  <NotificationPermission />
-                  <PWAInstallButton />
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowProfileModal(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">Profile</span>
-                  </Button>
-                </>
-              )}
-              {canReport && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowReportDialog(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Flag className="h-4 w-4" />
-                  <span className="hidden sm:inline">Report</span>
-                </Button>
-              )}
+              <FollowButton creatorId={creatorId} />
             </div>
           </div>
         </div>

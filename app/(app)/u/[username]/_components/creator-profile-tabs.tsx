@@ -77,39 +77,21 @@ export function CreatorProfileTabs({
     }
   }
 
-  // Common tab trigger styles
-  const tabTriggerStyles = `
-    relative px-4 py-3 text-sm font-medium text-muted-foreground
-    transition-all duration-200 ease-in-out
-    hover:text-foreground
-    data-[state=active]:bg-transparent 
-    data-[state=active]:text-primary
-    data-[state=active]:shadow-none
-    rounded-none border-b-2 border-transparent
-    data-[state=active]:border-primary
-  `
-
   return (
     <div className="w-full">
       {/* Single Tabs component wrapping both navigation and content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        {/* Navigation Tabs - Ko-fi style with underline */}
+        {/* Navigation Tabs */}
         <div className="sticky top-0 z-10 bg-background border-b border-border">
           <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
-              <TabsList className="bg-transparent h-auto p-0 justify-start border-none gap-0">
-                <TabsTrigger value="posts" className={tabTriggerStyles}>
-                  Posts
-                </TabsTrigger>
+            <div className="flex items-center justify-between py-2">
+              <TabsList>
+                <TabsTrigger value="posts">Posts</TabsTrigger>
                 {memberships.length > 0 && (
-                  <TabsTrigger value="membership" className={tabTriggerStyles}>
-                    Membership
-                  </TabsTrigger>
+                  <TabsTrigger value="membership">Membership</TabsTrigger>
                 )}
                 {services.length > 0 && (
-                  <TabsTrigger value="shop" className={tabTriggerStyles}>
-                    Services
-                  </TabsTrigger>
+                  <TabsTrigger value="shop">Services</TabsTrigger>
                 )}
               </TabsList>
 
