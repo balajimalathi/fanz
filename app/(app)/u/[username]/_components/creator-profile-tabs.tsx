@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
 import { FeedSection } from "./feed-section"
 import { ServiceDisplayCard } from "@/components/creator/service-display-card"
 import { MembershipDisplayCard } from "@/components/creator/membership-display-card"
 import { SupportOptionsCard } from "@/components/creator/support-options-card"
-import { Share2 } from "lucide-react"
+import { Share2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 interface CreatorProfileTabsProps {
   creator: {
@@ -48,6 +48,7 @@ export function CreatorProfileTabs({
   currency,
 }: CreatorProfileTabsProps) {
   const [activeTab, setActiveTab] = useState("posts")
+  const [copied, setCopied] = useState(false)
 
   const handleShare = async () => {
     const url = window.location.href
@@ -66,160 +67,155 @@ export function CreatorProfileTabs({
       // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(url)
+        setCopied(true)
+        toast.success("Link copied to clipboard!")
+        setTimeout(() => setCopied(false), 2000)
       } catch (error) {
         console.error("Failed to copy URL:", error)
+        toast.error("Failed to copy link")
       }
     }
   }
 
+  // Common tab trigger styles
+  const tabTriggerStyles = `
+    relative px-4 py-3 text-sm font-medium text-muted-foreground
+    transition-all duration-200 ease-in-out
+    hover:text-foreground
+    data-[state=active]:bg-transparent 
+    data-[state=active]:text-primary
+    data-[state=active]:shadow-none
+    rounded-none border-b-2 border-transparent
+    data-[state=active]:border-primary
+  `
+
   return (
     <div className="w-full">
-      {/* Navigation Tabs - Ko-fi style with underline */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
-        <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-transparent h-auto p-0 w-full justify-start border-none">
-              {/* <TabsTrigger
-                value="about"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none px-4 py-3 text-sm font-medium"
-              >
-                About
-              </TabsTrigger> */}
-              <TabsTrigger
-                value="posts"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none px-4 py-3 text-sm font-medium"
-              >
-                Posts
-              </TabsTrigger>
-              {memberships.length > 0 && (
-                <TabsTrigger
-                  value="membership"
-                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none px-4 py-3 text-sm font-medium"
-                >
-                  Membership
+      {/* Single Tabs component wrapping both navigation and content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Navigation Tabs - Ko-fi style with underline */}
+        <div className="sticky top-0 z-10 bg-background border-b border-border">
+          <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+              <TabsList className="bg-transparent h-auto p-0 justify-start border-none gap-0">
+                <TabsTrigger value="posts" className={tabTriggerStyles}>
+                  Posts
                 </TabsTrigger>
-              )}
-              {/* <TabsTrigger
-                value="gallery"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none px-4 py-3 text-sm font-medium"
-              >
-                Gallery
-              </TabsTrigger> */}
-              {services.length > 0 && (
-                <TabsTrigger
-                  value="shop"
-                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none px-4 py-3 text-sm font-medium"
-                >
-                  Services
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
+                {memberships.length > 0 && (
+                  <TabsTrigger value="membership" className={tabTriggerStyles}>
+                    Membership
+                  </TabsTrigger>
+                )}
+                {services.length > 0 && (
+                  <TabsTrigger value="shop" className={tabTriggerStyles}>
+                    Services
+                  </TabsTrigger>
+                )}
+              </TabsList>
 
-      {/* Tab Content */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          {/* About Tab */}
-          <TabsContent value="about" className="mt-6">
-            <div className="max-w-3xl">
-              {creator.bio ? (
-                <Card className="bg-gray-50 dark:bg-gray-900/50 rounded-lg shadow-sm">
-                  <CardContent className="pt-6">
-                    <h2 className="text-xl font-semibold mb-4">About</h2>
-                    <p className="text-sm sm:text-base text-foreground whitespace-pre-line leading-relaxed">
-                      {creator.bio}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="bg-gray-50 dark:bg-gray-900/50 rounded-lg shadow-sm">
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-sm sm:text-base">
-                      No bio available yet.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Share Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="hidden sm:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                <span className="hidden md:inline">Share</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
+          {/* Posts Tab */}
+          <TabsContent value="posts" className="mt-6 focus-visible:outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Content - Full width on mobile, 2/3 on desktop */}
+              <div className="lg:col-span-2 order-2 lg:order-1">
+                <FeedSection
+                  username={creator.username ?? ""}
+                  creatorId={creator.id}
+                  memberships={memberships}
+                  hideHeading
+                />
+              </div>
+
+              {/* Support Card - Shows on desktop sidebar */}
+              <div className="lg:col-span-1 order-1 lg:order-2">
+                <div className="lg:sticky lg:top-20">
+                  <SupportOptionsCard
+                    creatorId={creator.id}
+                    creatorName={creator.displayName}
+                    memberships={memberships}
+                    currency={currency}
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
 
           {/* Membership Tab */}
           {memberships.length > 0 && (
-            <TabsContent value="membership" className="mt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {memberships.map((membership: any) => (
-                  <MembershipDisplayCard
-                    key={membership.id}
-                    id={membership.id}
-                    title={membership.title}
-                    description={membership.description}
-                    monthlyRecurringFee={membership.monthlyRecurringFee}
-                    currency={membership.currency}
-                    coverImageUrl={membership.coverImageUrl}
-                    creatorId={creator.id}
-                  />
-                ))}
+            <TabsContent value="membership" className="mt-6 focus-visible:outline-none">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Memberships</h2>
+                  <p className="text-muted-foreground mt-1">
+                    Join exclusive memberships to support {creator.displayName}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {memberships.map((membership) => (
+                    <MembershipDisplayCard
+                      key={membership.id}
+                      id={membership.id}
+                      title={membership.title}
+                      description={membership.description}
+                      monthlyRecurringFee={membership.monthlyRecurringFee}
+                      currency={membership.currency}
+                      coverImageUrl={membership.coverImageUrl}
+                      creatorId={creator.id}
+                    />
+                  ))}
+                </div>
               </div>
             </TabsContent>
           )}
 
-          {/* Gallery Tab */}
-          <TabsContent value="gallery" className="mt-6">
-            <Card className="bg-gray-50 dark:bg-gray-900/50 rounded-lg shadow-sm">
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground text-sm sm:text-base text-center py-8">
-                  Gallery coming soon
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Posts Tab - Two Column Layout */}
-          <TabsContent value="posts" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Main Content (2/3 width) */}
-              <div className="lg:col-span-2">
-                <FeedSection
-                  username={creator.username ?? ""}
-                  creatorId={creator.id}
-                  memberships={memberships}
-                />
-              </div>
-
-              {/* Right Column - Support Card (1/3 width) */}
-              {/* <div className="lg:col-span-1">
-                <SupportOptionsCard
-                  creatorId={creator.id}
-                  creatorName={creator.displayName}
-                  memberships={memberships}
-                  currency={currency}
-                />
-              </div> */}
-            </div>
-          </TabsContent>
-
-          {/* Shop Tab */}
+          {/* Services Tab */}
           {services.length > 0 && (
-            <TabsContent value="shop" className="mt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {services.map((service: any) => (
-                  <ServiceDisplayCard
-                    key={service.id}
-                    id={service.id}
-                    name={service.name}
-                    description={service.description}
-                    price={service.price}
-                    currency={service.currency}
-                    creatorId={creator.id}
-                  />
-                ))}
+            <TabsContent value="shop" className="mt-6 focus-visible:outline-none">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Services</h2>
+                  <p className="text-muted-foreground mt-1">
+                    Available services from {creator.displayName}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {services.map((service) => (
+                    <ServiceDisplayCard
+                      key={service.id}
+                      id={service.id}
+                      name={service.name}
+                      description={service.description}
+                      price={service.price}
+                      currency={service.currency}
+                      creatorId={creator.id}
+                    />
+                  ))}
+                </div>
               </div>
             </TabsContent>
           )}
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   )
 }
