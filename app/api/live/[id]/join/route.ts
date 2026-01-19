@@ -149,13 +149,14 @@ export async function POST(
       participantName,
       canPublish: false, // Viewers cannot publish
       canSubscribe: true,
-      canPublishData: false,
+      canPublishData: true, // Enable data channels for comments
     });
 
     return NextResponse.json({
       token,
       url: env.NEXT_PUBLIC_LIVEKIT_URL,
       roomName: stream.livekitRoomName,
+      startedAt: stream.startedAt,
     });
   } catch (error) {
     console.error("Error joining live stream:", error);

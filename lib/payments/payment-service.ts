@@ -334,6 +334,16 @@ export class PaymentService {
         metadata.planMetadata = (request as any).planMetadata;
       }
 
+      // Store tip metadata (streamId, isTip) if present
+      if ((request as any).metadata) {
+        if ((request as any).metadata.streamId) {
+          metadata.streamId = (request as any).metadata.streamId;
+        }
+        if ((request as any).metadata.isTip !== undefined) {
+          metadata.isTip = (request as any).metadata.isTip;
+        }
+      }
+
       // For wallet_credit, use placeholder entityId; for others, use the actual entityId
       const entityIdForInsert = 
         request.type === "wallet_credit" 
@@ -646,37 +656,107 @@ export class PaymentService {
             message: `${user?.name || "A user"} purchased access to your live stream`,
             link: `/home/live`,
           });
+
+          // Publish collection update for entry fee
+          if (streamRecord.status === "active") {
+            try {
+              const { publishCollectionUpdate } = await import("@/lib/utils/redis-pubsub");
+              const { calculateStreamCollection } = await import("@/lib/services/live-stream-collection-service");
+              
+              const creator = await db.query.creator.findFirst({
+                where: (c, { eq: eqOp }) => eqOp(c.id, streamRecord.creatorId),
+              });
+              const currency = creator?.currency || "USD";
+              
+              // Calculate current collection
+              const collection = await calculateStreamCollection(transaction.entityId, currency);
+              
+              await publishCollectionUpdate(transaction.entityId, {
+                type: "collection_update",
+                streamId: transaction.entityId,
+                total: collection.total,
+                currency,
+                entryFees: collection.entryFees,
+                tips: collection.tips,
+                timestamp: Date.now(),
+              });
+            } catch (error) {
+              console.error("Error publishing collection update for live stream purchase:", error);
+              // Don't throw - graceful degradation
+            }
+          }
         }
         break;
       }
 
       case "wallet_credit": {
-        // Add credits to user's wallet via fanWalletTransaction
-        const planMetadata = transaction.metadata?.planMetadata as {
-          planType: string;
-          coins: number;
-          bonus: number;
-          totalCoins: number;
-        } | undefined;
+        // Check if this is a tip (has streamId in metadata) or a coin purchase (has planMetadata)
+        const streamId = transaction.metadata?.streamId as string | undefined;
+        const isTip = transaction.metadata?.isTip as boolean | undefined;
+        
+        if (isTip && streamId) {
+          // This is a tip during a live stream
+          // Publish collection update for tip
+          try {
+            const { publishCollectionUpdate } = await import("@/lib/utils/redis-pubsub");
+            const { calculateStreamCollection } = await import("@/lib/services/live-stream-collection-service");
+            
+            // Verify stream is active
+            const streamRecord = await db.query.liveStream.findFirst({
+              where: (ls, { eq: eqOp }) => eqOp(ls.id, streamId),
+            });
 
-        if (!planMetadata) {
-          console.error("Plan metadata not found for wallet credit transaction");
-          return;
-        }
-
-        const { WalletService } = await import("@/lib/wallet/wallet-service");
-        await WalletService.addCredits(
-          transaction.userId,
-          planMetadata.totalCoins, // Add base coins + bonus
-          transaction.id, // Link to payment transaction
-          `Purchased ${planMetadata.totalCoins} credits (${planMetadata.coins} + ${planMetadata.bonus} bonus) via ${planMetadata.planType} plan`,
-          {
-            planType: planMetadata.planType,
-            baseCoins: planMetadata.coins,
-            bonusCoins: planMetadata.bonus,
-            paymentTransactionId: transaction.id,
+            if (streamRecord && streamRecord.status === "active") {
+              const creator = await db.query.creator.findFirst({
+                where: (c, { eq: eqOp }) => eqOp(c.id, transaction.creatorId),
+              });
+              const currency = creator?.currency || "USD";
+              
+              // Calculate current collection
+              const collection = await calculateStreamCollection(streamId, currency);
+              
+              await publishCollectionUpdate(streamId, {
+                type: "collection_update",
+                streamId,
+                total: collection.total,
+                currency,
+                entryFees: collection.entryFees,
+                tips: collection.tips,
+                timestamp: Date.now(),
+              });
+            }
+          } catch (error) {
+            console.error("Error publishing collection update for tip:", error);
+            // Don't throw - graceful degradation
           }
-        );
+        } else {
+          // This is a coin purchase
+          const planMetadata = transaction.metadata?.planMetadata as {
+            planType: string;
+            coins: number;
+            bonus: number;
+            totalCoins: number;
+          } | undefined;
+
+          if (!planMetadata) {
+            console.error("Plan metadata not found for wallet credit transaction");
+            return;
+          }
+
+          const { WalletService } = await import("@/lib/wallet/wallet-service");
+          await WalletService.addCredits(
+            transaction.userId,
+            planMetadata.totalCoins, // Add base coins + bonus
+            transaction.id, // Link to payment transaction
+            `Purchased ${planMetadata.totalCoins} credits (${planMetadata.coins} + ${planMetadata.bonus} bonus) via ${planMetadata.planType} plan`,
+            {
+              planType: planMetadata.planType,
+              baseCoins: planMetadata.coins,
+              bonusCoins: planMetadata.bonus,
+              paymentTransactionId: transaction.id,
+            }
+          );
+        }
         break;
       }
     }

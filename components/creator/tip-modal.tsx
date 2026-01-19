@@ -23,6 +23,7 @@ interface TipModalProps {
   creatorName: string
   currency?: string
   initialAmount?: number
+  streamId?: string // Optional streamId for tips during live streams
 }
 
 const PRESET_AMOUNTS = [3, 5, 10, 25, 50, 100]
@@ -34,6 +35,7 @@ export function TipModal({
   creatorName,
   currency = "USD",
   initialAmount,
+  streamId,
 }: TipModalProps) {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(initialAmount || null)
   const [customAmount, setCustomAmount] = useState("")
@@ -93,6 +95,7 @@ export function TipModal({
           amount: amount,
           currency: currency,
           originUrl: currentOriginUrl,
+          metadata: streamId ? { streamId, isTip: true } : { isTip: true },
         }),
       })
 

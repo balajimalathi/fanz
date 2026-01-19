@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,13 +9,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, X } from "lucide-react";
+import { Loader2, ArrowLeft, Heart } from "lucide-react";
 import { LiveKitRoom } from "@livekit/components-react";
-import { LiveStreamView } from "./live-stream-view";
 import { PaymentModal } from "@/components/payments/payment-modal";
+import { LiveViewerContent } from "./live-viewer-content";
 import { env } from "@/env";
 import { PriceDisplay } from "@/components/currency/price-display";
 import { toSubunits } from "@/lib/currency/currency-utils";
+import { useSession } from "@/lib/auth/auth-client";
 
 interface LiveViewerModalProps {
   open: boolean;
@@ -38,11 +39,14 @@ export function LiveViewerModal({
 }: LiveViewerModalProps) {
   const [token, setToken] = useState<string | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresPayment, setRequiresPayment] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -96,6 +100,7 @@ export function LiveViewerModal({
       const data = await response.json();
       setToken(data.token);
       setRoomName(data.roomName);
+      setStartedAt(data.startedAt);
     } catch (err) {
       console.error("Error joining stream:", err);
       setError(err instanceof Error ? err.message : "Failed to join stream");
@@ -124,53 +129,102 @@ export function LiveViewerModal({
     handleJoin();
   };
 
+  // Track if close was initiated by back button
+  const closeInitiatedByButton = useRef(false);
+
+  // Prevent closing on mobile (outside click or ESC)
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      // On mobile, only allow closing via back button
+      if (isMobile && !closeInitiatedByButton.current) {
+        return;
+      }
+      closeInitiatedByButton.current = false;
+      handleClose();
+    }
+  };
+
+  const handleBackButtonClick = () => {
+    closeInitiatedByButton.current = true;
+    handleClose();
+  };
+
+  // Prevent outside click on mobile
+  const handleInteractOutside = (e: Event) => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) {
+      e.preventDefault();
+    }
+  };
+
+  // Prevent ESC key on mobile
+  const handleEscapeKeyDown = (e: KeyboardEvent) => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-6xl w-full h-[90vh] p-0 gap-0">
-          <DialogHeader className="p-4 border-b">
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent 
+          className="w-full max-w-full md:max-w-6xl h-screen md:h-[90vh] p-0 gap-0 rounded-none md:rounded-lg max-h-screen md:max-h-[90vh] top-0 md:top-[50%] left-0 md:left-[50%] translate-x-0 md:translate-x-[-50%] translate-y-0 md:translate-y-[-50%] [&>button]:hidden md:[&>button]:block"
+          onInteractOutside={handleInteractOutside}
+          onEscapeKeyDown={handleEscapeKeyDown}
+        >
+          <DialogHeader className="p-3 md:p-4 border-b shrink-0">
             <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle>Live Stream</DialogTitle>
-                <DialogDescription>
-                  {streamType === "free"
-                    ? "Free stream"
-                    : streamType === "follower_only"
-                      ? "Follower-only stream"
-                      : price ? (
-                        <>Paid stream - <PriceDisplay amount={toSubunits(price, currency)} originalCurrency={currency} /></>
-                      ) : "Paid stream"}
-                </DialogDescription>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleClose}>
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBackButtonClick}
+                  className="md:hidden h-8 w-8 shrink-0"
+                  aria-label="Go back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="text-base md:text-lg truncate">Live Stream</DialogTitle>
+                  <DialogDescription className="text-xs md:text-sm truncate">
+                    {streamType === "free"
+                      ? "Free stream"
+                      : streamType === "follower_only"
+                        ? "Follower-only stream"
+                        : price ? (
+                          <>Paid stream - <PriceDisplay amount={toSubunits(price, currency)} originalCurrency={currency} /></>
+                        ) : "Paid stream"}
+                  </DialogDescription>
+                </div>
+              </div> 
             </div>
           </DialogHeader>
 
           <div className="flex-1 relative bg-black">
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                  <p>Joining stream...</p>
+                <div className="text-center text-white px-4">
+                  <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin mx-auto mb-2" />
+                  <p className="text-sm md:text-base">Joining stream...</p>
                 </div>
               </div>
             )}
 
             {error && !requiresPayment && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <p className="mb-4">{error}</p>
-                  <Button onClick={handleJoin}>Try Again</Button>
+                <div className="text-center text-white px-4">
+                  <p className="mb-4 text-sm md:text-base">{error}</p>
+                  <Button onClick={handleJoin} size="sm" className="md:size-default">Try Again</Button>
                 </div>
               </div>
             )}
 
             {requiresPayment && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-white p-8">
-                  <p className="mb-4 text-lg">
+                <div className="text-center text-white p-4 md:p-8">
+                  <p className="mb-4 text-sm md:text-lg">
                     This is a paid stream. Pay{" "}
                     {price && (
                       <PriceDisplay
@@ -182,7 +236,8 @@ export function LiveViewerModal({
                   </p>
                   <Button
                     onClick={() => setShowPaymentModal(true)}
-                    size="lg"
+                    size="default"
+                    className="md:size-lg"
                   >
                     Pay to Join
                   </Button>
@@ -199,7 +254,13 @@ export function LiveViewerModal({
                 video={true}
                 onDisconnected={handleClose}
               >
-                <LiveStreamView isCreator={false} />
+                <LiveViewerContent
+                  streamId={streamId}
+                  creatorId={creatorId}
+                  startedAt={startedAt}
+                  showTipModal={showTipModal}
+                  setShowTipModal={setShowTipModal}
+                />
               </LiveKitRoom>
             )}
           </div>
@@ -220,6 +281,7 @@ export function LiveViewerModal({
           onSuccess={handlePaymentSuccess}
         />
       )}
+
     </>
   );
 }

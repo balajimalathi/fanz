@@ -4,9 +4,9 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LiveKitRoom } from "@livekit/components-react";
 import { LiveStreamView } from "@/components/livekit/live-stream-view";
-import { ParticipantOverlay } from "@/components/livekit/participant-overlay";
-import { Button } from "@/components/ui/button";
-import { Loader2, PhoneOff } from "lucide-react";
+import { LiveStreamComments } from "@/components/livekit/live-stream-comments";
+import { LiveStreamControls } from "@/components/livekit/live-stream-controls";
+import { Loader2 } from "lucide-react";
 import { useSession } from "@/lib/auth/auth-client";
 import { env } from "@/env";
 
@@ -18,6 +18,7 @@ function LivePageContent() {
 
   const [token, setToken] = useState<string | null>(null);
   const [roomName, setRoomName] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ function LivePageContent() {
         const data = await response.json();
         setToken(data.token);
         setRoomName(data.roomName);
+        setStartedAt(data.startedAt);
       } catch (err) {
         console.error("Error fetching stream token:", err);
         setError(err instanceof Error ? err.message : "Failed to load stream");
@@ -77,19 +79,24 @@ function LivePageContent() {
     );
   }
 
-  if (error || !token || !roomName) {
+  if (error || !token || !roomName || !startedAt) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <p className="text-destructive mb-4">{error || "Failed to load stream"}</p>
-          <Button onClick={() => router.push("/home/inbox")}>Go Back</Button>
+          <button
+            onClick={() => router.push("/home/inbox")}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-black">
+    <div className="h-screen flex flex-col bg-black overflow-hidden">
       <LiveKitRoom
         serverUrl={env.NEXT_PUBLIC_LIVEKIT_URL}
         token={token}
@@ -98,25 +105,26 @@ function LivePageContent() {
         video={true}
         onDisconnected={handleEndStream}
       >
-        <div className="flex-1 relative">
-          <LiveStreamView isCreator={true} />
-          <ParticipantOverlay
-            streamId={streamId!}
-            creatorId={session?.user?.id || ""}
-            currentUserId={session?.user?.id || ""}
-          />
-        </div>
+        <div className="flex-1 flex overflow-hidden h-full">
+          {/* Main Video Area (70%) */}
+          <div className="flex-[0.7] relative bg-black overflow-hidden">
+            <LiveStreamView isCreator={true} />
+            <LiveStreamControls
+              streamId={streamId!}
+              onEndStream={handleEndStream}
+              startedAt={startedAt}
+            />
+          </div>
 
-        {/* Controls */}
-        <div className="absolute top-4 right-4 z-10">
-          <Button
-            variant="destructive"
-            onClick={handleEndStream}
-            className="shadow-lg"
-          >
-            <PhoneOff className="h-4 w-4 mr-2" />
-            End Stream
-          </Button>
+          {/* Comment Sidebar (30%) */}
+          <div className="flex-[0.3] border-l border-white/20 overflow-hidden flex flex-col min-h-0">
+            <LiveStreamComments
+              streamId={streamId!}
+              creatorId={session?.user?.id || ""}
+              currentUserId={session?.user?.id || ""}
+              showKickButton={true}
+            />
+          </div>
         </div>
       </LiveKitRoom>
     </div>

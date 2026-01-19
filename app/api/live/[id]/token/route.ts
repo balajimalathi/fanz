@@ -74,6 +74,7 @@ export async function GET(
       token,
       url: env.NEXT_PUBLIC_LIVEKIT_URL,
       roomName: stream.livekitRoomName,
+      startedAt: stream.startedAt,
     });
   } catch (error) {
     console.error("Error getting stream token:", error);
