@@ -281,6 +281,13 @@
       "when": 1768664473005,
       "tag": "0039_unknown_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1768895057418,
+      "tag": "0040_clumsy_maggott",
+      "breakpoints": true
     }
   ]
 }

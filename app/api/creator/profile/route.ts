@@ -5,7 +5,7 @@ import { db } from "@/lib/db/client"
 import { creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { validateUsernameFormat, isReservedSubdomain } from "@/lib/onboarding/validation-client"
-import { updateCreatorProfileSchema } from "@/lib/validations/creator"
+import { updateCreatorProfileSchema, normalizeSocialMediaHandle } from "@/lib/validations/creator"
 
 // GET - Fetch creator profile data
 /**
@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
       displayName: creatorRecord.displayName,
       bio: creatorRecord.bio || "",
       usernameLocked: creatorRecord.usernameLocked,
+      socialMediaLinks: creatorRecord.socialMediaLinks || {},
     })
   } catch (error) {
     console.error("Error fetching creator profile:", error)
@@ -119,7 +120,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const { username, displayName, bio } = validationResult.data
+    const { username, displayName, bio, socialMediaLinks } = validationResult.data
 
     // Fetch current creator record
     const creatorRecord = await db.query.creator.findFirst({
@@ -137,6 +138,16 @@ export async function PATCH(request: NextRequest) {
       username?: string
       displayName?: string
       bio?: string | null
+      socialMediaLinks?: {
+        instagram?: string;
+        twitter?: string;
+        facebook?: string;
+        telegram?: string;
+        tiktok?: string;
+        snapchat?: string;
+        youtube?: string;
+        linkedin?: string;
+      }
       updatedAt: Date
     } = {
       updatedAt: new Date(),
@@ -148,6 +159,21 @@ export async function PATCH(request: NextRequest) {
 
     if (bio !== undefined) {
       updateData.bio = bio || null
+    }
+
+    if (socialMediaLinks !== undefined) {
+      // Normalize handles (remove @ if present) and filter out empty strings
+      const normalizedLinks: typeof socialMediaLinks = {}
+      Object.entries(socialMediaLinks).forEach(([key, value]) => {
+        if (value && value.trim() !== "") {
+          const normalized = normalizeSocialMediaHandle(value)
+          if (normalized) {
+            normalizedLinks[key as keyof typeof socialMediaLinks] = normalized
+          }
+        }
+      })
+      // Store empty object if no links, or the normalized links
+      updateData.socialMediaLinks = normalizedLinks
     }
 
     // Validate and update username (only if provided and not locked)
@@ -193,6 +219,7 @@ export async function PATCH(request: NextRequest) {
       displayName: updatedCreator?.displayName || "",
       bio: updatedCreator?.bio || "",
       usernameLocked: updatedCreator?.usernameLocked || false,
+      socialMediaLinks: updatedCreator?.socialMediaLinks || {},
     })
   } catch (error) {
     console.error("Error updating creator profile:", error)

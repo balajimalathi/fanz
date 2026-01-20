@@ -5,6 +5,40 @@ import { SUPPORTED_CURRENCIES } from "@/lib/currency/currency-config";
 // Regex for alphanumeric, hyphens, and underscores
 const usernameRegex = /^[a-zA-Z0-9_-]+$/;
 
+// Regex for social media handles (alphanumeric, dots, hyphens, underscores)
+// Handles can start with @ or without it
+const socialMediaHandleRegex = /^@?[a-zA-Z0-9._-]+$/;
+
+// Helper function to normalize social media handles (remove @ if present)
+export function normalizeSocialMediaHandle(handle: string): string {
+  if (!handle) return ""
+  // Remove @ if present and trim whitespace
+  return handle.trim().replace(/^@+/, "")
+}
+
+// Helper function to validate social media handle
+export function validateSocialMediaHandle(handle: string): { valid: boolean; error?: string } {
+  if (!handle || handle.trim() === "") {
+    return { valid: true } // Empty is allowed
+  }
+  
+  const normalized = normalizeSocialMediaHandle(handle)
+  
+  if (normalized.length === 0) {
+    return { valid: false, error: "Handle cannot be empty" }
+  }
+  
+  if (!socialMediaHandleRegex.test(handle)) {
+    return { valid: false, error: "Handle can only contain letters, numbers, dots, hyphens, and underscores" }
+  }
+  
+  if (normalized.length > 50) {
+    return { valid: false, error: "Handle must be less than 50 characters" }
+  }
+  
+  return { valid: true }
+}
+
 export const updateCreatorProfileSchema = z.object({
   username: z
     .string()
@@ -24,6 +58,16 @@ export const updateCreatorProfileSchema = z.object({
     .max(100, "Display name must be less than 100 characters")
     .optional(),
   bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
+  socialMediaLinks: z.object({
+    instagram: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    twitter: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    facebook: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    telegram: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    tiktok: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    snapchat: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    youtube: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+    linkedin: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
+  }).optional(),
 });
 
 export type UpdateCreatorProfileInput = z.infer<typeof updateCreatorProfileSchema>;

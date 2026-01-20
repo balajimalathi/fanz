@@ -70,6 +70,7 @@ async function getCreatorProfile(username: string) {
         categories: creatorRecord.categories,
         chatEnabled: creatorRecord.chatEnabled ?? true,
         callEnabled: creatorRecord.callEnabled ?? true,
+        socialMediaLinks: creatorRecord.socialMediaLinks,
       },
       services: servicesWithDisplay,
       memberships: membershipsWithDisplay,
@@ -124,6 +125,7 @@ export default async function Page({
             profileImageUrl={creator.profileImageUrl}
             profileCoverUrl={creator.profileCoverUrl}
             creatorId={creator.id}
+            socialMediaLinks={creator.socialMediaLinks}
           />
 
           {/* Ko-fi Style Tabbed Content */}

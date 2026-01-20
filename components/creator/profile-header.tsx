@@ -15,6 +15,36 @@ import { useLiveHandler } from "@/app/(app)/u/[username]/_components/live-handle
 import { ReportCreatorDialog } from "@/components/report/report-creator-dialog"
 import { FanCreditsDisplay } from "./fan-credits-display"
 import { CreatorStats } from "./creator-stats"
+import { Icons } from "@/components/ui/icons"
+import Link from "next/link"
+
+// Helper function to construct social media URLs from handles
+function getSocialMediaUrl(platform: string, handle: string): string {
+  if (!handle) return ""
+  
+  const normalizedHandle = handle.replace(/^@+/, "")
+  
+  switch (platform) {
+    case "instagram":
+      return `https://instagram.com/${normalizedHandle}`
+    case "twitter":
+      return `https://twitter.com/${normalizedHandle}`
+    case "facebook":
+      return `https://facebook.com/${normalizedHandle}`
+    case "telegram":
+      return `https://t.me/${normalizedHandle}`
+    case "tiktok":
+      return `https://tiktok.com/@${normalizedHandle}`
+    case "snapchat":
+      return `https://snapchat.com/add/${normalizedHandle}`
+    case "youtube":
+      return `https://youtube.com/@${normalizedHandle}`
+    case "linkedin":
+      return `https://linkedin.com/in/${normalizedHandle}`
+    default:
+      return ""
+  }
+}
 
 interface ProfileHeaderProps {
   displayName: string
@@ -23,6 +53,16 @@ interface ProfileHeaderProps {
   profileImageUrl: string | null
   profileCoverUrl: string | null
   creatorId: string
+  socialMediaLinks?: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    telegram?: string;
+    tiktok?: string;
+    snapchat?: string;
+    youtube?: string;
+    linkedin?: string;
+  } | null
 }
 
 export function ProfileHeader({
@@ -32,6 +72,7 @@ export function ProfileHeader({
   profileImageUrl,
   profileCoverUrl,
   creatorId,
+  socialMediaLinks,
 }: ProfileHeaderProps) {
   const { data: session } = useSession()
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -160,6 +201,100 @@ export function ProfileHeader({
             <p className="text-sm sm:text-base text-foreground whitespace-pre-line leading-relaxed">
               {bio}
             </p>
+          </div>
+        )}
+
+        {/* Social Media Links */}
+        {socialMediaLinks && Object.keys(socialMediaLinks).length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            {socialMediaLinks.instagram && (
+              <Link
+                href={getSocialMediaUrl("instagram", socialMediaLinks.instagram)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Instagram"
+              >
+                <Icons.instagram className="h-5 w-5" />
+              </Link>
+            )}
+            {socialMediaLinks.twitter && (
+              <Link
+                href={getSocialMediaUrl("twitter", socialMediaLinks.twitter)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Twitter"
+              >
+                <Icons.twitter className="h-6 w-6 bg-muted rounded-full p-1" />
+              </Link>
+            )}
+            {socialMediaLinks.facebook && (
+              <Link
+                href={getSocialMediaUrl("facebook", socialMediaLinks.facebook)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Facebook"
+              >
+                <Icons.facebook className="h-8 w-8" />
+              </Link>
+            )}
+            {socialMediaLinks.telegram && (
+              <Link
+                href={getSocialMediaUrl("telegram", socialMediaLinks.telegram)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Telegram"
+              >
+                <Icons.telegram className="h-5 w-5" />
+              </Link>
+            )}
+            {socialMediaLinks.tiktok && (
+              <Link
+                href={getSocialMediaUrl("tiktok", socialMediaLinks.tiktok)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="TikTok"
+              >
+                <Icons.tiktok className="h-5 w-5" />
+              </Link>
+            )}
+            {socialMediaLinks.snapchat && (
+              <Link
+                href={getSocialMediaUrl("snapchat", socialMediaLinks.snapchat)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Snapchat"
+              >
+                <Icons.snapchat className="h-6 w-6" />
+              </Link>
+            )}
+            {socialMediaLinks.youtube && (
+              <Link
+                href={getSocialMediaUrl("youtube", socialMediaLinks.youtube)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="YouTube"
+              >
+                <Icons.youtube className="h-5 w-5" />
+              </Link>
+            )}
+            {socialMediaLinks.linkedin && (
+              <Link
+                href={getSocialMediaUrl("linkedin", socialMediaLinks.linkedin)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="LinkedIn"
+              >
+                <Icons.linkedin className="h-5 w-5" />
+              </Link>
+            )}
           </div>
         )}
       </div>

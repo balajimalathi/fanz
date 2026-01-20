@@ -101,6 +101,16 @@ export const creator = pgTable("creator", {
   profileImageUrl: text("profile_image_url"),
   profileCoverUrl: text("profile_cover_url"),
   bio: text("bio"),
+  socialMediaLinks: jsonb("social_media_links").$type<{
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    telegram?: string;
+    tiktok?: string;
+    snapchat?: string;
+    youtube?: string;
+    linkedin?: string;
+  }>(),
   currency: varchar("currency", { length: 3 }).default("USD"), // ISO 4217 currency code - creator's currency for pricing and payouts
   bankAccountDetails: jsonb("bank_account_details").$type<{
     pan?: string;
