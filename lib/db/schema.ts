@@ -74,7 +74,7 @@ export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
 export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream", "wallet_credit"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
-export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "chat", "custom_video", "custom_photo", "product_review", "endorsement", "collaboration", "personalized_message"]);
+export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "custom_video", "custom_photo", "product_review", "endorsement", "collaboration", "personalized_message"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
@@ -406,7 +406,9 @@ export const serviceOrder = pgTable("service_order", {
     .notNull()
     .references(() => paymentTransaction.id, { onDelete: "cascade" }),
   status: serviceOrderStatusEnum("status").notNull().default("pending"),
+  customerDescription: text("customer_description"),
   fulfillmentNotes: text("fulfillment_notes"),
+  fulfillmentMediaUrl: text("fulfillment_media_url"),
   activatedAt: timestamp("activated_at", { withTimezone: true }),
   utilizedAt: timestamp("utilized_at", { withTimezone: true }),
   customerJoinedAt: timestamp("customer_joined_at", { withTimezone: true }),

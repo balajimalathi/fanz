@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
         creatorImage: creator?.profileImageUrl || null,
         status: order.status,
         fulfillmentNotes: order.fulfillmentNotes,
+        fulfillmentMediaUrl: order.fulfillmentMediaUrl || null,
         customerFulfilledAt: order.customerFulfilledAt?.toISOString() || null,
         activatedAt: order.activatedAt?.toISOString() || null,
         deadlineDate: deadlineDate?.toISOString() || null,

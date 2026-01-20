@@ -302,6 +302,20 @@
       "when": 1768904963222,
       "tag": "0042_bored_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1768907659028,
+      "tag": "0043_glossy_master_chief",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1768908509891,
+      "tag": "0044_strange_sabra",
+      "breakpoints": true
     }
   ]
 }

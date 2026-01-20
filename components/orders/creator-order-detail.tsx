@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +20,11 @@ import {
   Package,
   User,
   Mail,
-  Calendar
+  Calendar,
+  Upload,
+  X,
+  FileVideo,
+  Image as ImageIcon
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/currency"
 import { formatRelativeTime, formatDateTimeLocal, formatDateLocal } from "@/lib/utils/date-formatting"
@@ -35,7 +39,9 @@ interface Order {
   userName: string
   userEmail: string
   status: string
+  customerDescription: string | null
   fulfillmentNotes: string | null
+  fulfillmentMediaUrl: string | null
   activatedAt: string | null
   utilizedAt: string | null
   customerJoinedAt: string | null
@@ -67,6 +73,9 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
   const [fulfillmentNotes, setFulfillmentNotes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchOrder = async () => {
     try {
@@ -78,6 +87,7 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
       const data = await response.json()
       setOrder(data)
       setFulfillmentNotes(data.fulfillmentNotes || "")
+      setSelectedFile(null) // Reset selected file when order is fetched
     } catch (error) {
       console.error("Error fetching order:", error)
       setMessage({ type: "error", text: "Failed to load order details" })
@@ -114,8 +124,98 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
     }
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const serviceType = order.serviceType
+    if (serviceType === "custom_video") {
+      if (!file.type.startsWith("video/")) {
+        setMessage({ type: "error", text: "Please select a video file" })
+        setTimeout(() => setMessage(null), 5000)
+        return
+      }
+      if (file.size > 500 * 1024 * 1024) {
+        setMessage({ type: "error", text: "Video file size must be less than 500MB" })
+        setTimeout(() => setMessage(null), 5000)
+        return
+      }
+    } else if (serviceType === "custom_photo") {
+      if (!file.type.startsWith("image/")) {
+        setMessage({ type: "error", text: "Please select an image file" })
+        setTimeout(() => setMessage(null), 5000)
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setMessage({ type: "error", text: "Image file size must be less than 10MB" })
+        setTimeout(() => setMessage(null), 5000)
+        return
+      }
+    }
+
+    setSelectedFile(file)
+  }
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return
+
+    try {
+      setUploadingFile(true)
+      const formData = new FormData()
+      formData.append("file", selectedFile)
+
+      const response = await fetch(`/api/creator/orders/${order.id}/fulfillment-media`, {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to upload file")
+      }
+
+      const data = await response.json()
+      setMessage({ type: "success", text: "File uploaded successfully!" })
+      setTimeout(() => setMessage(null), 5000)
+      setSelectedFile(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+      await fetchOrder()
+    } catch (error) {
+      console.error("Error uploading file:", error)
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to upload file",
+      })
+      setTimeout(() => setMessage(null), 5000)
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
   const handleMarkFulfilled = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check if file is required but not uploaded
+    const requiresFile = order.serviceType === "custom_video" || order.serviceType === "custom_photo"
+    if (requiresFile && !order.fulfillmentMediaUrl && !selectedFile) {
+      setMessage({
+        type: "error",
+        text: "Please upload the fulfillment file before marking as fulfilled",
+      })
+      setTimeout(() => setMessage(null), 5000)
+      return
+    }
+
+    // If file is selected but not uploaded, upload it first
+    if (selectedFile && !order.fulfillmentMediaUrl) {
+      await handleFileUpload()
+      // Wait a bit for the order to update
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await fetchOrder()
+    }
+
     try {
       setIsSubmitting(true)
       const response = await fetch(`/api/creator/orders/${order.id}`, {
@@ -224,7 +324,7 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
             <div>
               <Label className="text-muted-foreground">Amount</Label>
               <p className="font-semibold text-lg text-green-400">
-                {formatCurrency(order.amount, "INR")}
+                {formatCurrency(order.amount * 100, "INR")}
               </p>
             </div>
           </CardContent>
@@ -256,6 +356,20 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Customer Requirements */}
+      {order.customerDescription && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Requirements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-3 bg-muted rounded-md">
+              <p className="text-sm whitespace-pre-wrap">{order.customerDescription}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Order Timeline */}
       <Card>
@@ -306,6 +420,26 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
             <CardTitle>Fulfillment Status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {order.fulfillmentMediaUrl && (
+              <div>
+                <Label className="text-muted-foreground">Fulfillment Media</Label>
+                <div className="p-3 bg-muted rounded-md mt-2">
+                  <a
+                    href={order.fulfillmentMediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline flex items-center gap-2"
+                  >
+                    {order.serviceType === "custom_video" ? (
+                      <FileVideo className="h-4 w-4" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
+                    View {order.serviceType === "custom_video" ? "Video" : "Image"}
+                  </a>
+                </div>
+              </div>
+            )}
             {order.fulfillmentNotes && (
               <div>
                 <Label className="text-muted-foreground">Fulfillment Notes</Label>
@@ -370,6 +504,112 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
 
           {order.status === "active" && (
             <form onSubmit={handleMarkFulfilled} className="space-y-4">
+              {/* File Upload for custom_video and custom_photo */}
+              {(order.serviceType === "custom_video" || order.serviceType === "custom_photo") && (
+                <div className="space-y-2">
+                  <Label>
+                    Fulfillment File {order.serviceType === "custom_video" ? "(Video)" : "(Image)"} *
+                  </Label>
+                  {order.fulfillmentMediaUrl ? (
+                    <div className="space-y-2">
+                      <div className="p-3 bg-muted rounded-md flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {order.serviceType === "custom_video" ? (
+                            <FileVideo className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <span className="text-sm">File uploaded successfully</span>
+                        </div>
+                        <a
+                          href={order.fulfillmentMediaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={order.serviceType === "custom_video" ? "video/*" : "image/*"}
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={uploadingFile}
+                      />
+                      {selectedFile ? (
+                        <div className="p-3 bg-muted rounded-md flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {order.serviceType === "custom_video" ? (
+                              <FileVideo className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                            )}
+                            <span className="text-sm">{selectedFile.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleFileUpload}
+                              disabled={uploadingFile}
+                            >
+                              {uploadingFile ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedFile(null)
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = ""
+                                }
+                              }}
+                              disabled={uploadingFile}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingFile}
+                          className="w-full"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Select {order.serviceType === "custom_video" ? "Video" : "Image"} File
+                        </Button>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {order.serviceType === "custom_video"
+                          ? "Maximum file size: 500MB"
+                          : "Maximum file size: 10MB"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="fulfillment-notes">Fulfillment Notes (Optional)</Label>
                 <Textarea
@@ -380,7 +620,7 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
                   rows={4}
                 />
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button type="submit" disabled={isSubmitting || uploadingFile} className="w-full">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

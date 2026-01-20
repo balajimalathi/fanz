@@ -66,7 +66,9 @@ export async function GET(
       userName: customer?.name || "Unknown User",
       userEmail: customer?.email || "",
       status: order.status,
+      customerDescription: order.customerDescription || null,
       fulfillmentNotes: order.fulfillmentNotes,
+      fulfillmentMediaUrl: order.fulfillmentMediaUrl || null,
       activatedAt: order.activatedAt?.toISOString() || null,
       utilizedAt: order.utilizedAt?.toISOString() || null,
       customerJoinedAt: order.customerJoinedAt?.toISOString() || null,
@@ -144,23 +146,19 @@ export async function PATCH(
       if (serviceRecord) {
         const serviceType = serviceRecord.serviceType;
         
-        // For chat services, both parties must have participated
-        if (serviceType === "chat") {
-          if (!order.utilizedAt) {
+        // For custom_video and custom_photo, require fulfillment media file
+        if (serviceType === "custom_video" || serviceType === "custom_photo") {
+          if (!order.fulfillmentMediaUrl) {
             return NextResponse.json(
               { 
-                error: "Service cannot be fulfilled. Both parties must participate before fulfillment.",
-                details: {
-                  customerJoined: !!order.customerJoinedAt,
-                  creatorJoined: !!order.creatorJoinedAt,
-                }
+                error: `Fulfillment file is required for ${serviceType === "custom_video" ? "custom video" : "custom photo"} services. Please upload the file before marking as fulfilled.`,
               },
               { status: 400 }
             );
           }
         }
-        // For other service types (shoutout, custom_video, custom_photo, etc.), 
-        // no participation validation needed - creator can mark as fulfilled directly
+        // For other service types (shoutout, product_review, etc.), 
+        // no file validation needed - creator can mark as fulfilled directly
       }
     }
 

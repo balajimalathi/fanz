@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, entityId, returnUrl, duration, originUrl, currency } = body;
+    const { type, entityId, returnUrl, duration, originUrl, currency, customerDescription } = body;
 
     if (!type || !entityId) {
       return NextResponse.json(
@@ -38,6 +38,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate customerDescription for service type
+    if (type === "service") {
+      if (!customerDescription || typeof customerDescription !== "string") {
+        return NextResponse.json(
+          { error: "Customer description is required for service orders" },
+          { status: 400 }
+        );
+      }
+      const trimmedDescription = customerDescription.trim();
+      if (trimmedDescription.length < 10) {
+        return NextResponse.json(
+          { error: "Description must be at least 10 characters long" },
+          { status: 400 }
+        );
+      }
+      if (trimmedDescription.length > 2000) {
+        return NextResponse.json(
+          { error: "Description must be less than 2000 characters" },
+          { status: 400 }
+        );
+      }
+    }
+
     const result = await PaymentService.initiatePayment({
       userId: session.user.id,
       type: type as "membership" | "exclusive_post" | "service" | "live_stream",
@@ -46,6 +69,7 @@ export async function POST(request: NextRequest) {
       duration,
       originUrl,
       currency,
+      customerDescription: type === "service" ? customerDescription : undefined,
     });
 
     if (!result.success) {

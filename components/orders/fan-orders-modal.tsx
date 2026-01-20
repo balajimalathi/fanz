@@ -23,6 +23,7 @@ interface Order {
   creatorImage: string | null
   status: string
   fulfillmentNotes: string | null
+  fulfillmentMediaUrl: string | null
   customerFulfilledAt: string | null
   activatedAt: string | null
   deadlineDate: string | null

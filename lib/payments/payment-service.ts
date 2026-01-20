@@ -31,6 +31,7 @@ export interface InitiatePaymentRequest {
   originUrl?: string; // Origin URL for redirect after payment
   currency?: string; // User's preferred currency (ISO 4217). If not provided, will be detected.
   creatorId?: string; // Creator ID (required for wallet_credit type)
+  customerDescription?: string; // Customer description/requirements (required for service type)
 }
 
 export interface PaymentResult {
@@ -328,6 +329,11 @@ export class PaymentService {
         metadata.duration = request.duration;
       }
 
+      // Store customerDescription for service payments
+      if (request.type === "service" && request.customerDescription) {
+        metadata.customerDescription = request.customerDescription;
+      }
+
       // Store plan metadata for wallet credit purchases
       if (request.type === "wallet_credit" && (request as any).planMetadata) {
         metadata.planMetadata = (request as any).planMetadata;
@@ -600,6 +606,9 @@ export class PaymentService {
       }
 
       case "service": {
+        // Get customerDescription from transaction metadata
+        const customerDescription = transaction.metadata?.customerDescription as string | undefined;
+        
         // Create service order
         await db.insert(serviceOrder).values({
           userId: transaction.userId,
@@ -607,6 +616,7 @@ export class PaymentService {
           serviceId: transaction.entityId,
           transactionId: transaction.id,
           status: "pending",
+          customerDescription: customerDescription || null,
         });
 
         // Send notification to creator

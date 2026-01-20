@@ -13,7 +13,7 @@ export const serviceSchema = z.object({
     .number()
     .min(0, "Price must be non-negative")
     .max(100000000, "Price is too large"), // Max 1 crore rupees
-  serviceType: z.enum(["shoutout", "chat", "custom_video", "custom_photo", "product_review", "endorsement", "collaboration", "personalized_message"], {
+  serviceType: z.enum(["shoutout", "custom_video", "custom_photo", "product_review", "endorsement", "collaboration", "personalized_message"], {
     required_error: "Service type is required",
   }),
   visible: z.boolean().default(true),

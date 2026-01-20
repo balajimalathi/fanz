@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FulfillmentCountdown } from "./fulfillment-countdown"
-import { CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, Loader2, FileVideo, Image as ImageIcon, ExternalLink } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/currency"
 import { formatRelativeTime } from "@/lib/utils/date-formatting"
 
@@ -21,6 +21,7 @@ interface OrderCardProps {
     creatorImage: string | null
     status: string
     fulfillmentNotes: string | null
+    fulfillmentMediaUrl: string | null
     customerFulfilledAt: string | null
     activatedAt: string | null
     deadlineDate: string | null
@@ -94,6 +95,26 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
         {order.serviceDescription && (
           <div>
             <p className="text-sm text-muted-foreground line-clamp-2">{order.serviceDescription}</p>
+          </div>
+        )}
+
+        {order.fulfillmentMediaUrl && (
+          <div className="p-3 bg-muted rounded-md">
+            <p className="text-sm font-medium mb-2">Fulfillment Media:</p>
+            <a
+              href={order.fulfillmentMediaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              {order.serviceType === "custom_video" ? (
+                <FileVideo className="h-4 w-4" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+              View {order.serviceType === "custom_video" ? "Video" : "Image"}
+              <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
         )}
 

@@ -18,7 +18,7 @@ interface Service {
   name: string
   description: string
   price: number
-  serviceType: "shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message"
+  serviceType: "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message"
   visible: boolean
   createdAt?: string
   updatedAt?: string
@@ -300,8 +300,8 @@ function ServiceSection({
   const [name, setName] = useState(service.name)
   const [description, setDescription] = useState(service.description)
   const [price, setPrice] = useState(service.price.toString())
-  const [serviceType, setServiceType] = useState<"shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message">(
-    service.serviceType as "shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message"
+  const [serviceType, setServiceType] = useState<"shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message">(
+    service.serviceType as "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message"
   )
 
   const handleSave = () => {
@@ -351,13 +351,12 @@ function ServiceSection({
           </div>
           <div className="space-y-2">
             <Label htmlFor={`service-type-${service.id}`}>Service Type</Label>
-            <Select value={serviceType} onValueChange={(value: "shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message") => setServiceType(value)}>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message") => setServiceType(value)}>
               <SelectTrigger id={`service-type-${service.id}`}>
                 <SelectValue placeholder="Select service type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="shoutout">Shoutout</SelectItem>
-                <SelectItem value="chat">Chat</SelectItem>
                 <SelectItem value="custom_video">Custom Video</SelectItem>
                 <SelectItem value="custom_photo">Custom Photo</SelectItem>
                 <SelectItem value="product_review">Product Review</SelectItem>
@@ -405,7 +404,7 @@ function ServiceSection({
                   setName(service.name)
                   setDescription(service.description)
                   setPrice(service.price.toString())
-                  setServiceType(service.serviceType as "shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message")
+                  setServiceType(service.serviceType as "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message")
                 }}
               >
                 Cancel
@@ -490,7 +489,7 @@ function ServiceForm({ onSave, onCancel, creatorCurrency = "USD" }: ServiceFormP
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
-  const [serviceType, setServiceType] = useState<"shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message">("shoutout")
+  const [serviceType, setServiceType] = useState<"shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message">("shoutout")
   const [visible, setVisible] = useState(true)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -550,13 +549,12 @@ function ServiceForm({ onSave, onCancel, creatorCurrency = "USD" }: ServiceFormP
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-service-type">Service Type</Label>
-            <Select value={serviceType} onValueChange={(value: "shoutout" | "chat" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message") => setServiceType(value)}>
+            <Select value={serviceType} onValueChange={(value: "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message") => setServiceType(value)}>
               <SelectTrigger id="new-service-type">
                 <SelectValue placeholder="Select service type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="shoutout">Shoutout</SelectItem>
-                <SelectItem value="chat">Chat</SelectItem>
                 <SelectItem value="custom_video">Custom Video</SelectItem>
                 <SelectItem value="custom_photo">Custom Photo</SelectItem>
                 <SelectItem value="product_review">Product Review</SelectItem>
