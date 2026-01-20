@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/client";
 import { liveStream, liveStreamPurchase, paymentTransaction, fanWalletTransaction, coinEarnings } from "@/lib/db/schema";
-import { eq, and, gte, or, isNull } from "drizzle-orm";
+import { eq, and, gte, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
 /**
@@ -66,52 +66,73 @@ export async function calculateStreamCollection(
   const entryFees = (entryFeesFromPayments + coinEntryFees) / 100; // Convert from paise/cents to main currency
 
   // Calculate tips from payment transactions (wallet_credit payments)
+  const tipsFromPaymentsWhereConditions = [
+    eq(paymentTransaction.creatorId, stream.creatorId),
+    eq(paymentTransaction.type, "wallet_credit"),
+    eq(paymentTransaction.status, "completed"),
+    gte(paymentTransaction.createdAt, stream.startedAt),
+    // Check if tip has streamId in metadata (indicating it's a tip during this stream)
+    sql`${paymentTransaction.metadata}->>'streamId' = ${streamId}`
+  ];
+
+  // Add end date condition only if stream has ended
+  if (stream.endedAt) {
+    tipsFromPaymentsWhereConditions.push(
+      sql`${paymentTransaction.createdAt} <= ${stream.endedAt}`
+    );
+  }
+
   const tipsFromPayments = await db
     .select({
       total: sql<number>`COALESCE(SUM(${paymentTransaction.amount}), 0)`,
     })
     .from(paymentTransaction)
-    .where(
-      and(
-        eq(paymentTransaction.creatorId, stream.creatorId),
-        eq(paymentTransaction.type, "wallet_credit"),
-        eq(paymentTransaction.status, "completed"),
-        gte(paymentTransaction.createdAt, stream.startedAt),
-        or(
-          isNull(stream.endedAt),
-          sql`${paymentTransaction.createdAt} <= ${stream.endedAt}`
-        ),
-        // Check if tip has streamId in metadata (indicating it's a tip during this stream)
-        sql`${paymentTransaction.metadata}->>'streamId' = ${streamId}`
-      )
-    );
+    .where(and(...tipsFromPaymentsWhereConditions));
 
   const tipsFromPaymentsAmount = (tipsFromPayments[0]?.total || 0) / 100; // Convert from paise/cents to main currency
 
   // Calculate tips from coin-based transactions (fanWalletTransaction with type="usage" and metadata.streamId)
   // Note: We need to convert coins to currency value - for now, we'll use a simple conversion
   // In a real system, you'd calculate the USD value of coins using FIFO from coin purchases
+  const tipsFromCoinsWhereConditions = [
+    eq(fanWalletTransaction.type, "usage"),
+    gte(fanWalletTransaction.createdAt, stream.startedAt),
+    // Check if transaction has streamId and type="tip" in metadata
+    sql`${fanWalletTransaction.metadata}->>'streamId' = ${streamId}`,
+    sql`${fanWalletTransaction.metadata}->>'type' = 'tip'`
+  ];
+
+  // Add end date condition only if stream has ended
+  if (stream.endedAt) {
+    tipsFromCoinsWhereConditions.push(
+      sql`${fanWalletTransaction.createdAt} <= ${stream.endedAt}`
+    );
+  }
+
   const tipsFromCoins = await db
     .select({
       total: sql<number>`COALESCE(SUM(ABS(${fanWalletTransaction.amount})), 0)`,
     })
     .from(fanWalletTransaction)
-    .where(
-      and(
-        eq(fanWalletTransaction.type, "usage"),
-        gte(fanWalletTransaction.createdAt, stream.startedAt),
-        or(
-          isNull(stream.endedAt),
-          sql`${fanWalletTransaction.createdAt} <= ${stream.endedAt}`
-        ),
-        // Check if transaction has streamId and type="tip" in metadata
-        sql`${fanWalletTransaction.metadata}->>'streamId' = ${streamId}`,
-        sql`${fanWalletTransaction.metadata}->>'type' = 'tip'`
-      )
-    );
+    .where(and(...tipsFromCoinsWhereConditions));
 
   // Get USD value of coin tips from coinEarnings table
   // Join with fanWalletTransaction to get the timestamp
+  const coinEarningsTipsWhereConditions = [
+    eq(coinEarnings.creatorId, stream.creatorId),
+    gte(fanWalletTransaction.createdAt, stream.startedAt),
+    // Check if earnings have streamId and type="tip" in metadata
+    sql`${coinEarnings.metadata}->>'streamId' = ${streamId}`,
+    sql`${coinEarnings.metadata}->>'type' = 'tip'`
+  ];
+
+  // Add end date condition only if stream has ended
+  if (stream.endedAt) {
+    coinEarningsTipsWhereConditions.push(
+      sql`${fanWalletTransaction.createdAt} <= ${stream.endedAt}`
+    );
+  }
+
   const coinEarningsTips = await db
     .select({
       total: sql<number>`COALESCE(SUM(${coinEarnings.usdValue}), 0)`,
@@ -121,19 +142,7 @@ export async function calculateStreamCollection(
       fanWalletTransaction,
       eq(coinEarnings.fanWalletTransactionId, fanWalletTransaction.id)
     )
-    .where(
-      and(
-        eq(coinEarnings.creatorId, stream.creatorId),
-        gte(fanWalletTransaction.createdAt, stream.startedAt),
-        or(
-          isNull(stream.endedAt),
-          sql`${fanWalletTransaction.createdAt} <= ${stream.endedAt}`
-        ),
-        // Check if earnings have streamId and type="tip" in metadata
-        sql`${coinEarnings.metadata}->>'streamId' = ${streamId}`,
-        sql`${coinEarnings.metadata}->>'type' = 'tip'`
-      )
-    );
+    .where(and(...coinEarningsTipsWhereConditions));
 
   const tipsFromCoinsUSD = (coinEarningsTips[0]?.total || 0) / 100; // Convert from cents to currency
 

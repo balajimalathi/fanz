@@ -113,11 +113,7 @@ export async function POST(
         type: "service_order_fulfilled",
         title: "Service Order Confirmed",
         message: `${fanUser?.name || "A fan"} has confirmed fulfillment of "${serviceRecord.name}"`,
-        metadata: {
-          orderId: order.id,
-          serviceId: serviceRecord.id,
-          serviceName: serviceRecord.name,
-        },
+        link: `/home/orders/${order.id}`,
         read: false,
       })
     }
