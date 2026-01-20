@@ -567,3 +567,85 @@ export function getStreamClient(): Redis {
   return client;
 }
 
+// ============================================================================
+// Live Stream Collection Updates
+// ============================================================================
+
+export interface CollectionUpdateEvent {
+  type: "collection_update";
+  streamId: string;
+  total: number;
+  currency: string;
+  entryFees: number;
+  tips: number;
+  timestamp: number;
+}
+
+/**
+ * Publish a collection update event to Redis
+ * @param streamId - The stream ID to publish the event for
+ * @param event - The collection update event object
+ */
+export async function publishCollectionUpdate(
+  streamId: string,
+  event: CollectionUpdateEvent
+): Promise<void> {
+  try {
+    const publisher = getPublisherClient();
+    const channel = `live:collection:${streamId}`;
+    await publisher.publish(channel, JSON.stringify(event));
+    console.log("[Redis Pub/Sub] Published collection update to channel:", channel);
+  } catch (error) {
+    console.error("Error publishing collection update to Redis:", error);
+    // Don't throw - graceful degradation
+  }
+}
+
+/**
+ * Subscribe to collection updates for a stream
+ * @param subscriber - Redis subscriber client
+ * @param streamId - The stream ID to subscribe to
+ * @param callback - Callback function to handle received collection updates
+ */
+export async function subscribeToCollectionUpdates(
+  subscriber: Redis,
+  streamId: string,
+  callback: (event: CollectionUpdateEvent) => void
+): Promise<void> {
+  try {
+    const channel = `live:collection:${streamId}`;
+    await subscriber.subscribe(channel);
+    
+    subscriber.on("message", (receivedChannel, message) => {
+      if (receivedChannel === channel) {
+        try {
+          const parsedEvent = JSON.parse(message) as CollectionUpdateEvent;
+          callback(parsedEvent);
+        } catch (error) {
+          console.error("Error parsing Redis collection update:", error);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error subscribing to collection updates:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unsubscribe from collection updates for a stream
+ * @param subscriber - Redis subscriber client
+ * @param streamId - The stream ID to unsubscribe from
+ */
+export async function unsubscribeFromCollectionUpdates(
+  subscriber: Redis,
+  streamId: string
+): Promise<void> {
+  try {
+    const channel = `live:collection:${streamId}`;
+    await subscriber.unsubscribe(channel);
+  } catch (error) {
+    console.error("Error unsubscribing from collection updates:", error);
+  }
+}
+

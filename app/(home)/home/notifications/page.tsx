@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Bell, Check } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+import { formatRelativeTime } from "@/lib/utils/date-formatting"
 
 interface Notification {
   id: string
@@ -138,9 +138,7 @@ export default function NotificationsPage() {
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.createdAt), {
-                        addSuffix: true,
-                      })}
+                      {formatRelativeTime(notification.createdAt)}
                     </p>
                     {notification.link && (
                       <Link

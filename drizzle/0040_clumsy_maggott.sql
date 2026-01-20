@@ -1,0 +1,1 @@
+ALTER TABLE "creator" ADD COLUMN "social_media_links" jsonb;

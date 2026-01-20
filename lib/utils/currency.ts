@@ -26,7 +26,7 @@ export function subunitsToDisplay(amountInSubunits: number, currency: string = "
  */
 export function formatCurrency(
   amountInSubunits: number,
-  currency: string = "USD",
+  currency: string = "INR",
   options?: {
     showSymbol?: boolean;
     minimumFractionDigits?: number;
@@ -61,7 +61,11 @@ export function formatCurrency(
  * @param currency - Currency code (ISO 4217), defaults to USD
  * @returns Compact formatted currency string
  */
-export function formatCurrencyCompact(amountInSubunits: number, currency: string = "USD"): string {
+export function formatCurrencyCompact(amountInSubunits: number, currency: string = "INR"): string {
+
+  if(currency === "-") {
+    return "-";
+  }
   const symbol = getCurrencySymbol(currency);
   const displayAmount = subunitsToDisplay(amountInSubunits, currency);
   const decimals = getCurrencyDecimals(currency);

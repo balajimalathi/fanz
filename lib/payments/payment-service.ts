@@ -18,7 +18,6 @@ import { GatewayService } from "./gateway/gateway-service";
 import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
-import { BASE_CURRENCY } from "@/lib/currency/currency-config";
 import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
 export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream" | "wallet_credit";
@@ -32,6 +31,7 @@ export interface InitiatePaymentRequest {
   originUrl?: string; // Origin URL for redirect after payment
   currency?: string; // User's preferred currency (ISO 4217). If not provided, will be detected.
   creatorId?: string; // Creator ID (required for wallet_credit type)
+  customerDescription?: string; // Customer description/requirements (required for service type)
 }
 
 export interface PaymentResult {
@@ -103,7 +103,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, membershipRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           // Calculate amount based on duration (bundle pricing)
           // Amount is stored in creator's currency subunits
@@ -137,7 +137,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, postRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           // Check if user already purchased this post
           const existingPurchase = await db.query.postPurchase.findFirst({
@@ -174,7 +174,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, serviceRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           amount = serviceRecord.price; // Already in creator's currency subunits
           creatorId = serviceRecord.creatorId;
@@ -198,7 +198,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, streamRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           // Check if user already purchased this stream
           const existingPurchase = await db.query.liveStreamPurchase.findFirst({
@@ -274,7 +274,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, request.creatorId!),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           amount = planPrice; // Price in paise
           creatorId = request.creatorId; // Creator whose page they were on
@@ -329,9 +329,24 @@ export class PaymentService {
         metadata.duration = request.duration;
       }
 
+      // Store customerDescription for service payments
+      if (request.type === "service" && request.customerDescription) {
+        metadata.customerDescription = request.customerDescription;
+      }
+
       // Store plan metadata for wallet credit purchases
       if (request.type === "wallet_credit" && (request as any).planMetadata) {
         metadata.planMetadata = (request as any).planMetadata;
+      }
+
+      // Store tip metadata (streamId, isTip) if present
+      if ((request as any).metadata) {
+        if ((request as any).metadata.streamId) {
+          metadata.streamId = (request as any).metadata.streamId;
+        }
+        if ((request as any).metadata.isTip !== undefined) {
+          metadata.isTip = (request as any).metadata.isTip;
+        }
       }
 
       // For wallet_credit, use placeholder entityId; for others, use the actual entityId
@@ -354,9 +369,9 @@ export class PaymentService {
           creatorId,
           type: dbType,
           entityId: entityIdForInsert,
-          amount: paymentAmount, // Amount in creator's currency subunits
-          originalCurrency: creatorCurrency,
-          baseCurrency: creatorCurrency, // Use creator currency as base
+          amount: paymentAmount, // Amount in INR subunits
+          originalCurrency: "INR",
+          baseCurrency: "INR", // All transactions use INR
           convertedAmount: paymentAmount, // Same as amount (no conversion)
           exchangeRate: "1.0", // No conversion
           platformFee: split.platformFee,
@@ -380,8 +395,8 @@ export class PaymentService {
 
       // Initiate payment with gateway
       const gatewayResponse = await GatewayService.initiatePayment({
-        amount: paymentAmount, // Amount in creator's currency subunits
-        currency: creatorCurrency,
+        amount: paymentAmount, // Amount in INR subunits
+        currency: "INR",
         orderId,
         customerId: request.userId,
         customerEmail: user.email,
@@ -591,6 +606,9 @@ export class PaymentService {
       }
 
       case "service": {
+        // Get customerDescription from transaction metadata
+        const customerDescription = transaction.metadata?.customerDescription as string | undefined;
+        
         // Create service order
         await db.insert(serviceOrder).values({
           userId: transaction.userId,
@@ -598,6 +616,7 @@ export class PaymentService {
           serviceId: transaction.entityId,
           transactionId: transaction.id,
           status: "pending",
+          customerDescription: customerDescription || null,
         });
 
         // Send notification to creator
@@ -646,37 +665,107 @@ export class PaymentService {
             message: `${user?.name || "A user"} purchased access to your live stream`,
             link: `/home/live`,
           });
+
+          // Publish collection update for entry fee
+          if (streamRecord.status === "active") {
+            try {
+              const { publishCollectionUpdate } = await import("@/lib/utils/redis-pubsub");
+              const { calculateStreamCollection } = await import("@/lib/services/live-stream-collection-service");
+              
+              const creator = await db.query.creator.findFirst({
+                where: (c, { eq: eqOp }) => eqOp(c.id, streamRecord.creatorId),
+              });
+              const currency = creator?.currency || "USD";
+              
+              // Calculate current collection
+              const collection = await calculateStreamCollection(transaction.entityId, currency);
+              
+              await publishCollectionUpdate(transaction.entityId, {
+                type: "collection_update",
+                streamId: transaction.entityId,
+                total: collection.total,
+                currency,
+                entryFees: collection.entryFees,
+                tips: collection.tips,
+                timestamp: Date.now(),
+              });
+            } catch (error) {
+              console.error("Error publishing collection update for live stream purchase:", error);
+              // Don't throw - graceful degradation
+            }
+          }
         }
         break;
       }
 
       case "wallet_credit": {
-        // Add credits to user's wallet via fanWalletTransaction
-        const planMetadata = transaction.metadata?.planMetadata as {
-          planType: string;
-          coins: number;
-          bonus: number;
-          totalCoins: number;
-        } | undefined;
+        // Check if this is a tip (has streamId in metadata) or a coin purchase (has planMetadata)
+        const streamId = transaction.metadata?.streamId as string | undefined;
+        const isTip = transaction.metadata?.isTip as boolean | undefined;
+        
+        if (isTip && streamId) {
+          // This is a tip during a live stream
+          // Publish collection update for tip
+          try {
+            const { publishCollectionUpdate } = await import("@/lib/utils/redis-pubsub");
+            const { calculateStreamCollection } = await import("@/lib/services/live-stream-collection-service");
+            
+            // Verify stream is active
+            const streamRecord = await db.query.liveStream.findFirst({
+              where: (ls, { eq: eqOp }) => eqOp(ls.id, streamId),
+            });
 
-        if (!planMetadata) {
-          console.error("Plan metadata not found for wallet credit transaction");
-          return;
-        }
-
-        const { WalletService } = await import("@/lib/wallet/wallet-service");
-        await WalletService.addCredits(
-          transaction.userId,
-          planMetadata.totalCoins, // Add base coins + bonus
-          transaction.id, // Link to payment transaction
-          `Purchased ${planMetadata.totalCoins} credits (${planMetadata.coins} + ${planMetadata.bonus} bonus) via ${planMetadata.planType} plan`,
-          {
-            planType: planMetadata.planType,
-            baseCoins: planMetadata.coins,
-            bonusCoins: planMetadata.bonus,
-            paymentTransactionId: transaction.id,
+            if (streamRecord && streamRecord.status === "active") {
+              const creator = await db.query.creator.findFirst({
+                where: (c, { eq: eqOp }) => eqOp(c.id, transaction.creatorId),
+              });
+              const currency = creator?.currency || "USD";
+              
+              // Calculate current collection
+              const collection = await calculateStreamCollection(streamId, currency);
+              
+              await publishCollectionUpdate(streamId, {
+                type: "collection_update",
+                streamId,
+                total: collection.total,
+                currency,
+                entryFees: collection.entryFees,
+                tips: collection.tips,
+                timestamp: Date.now(),
+              });
+            }
+          } catch (error) {
+            console.error("Error publishing collection update for tip:", error);
+            // Don't throw - graceful degradation
           }
-        );
+        } else {
+          // This is a coin purchase
+          const planMetadata = transaction.metadata?.planMetadata as {
+            planType: string;
+            coins: number;
+            bonus: number;
+            totalCoins: number;
+          } | undefined;
+
+          if (!planMetadata) {
+            console.error("Plan metadata not found for wallet credit transaction");
+            return;
+          }
+
+          const { WalletService } = await import("@/lib/wallet/wallet-service");
+          await WalletService.addCredits(
+            transaction.userId,
+            planMetadata.totalCoins, // Add base coins + bonus
+            transaction.id, // Link to payment transaction
+            `Purchased ${planMetadata.totalCoins} credits (${planMetadata.coins} + ${planMetadata.bonus} bonus) via ${planMetadata.planType} plan`,
+            {
+              planType: planMetadata.planType,
+              baseCoins: planMetadata.coins,
+              bonusCoins: planMetadata.bonus,
+              paymentTransactionId: transaction.id,
+            }
+          );
+        }
         break;
       }
     }

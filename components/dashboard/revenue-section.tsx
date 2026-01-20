@@ -25,7 +25,7 @@ export function RevenueSection({
   chartData,
 }: RevenueSectionProps) {
   const { currency: creatorCurrency, loading } = useCreatorCurrency();
-  const currency = loading ? "USD" : creatorCurrency;
+  const currency = loading ? "INR" : creatorCurrency;
   const currencySymbol = getCurrencySymbol(currency);
 
   const chartConfig = {

@@ -53,10 +53,21 @@ export async function GET(request: NextRequest) {
     const transactionMap = new Map(transactions.map((t) => [t.id, t]))
     const userMap = new Map(users.map((u) => [u.id, u]))
 
+    // Calculate fulfillment deadline for each order
+    const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
+
     const ordersWithDetails = orders.map((order) => {
       const service = serviceMap.get(order.serviceId)
       const transaction = transactionMap.get(order.transactionId)
       const user = userMap.get(order.userId)
+
+      // Calculate deadline
+      const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
+      const deadlineDate = order.activatedAt
+        ? new Date(order.activatedAt.getTime() + deadlineHours * 60 * 60 * 1000)
+        : null
+      const isDeadlinePassed = deadlineDate ? new Date() > deadlineDate : false
+      const waitingForFanConfirmation = order.status === "fulfilled" && !order.customerFulfilledAt
 
       return {
         id: order.id,
@@ -73,6 +84,10 @@ export async function GET(request: NextRequest) {
         utilizedAt: order.utilizedAt?.toISOString() || null,
         customerJoinedAt: order.customerJoinedAt?.toISOString() || null,
         creatorJoinedAt: order.creatorJoinedAt?.toISOString() || null,
+        customerFulfilledAt: order.customerFulfilledAt?.toISOString() || null,
+        deadlineDate: deadlineDate?.toISOString() || null,
+        isDeadlinePassed,
+        waitingForFanConfirmation,
         amount: transaction?.amount ? transaction.amount / 100 : 0,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),

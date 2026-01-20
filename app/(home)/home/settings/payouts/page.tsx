@@ -18,6 +18,7 @@ import toast from "react-hot-toast"
 import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 import { getCurrencySymbol } from "@/lib/currency/currency-utils"
+import { formatDateLocal } from "@/lib/utils/date-formatting"
 
 interface Payout {
   id: string
@@ -52,7 +53,7 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-IN", {
+  return formatDateLocal(dateString, {
     year: "numeric",
     month: "short",
     day: "numeric",

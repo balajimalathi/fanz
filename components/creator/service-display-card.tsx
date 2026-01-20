@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useSession } from "@/lib/auth/auth-client"
-import { PaymentModal } from "@/components/payments/payment-modal"
+import { ServicePaymentModal } from "@/components/payments/service-payment-modal"
 import { PriceDisplay } from "@/components/currency/price-display"
 import { toSubunits } from "@/lib/currency/currency-utils"
 
@@ -74,12 +74,12 @@ export function ServiceDisplayCard({
         </CardContent>
       </Card>
 
-      <PaymentModal
+      <ServicePaymentModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        type="service"
-        entityId={id}
+        serviceId={id}
         amount={price}
+        currency={currency}
         title={`Purchase ${name}`}
         description={description}
         originUrl={currentOriginUrl}

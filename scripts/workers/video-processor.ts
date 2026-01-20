@@ -11,7 +11,8 @@
 
 // Load environment variables before importing anything that needs them
 import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local';
+dotenv.config({ path: envFile });
 dotenv.config();
 
 import { Worker } from "bullmq" 

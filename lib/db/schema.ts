@@ -18,20 +18,20 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
   image: text("image"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   role: text("role"),
   banned: boolean("banned"),
   banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
+  banExpires: timestamp("ban_expires", { withTimezone: true }),
 });
  
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id")
@@ -50,21 +50,21 @@ export const account = pgTable("account", {
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
   scope: text("scope"),
   password: text("password"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at"),
-  updatedAt: timestamp("updated_at"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const creatorTypeEnum = pgEnum("creator_type", ["ai", "human"]);
@@ -74,7 +74,7 @@ export const mediaTypeEnum = pgEnum("media_type", ["image", "video"]);
 export const messageTypeEnum = pgEnum("message_type", ["text", "audio", "image", "video"]);
 export const paymentTransactionTypeEnum = pgEnum("payment_transaction_type", ["membership", "exclusive_post", "service", "live_stream", "wallet_credit"]);
 export const paymentTransactionStatusEnum = pgEnum("payment_transaction_status", ["pending", "processing", "completed", "failed", "cancelled"]);
-export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "audio_call", "video_call", "chat"]);
+export const serviceTypeEnum = pgEnum("service_type", ["shoutout", "custom_video", "custom_photo", "product_review", "endorsement", "collaboration", "personalized_message"]);
 export const serviceOrderStatusEnum = pgEnum("service_order_status", ["pending", "active", "fulfilled", "cancelled"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 export const callStatusEnum = pgEnum("call_status", ["initiated", "ringing", "accepted", "rejected", "ended", "missed"]);
@@ -91,7 +91,7 @@ export const creator = pgTable("creator", {
   creatorType: creatorTypeEnum("creator_type"),
   contentType: contentTypeEnum("content_type"),
   gender: text("gender"),
-  dateOfBirth: timestamp("date_of_birth"),
+  dateOfBirth: timestamp("date_of_birth", { withTimezone: true }),
   categories: jsonb("categories").$type<string[]>(),
   onboarded: boolean("onboarded").notNull().default(false),
   usernameLocked: boolean("username_locked").notNull().default(false),
@@ -101,7 +101,17 @@ export const creator = pgTable("creator", {
   profileImageUrl: text("profile_image_url"),
   profileCoverUrl: text("profile_cover_url"),
   bio: text("bio"),
-  currency: varchar("currency", { length: 3 }).default("USD"), // ISO 4217 currency code - creator's currency for pricing and payouts
+  socialMediaLinks: jsonb("social_media_links").$type<{
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    telegram?: string;
+    tiktok?: string;
+    snapchat?: string;
+    youtube?: string;
+    linkedin?: string;
+  }>(),
+  currency: varchar("currency", { length: 3 }).default("INR"), // ISO 4217 currency code - creator's currency for pricing and payouts
   bankAccountDetails: jsonb("bank_account_details").$type<{
     pan?: string;
     accountNumber?: string;
@@ -117,7 +127,7 @@ export const creator = pgTable("creator", {
     automaticPayout?: boolean;
   }>(),
   isOnline: boolean("is_online").notNull().default(false),
-  lastSeenAt: timestamp("last_seen_at"),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   chatEnabled: boolean("chat_enabled").notNull().default(true),
   callEnabled: boolean("call_enabled").notNull().default(true),
   chatAvailabilitySchedule: jsonb("chat_availability_schedule").$type<{
@@ -142,8 +152,8 @@ export const creator = pgTable("creator", {
       };
     };
   }>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const service = pgTable("service", {
@@ -156,8 +166,8 @@ export const service = pgTable("service", {
   price: integer("price").notNull().default(0), // Stored in paise (smallest currency unit)
   serviceType: serviceTypeEnum("service_type").notNull(),
   visible: boolean("visible").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const membership = pgTable("membership", {
@@ -170,8 +180,8 @@ export const membership = pgTable("membership", {
   monthlyRecurringFee: integer("monthly_recurring_fee").notNull().default(0), // Stored in paise (smallest currency unit)
   visible: boolean("visible").notNull().default(true),
   coverImageUrl: text("cover_image_url"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const post = pgTable("post", {
@@ -183,8 +193,8 @@ export const post = pgTable("post", {
   postType: postTypeEnum("post_type").notNull(),
   price: integer("price"), // For exclusive posts, stored in paise
   isPinned: boolean("is_pinned").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const postMedia = pgTable("post_media", {
@@ -199,7 +209,7 @@ export const postMedia = pgTable("post_media", {
   blurThumbnailUrl: text("blur_thumbnail_url"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   orderIndex: integer("order_index").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const postMembership = pgTable("post_membership", {
@@ -223,7 +233,7 @@ export const notification = pgTable("notification", {
   message: text("message").notNull(),
   link: text("link"),
   read: boolean("read").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const follower = pgTable("follower", {
@@ -244,7 +254,7 @@ export const customers = pgTable("customers", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }),
   dodoCustomerId: varchar("dodo_customer_id", { length: 255 }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const subscriptions = pgTable("subscriptions", {
@@ -255,10 +265,10 @@ export const subscriptions = pgTable("subscriptions", {
   planId: varchar("plan_id", { length: 255 }).notNull(), // membershipId as string
   price: integer("price"), // Stored in smallest currency unit (subunits), nullable for backward compatibility
   status: varchar("status", { length: 50 }).notNull().default("active"),
-  currentPeriodStart: timestamp("current_period_start"),
-  currentPeriodEnd: timestamp("current_period_end"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   uniqueCustomerPlan: { unique: { columns: [table.customerId, table.planId] } },
 }));
@@ -287,8 +297,8 @@ export const postComment = pgTable("post_comment", {
   content: text("content").notNull(),
   parentCommentId: uuid("parent_comment_id")
     .references((): any => postComment.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const pushSubscription = pgTable("push_subscription", {
@@ -300,8 +310,8 @@ export const pushSubscription = pgTable("push_subscription", {
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
   userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const notificationPreference = pgTable("notification_preference", {
@@ -311,8 +321,8 @@ export const notificationPreference = pgTable("notification_preference", {
     .references(() => user.id, { onDelete: "cascade" })
     .unique(),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const notificationChannelPreference = pgTable("notification_channel_preference", {
@@ -322,8 +332,8 @@ export const notificationChannelPreference = pgTable("notification_channel_prefe
     .references(() => user.id, { onDelete: "cascade" }),
   channel: text("channel").notNull(), // 'payout', 'follow', 'comment', 'message', 'security', 'platform'
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   uniqueUserChannel: { unique: { columns: [table.userId, table.channel] } },
 }));
@@ -337,7 +347,7 @@ export const broadcastMessage = pgTable("broadcast_message", {
   messageType: messageTypeEnum("message_type").notNull(),
   content: text("content"),
   audioUrl: text("audio_url"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const paymentTransaction = pgTable("payment_transaction", {
@@ -352,7 +362,7 @@ export const paymentTransaction = pgTable("payment_transaction", {
   entityId: uuid("entity_id").notNull(), // membershipId, postId, or serviceId
   amount: integer("amount").notNull(), // Stored in smallest currency unit of originalCurrency
   originalCurrency: varchar("original_currency", { length: 3 }).default("INR"), // Fan's payment currency (ISO 4217)
-  baseCurrency: varchar("base_currency", { length: 3 }).default("USD"), // Platform base currency (ISO 4217)
+  baseCurrency: varchar("base_currency", { length: 3 }).default("INR"), // Platform base currency (ISO 4217)
   convertedAmount: integer("converted_amount"), // Amount in base currency subunits
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }), // Rate used for conversion
   processorFee: integer("processor_fee"), // Gateway forex fee if applicable
@@ -361,8 +371,8 @@ export const paymentTransaction = pgTable("payment_transaction", {
   status: paymentTransactionStatusEnum("status").notNull().default("pending"),
   gatewayTransactionId: text("gateway_transaction_id"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const postPurchase = pgTable("post_purchase", {
@@ -376,7 +386,7 @@ export const postPurchase = pgTable("post_purchase", {
   transactionId: uuid("transaction_id")
     .notNull()
     .references(() => paymentTransaction.id, { onDelete: "cascade" }),
-  purchasedAt: timestamp("purchased_at").notNull().defaultNow(),
+  purchasedAt: timestamp("purchased_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   uniqueUserPost: { unique: { columns: [table.userId, table.postId] } },
 }));
@@ -396,13 +406,22 @@ export const serviceOrder = pgTable("service_order", {
     .notNull()
     .references(() => paymentTransaction.id, { onDelete: "cascade" }),
   status: serviceOrderStatusEnum("status").notNull().default("pending"),
+  customerDescription: text("customer_description"),
   fulfillmentNotes: text("fulfillment_notes"),
-  activatedAt: timestamp("activated_at"),
-  utilizedAt: timestamp("utilized_at"),
-  customerJoinedAt: timestamp("customer_joined_at"),
-  creatorJoinedAt: timestamp("creator_joined_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  fulfillmentMediaUrl: text("fulfillment_media_url"),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  utilizedAt: timestamp("utilized_at", { withTimezone: true }),
+  customerJoinedAt: timestamp("customer_joined_at", { withTimezone: true }),
+  creatorJoinedAt: timestamp("creator_joined_at", { withTimezone: true }),
+  customerFulfilledAt: timestamp("customer_fulfilled_at", { withTimezone: true }),
+  fulfillmentDeadlineHours: integer("fulfillment_deadline_hours").default(12),
+  fulfillmentConfig: jsonb("fulfillment_config").$type<{
+    requiresFanConfirmation?: boolean;
+    requiresParticipation?: boolean;
+    customFields?: Record<string, unknown>;
+  }>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const payout = pgTable("payout", {
@@ -410,21 +429,21 @@ export const payout = pgTable("payout", {
   creatorId: text("creator_id")
     .notNull()
     .references(() => creator.id, { onDelete: "cascade" }),
-  periodStart: timestamp("period_start").notNull(),
-  periodEnd: timestamp("period_end").notNull(),
+  periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
   totalAmount: integer("total_amount").notNull(), // Sum of all transactions in base currency subunits
   platformFee: integer("platform_fee").notNull(), // Total platform fee in base currency subunits
   netAmount: integer("net_amount").notNull(), // Amount to be paid to creator in base currency subunits
-  payoutCurrency: varchar("payout_currency", { length: 3 }).default("USD"), // Creator's preferred payout currency (ISO 4217)
+  payoutCurrency: varchar("payout_currency", { length: 3 }).default("INR"), // Creator's preferred payout currency (ISO 4217)
   convertedFromAmount: integer("converted_from_amount"), // Amount in base currency before conversion
   convertedAmount: integer("converted_amount"), // Amount in payout currency subunits
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }), // Rate used for payout conversion
   payoutFee: integer("payout_fee"), // Conversion/transfer fee
   status: payoutStatusEnum("status").notNull().default("pending"),
-  processedAt: timestamp("processed_at"),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const payoutItem = pgTable("payout_item", {
@@ -436,7 +455,7 @@ export const payoutItem = pgTable("payout_item", {
     .notNull()
     .references(() => paymentTransaction.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(), // Creator amount for this transaction in paise
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const conversation = pgTable("conversation", {
@@ -448,14 +467,14 @@ export const conversation = pgTable("conversation", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   isEnabled: boolean("is_enabled").notNull().default(true),
-  lastMessageAt: timestamp("last_message_at"),
+  lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
   lastMessagePreview: text("last_message_preview"),
   requestStatus: conversationRequestStatusEnum("request_status").notNull().default("pending_request"),
-  requestedAt: timestamp("requested_at"),
-  acceptedAt: timestamp("accepted_at"),
-  rejectedAt: timestamp("rejected_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  requestedAt: timestamp("requested_at", { withTimezone: true }),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   uniqueCreatorFan: { unique: { columns: [table.creatorId, table.fanId] } },
 }));
@@ -472,11 +491,11 @@ export const chatMessage = pgTable("chat_message", {
   content: text("content"),
   mediaUrl: text("media_url"),
   thumbnailUrl: text("thumbnail_url"),
-  readAt: timestamp("read_at"),
+  readAt: timestamp("read_at", { withTimezone: true }),
   coinsPending: integer("coins_pending"), // Coins that will be deducted when creator replies
   coinsDeducted: boolean("coins_deducted").notNull().default(false), // Whether coins have been deducted
-  deductedAt: timestamp("deducted_at"), // When coins were deducted
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  deductedAt: timestamp("deducted_at", { withTimezone: true }), // When coins were deducted
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const call = pgTable("call", {
@@ -492,14 +511,14 @@ export const call = pgTable("call", {
   callType: callTypeEnum("call_type").notNull(),
   status: callStatusEnum("status").notNull(),
   livekitRoomName: text("livekit_room_name"),
-  startedAt: timestamp("started_at"),
-  endedAt: timestamp("ended_at"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
   duration: integer("duration"), // Duration in seconds
   coinsReserved: integer("coins_reserved"), // Coins reserved at call start
   coinsSpent: integer("coins_spent").default(0), // Coins actually spent during call
-  lastHeartbeatAt: timestamp("last_heartbeat_at"), // Timestamp of last heartbeat
+  lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true }), // Timestamp of last heartbeat
   meteringActive: boolean("metering_active").notNull().default(false), // True when both parties connected
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const liveStream = pgTable("live_stream", {
@@ -511,10 +530,10 @@ export const liveStream = pgTable("live_stream", {
   streamType: liveStreamTypeEnum("stream_type").notNull(),
   price: integer("price"), // In paise, nullable (only for paid streams)
   status: liveStreamStatusEnum("status").notNull().default("active"),
-  startedAt: timestamp("started_at").notNull().defaultNow(),
-  endedAt: timestamp("ended_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const liveStreamPurchase = pgTable("live_stream_purchase", {
@@ -532,25 +551,6 @@ export const liveStreamPurchase = pgTable("live_stream_purchase", {
   uniqueUserStream: { unique: { columns: [table.userId, table.liveStreamId] } },
 }));
 
-export const exchangeRates = pgTable("exchange_rates", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  fromCurrency: varchar("from_currency", { length: 3 }).notNull(),
-  toCurrency: varchar("to_currency", { length: 3 }).notNull(),
-  rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
-  source: text("source").notNull(), // 'processor' or 'api'
-  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-}, (table) => ({
-  currencyPairIndex: { unique: { columns: [table.fromCurrency, table.toCurrency, table.fetchedAt] } },
-}));
-
-export const userCurrencyPreference = pgTable("user_currency_preference", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  currency: varchar("currency", { length: 3 }).notNull(), // ISO 4217 currency code
-  detectedFrom: text("detected_from").notNull(), // 'ip', 'browser', or 'manual'
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
 
 export const reportStatusEnum = pgEnum("report_status", ["pending", "reviewing", "resolved", "dismissed"]);
 export const reportTypeEnum = pgEnum("report_type", ["user", "creator", "post", "comment", "message", "other"]);
@@ -570,12 +570,12 @@ export const report = pgTable("report", {
   reason: text("reason").notNull(),
   description: text("description"),
   status: reportStatusEnum("status").notNull().default("pending"),
-  resolvedAt: timestamp("resolved_at"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   resolvedBy: text("resolved_by")
     .references(() => user.id, { onDelete: "set null" }),
   resolution: text("resolution"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const disputeStatusEnum = pgEnum("dispute_status", ["open", "investigating", "resolved", "closed"]);
@@ -598,11 +598,11 @@ export const dispute = pgTable("dispute", {
   description: text("description"),
   status: disputeStatusEnum("status").notNull().default("open"),
   resolution: text("resolution"),
-  resolvedAt: timestamp("resolved_at"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   resolvedBy: text("resolved_by")
     .references(() => user.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const fanWallet = pgTable("fan_wallet", {
@@ -612,8 +612,8 @@ export const fanWallet = pgTable("fan_wallet", {
     .references(() => user.id, { onDelete: "cascade" })
     .unique(),
   balance: integer("balance").notNull().default(0), // Current credit balance in coins
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const fanWalletTransaction = pgTable("fan_wallet_transaction", {
@@ -633,7 +633,7 @@ export const fanWalletTransaction = pgTable("fan_wallet_transaction", {
     .references((): any => fanWalletTransaction.id, { onDelete: "set null" }),
   remainingCoins: integer("remaining_coins"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const coinEarnings = pgTable("coin_earnings", {
@@ -653,7 +653,7 @@ export const coinEarnings = pgTable("coin_earnings", {
   paymentTransactionId: uuid("payment_transaction_id")
     .references(() => paymentTransaction.id, { onDelete: "set null" }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const creatorPricing = pgTable("creator_pricing", {
@@ -668,6 +668,6 @@ export const creatorPricing = pgTable("creator_pricing", {
   audioCallPricePerMinute: integer("audio_call_price_per_minute").notNull().default(0), // Coins per minute for audio calls
   videoCallPricePerMinute: integer("video_call_price_per_minute").notNull().default(0), // Coins per minute for video calls
   liveStreamEntryPrice: integer("live_stream_entry_price").notNull().default(0), // Coins for one-time entry to paid streams
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -281,6 +281,41 @@
       "when": 1768664473005,
       "tag": "0039_unknown_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1768895057418,
+      "tag": "0040_clumsy_maggott",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1768899609891,
+      "tag": "0041_previous_hellcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1768904963222,
+      "tag": "0042_bored_kylun",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1768907659028,
+      "tag": "0043_glossy_master_chief",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1768908509891,
+      "tag": "0044_strange_sabra",
+      "breakpoints": true
     }
   ]
 }

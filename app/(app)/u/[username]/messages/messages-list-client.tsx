@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime } from "@/lib/utils/date-formatting";
 import { useRouter, useParams } from "next/navigation";
 
 interface Conversation {
@@ -92,9 +92,7 @@ export function MessagesListClient({ fanId }: MessagesListClientProps) {
                       </p>
                       {conversation.lastMessageAt && (
                         <span className="text-xs text-muted-foreground shrink-0">
-                          {formatDistanceToNow(new Date(conversation.lastMessageAt), {
-                            addSuffix: true,
-                          })}
+                          {formatRelativeTime(conversation.lastMessageAt)}
                         </span>
                       )}
                     </div>

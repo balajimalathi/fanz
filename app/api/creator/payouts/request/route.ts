@@ -38,15 +38,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get pending payout amount (always in USD for MVP)
+    // Get pending payout amount (always in INR)
     const pendingAmount = await PayoutService.getPendingPayoutAmount(session.user.id)
     const { getCurrencyDecimals, getCurrencySymbol } = await import("@/lib/currency/currency-utils")
-    const BASE_CURRENCY = "USD"
-    const decimals = getCurrencyDecimals(BASE_CURRENCY)
+    const currency = "INR"
+    const decimals = getCurrencyDecimals(currency)
     const divisor = Math.pow(10, decimals)
     const pendingAmountDisplay = pendingAmount / divisor
     const minimumThreshold = payoutSettings.minimumThreshold || 1000
-    const currencySymbol = getCurrencySymbol(BASE_CURRENCY)
+    const currencySymbol = getCurrencySymbol(currency)
 
     // Check if minimum threshold is met
     if (pendingAmountDisplay < minimumThreshold) {

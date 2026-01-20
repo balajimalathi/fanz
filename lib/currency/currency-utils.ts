@@ -3,8 +3,6 @@
  * Helper functions for currency formatting, conversion, and validation
  */
 
-import { BASE_CURRENCY } from "./currency-config";
-
 /**
  * Currency metadata
  * Decimal places and formatting information for each currency

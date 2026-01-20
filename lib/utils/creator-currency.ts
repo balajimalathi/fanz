@@ -6,12 +6,10 @@
 import { db } from "@/lib/db/client";
 import { creator } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { BASE_CURRENCY } from "@/lib/currency/currency-config";
-
 /**
  * Get creator's currency from database
  * @param creatorId - The creator's user ID
- * @returns The creator's currency code (ISO 4217) or BASE_CURRENCY as fallback
+ * @returns The creator's currency code (ISO 4217) or "INR" as fallback
  */
 export async function getCreatorCurrency(creatorId: string): Promise<string> {
   try {
@@ -22,9 +20,9 @@ export async function getCreatorCurrency(creatorId: string): Promise<string> {
       },
     });
 
-    return creatorRecord?.currency || BASE_CURRENCY;
+    return creatorRecord?.currency || "INR";
   } catch (error) {
     console.error("Error fetching creator currency:", error);
-    return BASE_CURRENCY;
+    return "INR";
   }
 }

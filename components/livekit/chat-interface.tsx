@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Paperclip, Mic, X, Loader2, Coins, AlertCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime } from "@/lib/utils/date-formatting";
 import { TypingIndicator } from "./typing-indicator";
 import { AudioMessagePlayer } from "./audio-message-player";
 
@@ -1166,9 +1166,7 @@ export function ChatInterface({
                         isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                       }`}
                     >
-                      {formatDistanceToNow(new Date(message.createdAt), {
-                        addSuffix: true,
-                      })}
+                      {formatRelativeTime(message.createdAt)}
                     </p>
                     {isOwn && isFan && message.coinsPending && !message.coinsDeducted && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">

@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { AdminDataTable } from "./table/admin-data-table"
+import { formatDateLocal } from "@/lib/utils/date-formatting"
 
 interface Transaction {
   id: string
@@ -120,7 +121,7 @@ export function TransactionsTable() {
         header: "Created",
         cell: ({ row }) => (
           <div className="text-sm text-muted-foreground">
-            {new Date(row.original.createdAt).toLocaleDateString()}
+            {formatDateLocal(row.original.createdAt)}
           </div>
         ),
       },

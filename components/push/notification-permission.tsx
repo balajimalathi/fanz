@@ -182,8 +182,8 @@ export function NotificationPermission({ className }: NotificationPermissionProp
       disabled={isLoading}
       className={className}
     >
-      <Bell className="mr-2 h-4 w-4" />
-      {isLoading ? "Enabling..." : "Enable Notifications"}
+      <Bell className="h-4 w-4" />
+      {isLoading ? "Enabling..." : ""}
     </Button>
   )
 }
