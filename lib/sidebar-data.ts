@@ -121,6 +121,11 @@ export const sidebarData = {
       icon: Plus,
     },
     {
+      title: "Orders",
+      url: "/home/orders",
+      icon: FileText,
+    },
+    {
       title: "Notifications",
       url: "/home/notifications",
       icon: Bell,

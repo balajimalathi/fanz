@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle, Ban } from "lucide-react"
 import toast from "react-hot-toast"
 import { AdminDataTable } from "./table/admin-data-table"
+import { formatDateLocal } from "@/lib/utils/date-formatting"
 
 interface Dispute {
   id: string
@@ -166,7 +167,7 @@ export function DisputesTable() {
         header: "Created",
         cell: ({ row }) => (
           <div className="text-sm text-muted-foreground">
-            {new Date(row.original.createdAt).toLocaleDateString()}
+            {formatDateLocal(row.original.createdAt)}
           </div>
         ),
       },

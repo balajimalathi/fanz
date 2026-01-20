@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Send, Heart } from "lucide-react";
 import { useSession } from "@/lib/auth/auth-client";
+import { formatTimeLocal } from "@/lib/utils/date-formatting";
 
 interface Comment {
   userId: string;
@@ -203,7 +204,7 @@ export function LiveStreamComments({
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return formatTimeLocal(date);
   };
 
   return (

@@ -11,6 +11,7 @@ import { Trash2, Loader2, Image as ImageIcon } from "lucide-react"
 import toast from "react-hot-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AdminDataTable } from "./table/admin-data-table"
+import { formatDateLocal } from "@/lib/utils/date-formatting"
 
 interface Post {
   id: string
@@ -164,7 +165,7 @@ export function ContentModerationTable() {
         header: "Created",
         cell: ({ row }) => (
           <div className="text-sm text-muted-foreground">
-            {new Date(row.original.createdAt).toLocaleDateString()}
+            {formatDateLocal(row.original.createdAt)}
           </div>
         ),
       },
@@ -247,7 +248,7 @@ export function ContentModerationTable() {
         header: "Created",
         cell: ({ row }) => (
           <div className="text-sm text-muted-foreground">
-            {new Date(row.original.createdAt).toLocaleDateString()}
+            {formatDateLocal(row.original.createdAt)}
           </div>
         ),
       },

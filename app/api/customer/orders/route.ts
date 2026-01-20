@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
-import { serviceOrder, service, user, paymentTransaction } from "@/lib/db/schema"
-import { eq, and, desc, inArray } from "drizzle-orm"
+import { serviceOrder, service, creator, user, paymentTransaction } from "@/lib/db/schema"
+import { eq, desc, inArray, and } from "drizzle-orm"
 
+// GET - Fetch all service orders for the authenticated fan
+// Optional query parameter: creatorId - filter orders by specific creator
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -12,54 +14,56 @@ export async function GET(request: NextRequest) {
     })
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
     }
 
-    // Get creator record
-    const creatorRecord = await db.query.creator.findFirst({
-      where: (c, { eq: eqOp }) => eqOp(c.id, session.user.id),
-    })
+    // Get optional creatorId from query params
+    const { searchParams } = new URL(request.url)
+    const creatorId = searchParams.get("creatorId")
 
-    if (!creatorRecord) {
-      return NextResponse.json({ error: "Creator not found" }, { status: 404 })
-    }
+    // Build where condition - filter by userId and optionally by creatorId
+    const whereCondition = creatorId
+      ? and(eq(serviceOrder.userId, session.user.id), eq(serviceOrder.creatorId, creatorId))
+      : eq(serviceOrder.userId, session.user.id)
 
-    // Get all service orders for this creator
+    // Get service orders for this fan (optionally filtered by creator)
     const orders = await db
       .select()
       .from(serviceOrder)
-      .where(eq(serviceOrder.creatorId, session.user.id))
+      .where(whereCondition)
       .orderBy(desc(serviceOrder.createdAt))
 
     // Get related data
-    const orderIds = orders.map((o) => o.id)
     const serviceIds = orders.map((o) => o.serviceId)
+    const creatorIds = orders.map((o) => o.creatorId)
     const transactionIds = orders.map((o) => o.transactionId)
-    const userIds = orders.map((o) => o.userId)
 
     const services = await db.query.service.findMany({
       where: (s, { inArray: inArrayOp }) => inArrayOp(s.id, serviceIds),
+    })
+
+    const creators = await db.query.creator.findMany({
+      where: (c, { inArray: inArrayOp }) => inArrayOp(c.id, creatorIds),
     })
 
     const transactions = await db.query.paymentTransaction.findMany({
       where: (pt, { inArray: inArrayOp }) => inArrayOp(pt.id, transactionIds),
     })
 
-    const users = await db.query.user.findMany({
-      where: (u, { inArray: inArrayOp }) => inArrayOp(u.id, userIds),
-    })
-
     const serviceMap = new Map(services.map((s) => [s.id, s]))
+    const creatorMap = new Map(creators.map((c) => [c.id, c]))
     const transactionMap = new Map(transactions.map((t) => [t.id, t]))
-    const userMap = new Map(users.map((u) => [u.id, u]))
 
     // Calculate fulfillment deadline for each order
     const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
 
     const ordersWithDetails = orders.map((order) => {
       const service = serviceMap.get(order.serviceId)
+      const creator = creatorMap.get(order.creatorId)
       const transaction = transactionMap.get(order.transactionId)
-      const user = userMap.get(order.userId)
 
       // Calculate deadline
       const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
@@ -67,7 +71,7 @@ export async function GET(request: NextRequest) {
         ? new Date(order.activatedAt.getTime() + deadlineHours * 60 * 60 * 1000)
         : null
       const isDeadlinePassed = deadlineDate ? new Date() > deadlineDate : false
-      const waitingForFanConfirmation = order.status === "fulfilled" && !order.customerFulfilledAt
+      const canFulfill = order.status === "fulfilled" && !order.customerFulfilledAt && !isDeadlinePassed
 
       return {
         id: order.id,
@@ -75,20 +79,19 @@ export async function GET(request: NextRequest) {
         serviceName: service?.name || "Unknown Service",
         serviceDescription: service?.description || "",
         serviceType: service?.serviceType || "shoutout",
-        userId: order.userId,
-        userName: user?.name || "Unknown User",
-        userEmail: user?.email || "",
+        creatorId: order.creatorId,
+        creatorName: creator?.displayName || "Unknown Creator",
+        creatorUsername: creator?.username || "",
+        creatorImage: creator?.profileImageUrl || null,
         status: order.status,
         fulfillmentNotes: order.fulfillmentNotes,
-        activatedAt: order.activatedAt?.toISOString() || null,
-        utilizedAt: order.utilizedAt?.toISOString() || null,
-        customerJoinedAt: order.customerJoinedAt?.toISOString() || null,
-        creatorJoinedAt: order.creatorJoinedAt?.toISOString() || null,
         customerFulfilledAt: order.customerFulfilledAt?.toISOString() || null,
+        activatedAt: order.activatedAt?.toISOString() || null,
         deadlineDate: deadlineDate?.toISOString() || null,
         isDeadlinePassed,
-        waitingForFanConfirmation,
+        canFulfill,
         amount: transaction?.amount ? transaction.amount / 100 : 0,
+        currency: creator?.currency || "USD",
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
       }
@@ -96,11 +99,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ orders: ordersWithDetails })
   } catch (error) {
-    console.error("Error fetching service orders:", error)
+    console.error("Error fetching fan service orders:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     )
   }
 }
-

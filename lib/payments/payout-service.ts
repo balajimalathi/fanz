@@ -3,10 +3,11 @@ import {
   payout,
   payoutItem,
   paymentTransaction,
+  serviceOrder,
   creator,
   user,
 } from "@/lib/db/schema"
-import { eq, and, gte, lte, desc, inArray } from "drizzle-orm"
+import { eq, and, gte, lte, desc, inArray, isNotNull, or, isNull } from "drizzle-orm"
 
 export interface CreatePayoutRequest {
   creatorId: string
@@ -25,6 +26,47 @@ export interface PayoutResult {
  * Handles manual payout processing and bank account management
  */
 export class PayoutService {
+  /**
+   * Filter transactions to only include service orders that have been confirmed by fans
+   */
+  private static async filterEligibleTransactions(
+    transactions: (typeof paymentTransaction.$inferSelect)[]
+  ): Promise<(typeof paymentTransaction.$inferSelect)[]> {
+    // Get all service transaction IDs
+    const serviceTransactionIds = transactions
+      .filter((t) => t.type === "service")
+      .map((t) => t.id)
+
+    if (serviceTransactionIds.length === 0) {
+      // No service transactions, return all
+      return transactions
+    }
+
+    // Get service orders for these transactions
+    const serviceOrders = await db
+      .select()
+      .from(serviceOrder)
+      .where(
+        // @ts-ignore - drizzle type issue with inArray
+        inArray(serviceOrder.transactionId, serviceTransactionIds)
+      )
+
+    // Create a map of transaction ID to service order
+    const transactionToOrderMap = new Map(
+      serviceOrders.map((order) => [order.transactionId, order])
+    )
+
+    // Filter transactions: include non-service transactions, or service transactions with fan confirmation
+    return transactions.filter((transaction) => {
+      if (transaction.type !== "service") {
+        return true // Include all non-service transactions
+      }
+
+      const order = transactionToOrderMap.get(transaction.id)
+      // Only include service transactions where fan has confirmed fulfillment
+      return order?.customerFulfilledAt !== null && order?.customerFulfilledAt !== undefined
+    })
+  }
   /**
    * Create a payout for a creator for a specific period
    */
@@ -50,13 +92,23 @@ export class PayoutService {
         }
       }
 
+      // Filter to only include eligible transactions (service orders must be confirmed by fans)
+      const eligibleTransactions = await this.filterEligibleTransactions(transactions)
+
+      if (eligibleTransactions.length === 0) {
+        return {
+          success: false,
+          error: "No eligible transactions found for this period (service orders must be confirmed by fans)",
+        }
+      }
+
       // Calculate totals in INR - all amounts are already in INR
-      const totalAmountBase = transactions.reduce(
+      const totalAmountBase = eligibleTransactions.reduce(
         (sum, t) => sum + (t.convertedAmount || t.amount), 
         0
       )
-      const totalPlatformFeeBase = transactions.reduce((sum, t) => sum + t.platformFee, 0)
-      const netAmountBase = transactions.reduce((sum, t) => sum + t.creatorAmount, 0)
+      const totalPlatformFeeBase = eligibleTransactions.reduce((sum, t) => sum + t.platformFee, 0)
+      const netAmountBase = eligibleTransactions.reduce((sum, t) => sum + t.creatorAmount, 0)
 
       // All payouts are in INR
       const [newPayout] = await db
@@ -78,7 +130,7 @@ export class PayoutService {
 
       // Create payout items
       await db.insert(payoutItem).values(
-        transactions.map((t) => ({
+        eligibleTransactions.map((t) => ({
           payoutId: newPayout.id,
           transactionId: t.id,
           amount: t.creatorAmount,
@@ -152,9 +204,17 @@ export class PayoutService {
 
       // Calculate pending amount in INR (transactions not in completed payouts)
       // creatorAmount is already in INR
-      const pendingAmount = completedTransactions
-        .filter((t) => !paidTransactionIds.has(t.id))
-        .reduce((sum, t) => sum + t.creatorAmount, 0)
+      const unpaidTransactions = completedTransactions.filter(
+        (t) => !paidTransactionIds.has(t.id)
+      )
+
+      // Filter to only include eligible transactions (service orders must be confirmed by fans)
+      const eligibleTransactions = await this.filterEligibleTransactions(unpaidTransactions)
+
+      const pendingAmount = eligibleTransactions.reduce(
+        (sum, t) => sum + t.creatorAmount,
+        0
+      )
 
       return pendingAmount
     } catch (error) {
@@ -316,20 +376,23 @@ export class PayoutService {
         (t) => !usedTransactionIds.has(t.id)
       )
 
-      if (availableTransactions.length === 0) {
+      // Filter to only include eligible transactions (service orders must be confirmed by fans)
+      const eligibleTransactions = await this.filterEligibleTransactions(availableTransactions)
+
+      if (eligibleTransactions.length === 0) {
         return {
           success: false,
-          error: "No available transactions to include in payout",
+          error: "No available transactions to include in payout (service orders must be confirmed by fans)",
         }
       }
 
       // Calculate totals in INR - all amounts are already in INR
-      const totalAmountBase = availableTransactions.reduce(
+      const totalAmountBase = eligibleTransactions.reduce(
         (sum, t) => sum + (t.convertedAmount || t.amount),
         0
       )
-      const totalPlatformFeeBase = availableTransactions.reduce((sum, t) => sum + t.platformFee, 0)
-      const netAmountBase = availableTransactions.reduce((sum, t) => sum + t.creatorAmount, 0)
+      const totalPlatformFeeBase = eligibleTransactions.reduce((sum, t) => sum + t.platformFee, 0)
+      const netAmountBase = eligibleTransactions.reduce((sum, t) => sum + t.creatorAmount, 0)
 
       // All payouts are in INR
       const [newPayout] = await db
@@ -351,7 +414,7 @@ export class PayoutService {
 
       // Create payout items
       await db.insert(payoutItem).values(
-        availableTransactions.map((t) => ({
+        eligibleTransactions.map((t) => ({
           payoutId: newPayout.id,
           transactionId: t.id,
           amount: t.creatorAmount,

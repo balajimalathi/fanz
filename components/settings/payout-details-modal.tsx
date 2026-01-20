@@ -53,16 +53,17 @@ const getStatusBadgeVariant = (status: string) => {
   }
 }
 
+import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
+import { formatDateLocal } from "@/lib/utils/date-formatting"
+
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-IN", {
+  return formatDateLocal(dateString, {
     year: "numeric",
     month: "long",
     day: "numeric",
   })
 }
-
-import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
-import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 
 export function PayoutDetailsModal({
   payoutId,

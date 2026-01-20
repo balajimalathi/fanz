@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime } from "@/lib/utils/date-formatting";
 import { ChatInterface } from "@/components/livekit/chat-interface";
 import { Button } from "@/components/ui/button";
 import { Phone, Video, Radio } from "lucide-react";
@@ -203,9 +203,7 @@ export function InboxPageClient({ creatorId, currentUserId }: InboxPageClientPro
                           <p className="font-medium truncate">{follower.followerName}</p>
                           {conv?.lastMessageAt && (
                             <span className="text-xs text-muted-foreground shrink-0">
-                              {formatDistanceToNow(new Date(conv.lastMessageAt), {
-                                addSuffix: true,
-                              })}
+                              {formatRelativeTime(conv.lastMessageAt)}
                             </span>
                           )}
                         </div>
