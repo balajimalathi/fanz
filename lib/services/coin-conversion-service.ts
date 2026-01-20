@@ -1,9 +1,7 @@
 import { db } from "@/lib/db/client";
 import { fanWalletTransaction, coinEarnings, creator } from "@/lib/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
-import { ExchangeRateService } from "./exchange-rate-service";
 import { calculateSplitPayment } from "@/lib/payments/split-calculator";
-import { BASE_CURRENCY } from "@/lib/currency/currency-config";
 
 interface CoinUsage {
   purchaseTransactionId: string;
@@ -84,7 +82,7 @@ export class CoinConversionService {
         : 1.0;
 
       const creatorCurrency =
-        purchase.creatorCurrency || BASE_CURRENCY;
+        purchase.creatorCurrency || "INR";
 
       allocations.push({
         purchaseTransactionId: purchase.id,
@@ -156,34 +154,19 @@ export class CoinConversionService {
   }
 
   /**
-   * Convert USD value to creator currency
-   * @param usdValue - USD value in cents (subunits)
+   * Convert value to creator currency (simplified - all in INR)
+   * @param value - Value in INR subunits
    * @param creatorId - Creator ID
-   * @param exchangeRate - Exchange rate to use (from purchase time)
-   * @returns Amount in creator currency subunits
+   * @param exchangeRate - Exchange rate (kept for compatibility, not used)
+   * @returns Amount in INR subunits (no conversion needed)
    */
   static async convertToCreatorCurrency(
-    usdValue: number,
+    value: number,
     creatorId: string,
     exchangeRate: number
   ): Promise<number> {
-    // Get creator's currency
-    const creatorRecord = await db.query.creator.findFirst({
-      where: (c, { eq: eqOp }) => eqOp(c.id, creatorId),
-      columns: {
-        currency: true,
-      },
-    });
-
-    const creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
-
-    // If creator currency is USD, no conversion needed
-    if (creatorCurrency === BASE_CURRENCY) {
-      return usdValue;
-    }
-
-    // Convert using the provided exchange rate (from purchase time)
-    return Math.round(usdValue * exchangeRate);
+    // All values are in INR, no conversion needed
+    return value;
   }
 
   /**

@@ -86,7 +86,7 @@ export function StatsOverview({
   const revenueTrend = thisMonthRevenue > 0 ? { value: 0, isPositive: true } : undefined;
 
   // Use creator currency for all revenue displays
-  const currency = loading ? "USD" : creatorCurrency;
+  const currency = loading ? "INR" : creatorCurrency;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Edit2, Plus, X, Eye, EyeOff, Save, Trash, Loader2 } from "lucide-react"
+import { Edit2, Plus, X, Eye, EyeOff, Save, Trash, Loader2, Coins, Grid } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +32,7 @@ export function ServiceCard() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
-  
+
   // Fetch services on mount
   useEffect(() => {
     fetchServices()
@@ -199,6 +199,7 @@ export function ServiceCard() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
+          <Grid className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold text-primary">Services</h2>
         </div>
         <Button onClick={handleAddService} size="sm" disabled={isLoading}>

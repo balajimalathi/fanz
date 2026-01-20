@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { Edit2, Plus, X, Eye, EyeOff, Save, Trash, Loader2, Upload } from "lucide-react"
+import { Edit2, Plus, X, Eye, EyeOff, Save, Trash, Loader2, Upload, Notebook } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,7 +43,7 @@ const getMonthlyFeeOptions = (currency: string) => {
     minimumFractionDigits: currency === "JPY" ? 0 : 2,
     maximumFractionDigits: currency === "JPY" ? 0 : 2,
   })
-  
+
   return MONTHLY_FEE_VALUES.map((value) => ({
     value,
     label: `${formatter.format(value)}/month`,
@@ -59,7 +59,7 @@ export function MembershipCard() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
-  
+
   // Fetch memberships on mount
   useEffect(() => {
     fetchMemberships()
@@ -152,7 +152,7 @@ export function MembershipCard() {
         }
 
         const newMembership = await response.json()
-        
+
         // If there's a cropped image, upload it now
         if (croppedImageBlob && newMembership.id) {
           try {
@@ -173,7 +173,7 @@ export function MembershipCard() {
             // Don't fail the membership creation if image upload fails
           }
         }
-        
+
         setMemberships([...memberships, newMembership])
         setIsAddingMembership(false)
         setMessage({ type: "success", text: "Membership created successfully" })
@@ -248,6 +248,7 @@ export function MembershipCard() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
+          <Notebook className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold text-primary">Membership</h2>
         </div>
         <Button onClick={handleAddMembership} size="sm" disabled={isLoading}>
@@ -544,7 +545,7 @@ function MembershipSection({
                 <p className="text-sm text-muted-foreground">{description}</p>
               )}
               <p className="text-primary font-medium">
-                {selectedFeeOption?.label || 
+                {selectedFeeOption?.label ||
                   `${new Intl.NumberFormat("en-US", {
                     style: "currency",
                     currency: creatorCurrency,
@@ -553,53 +554,53 @@ function MembershipSection({
                   }).format(membership.monthlyRecurringFee)}/month`}
               </p>
             </div>
-          <div className="flex items-center gap-2 ml-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onEdit}
-              aria-label="Edit membership"
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onToggleVisibility(membership.id)}
-              aria-label="Toggle visibility"
-            >
-              {membership.visible ? (
-                <Eye className="h-4 w-4" />
-              ) : (
-                <EyeOff className="h-4 w-4" />
-              )}
-            </Button>
+            <div className="flex items-center gap-2 ml-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onEdit}
+                aria-label="Edit membership"
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onToggleVisibility(membership.id)}
+                aria-label="Toggle visibility"
+              >
+                {membership.visible ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-    <Sheet open={showCropper} onOpenChange={setShowCropper}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Crop Cover Image</SheetTitle>
-        </SheetHeader>
-        {cropperImage && (
-          <div className="mt-4">
-            <ImageCropper
-              image={cropperImage}
-              aspectRatio={2}
-              targetWidth={1200}
-              targetHeight={600}
-              onCropComplete={handleCropComplete}
-              onCancel={() => {
-                setShowCropper(false)
-                setCropperImage(null)
-              }}
-            />
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+        </CardContent>
+      </Card>
+      <Sheet open={showCropper} onOpenChange={setShowCropper}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Crop Cover Image</SheetTitle>
+          </SheetHeader>
+          {cropperImage && (
+            <div className="mt-4">
+              <ImageCropper
+                image={cropperImage}
+                aspectRatio={2}
+                targetWidth={1200}
+                targetHeight={600}
+                onCropComplete={handleCropComplete}
+                onCancel={() => {
+                  setShowCropper(false)
+                  setCropperImage(null)
+                }}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
@@ -624,13 +625,13 @@ function MembershipForm({ onSave, onCancel, creatorCurrency = "USD" }: Membershi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // If there's a cropped image, convert it to blob
     let croppedBlob: Blob | undefined
     if (cropperImage) {
       croppedBlob = cropperImage
     }
-    
+
     onSave({
       title,
       description,

@@ -13,7 +13,7 @@ interface CreatorCurrency {
  */
 export function useCreatorCurrency() {
   const [currencyData, setCurrencyData] = useState<CreatorCurrency>({
-    currency: "USD",
+    currency: "INR",
     loading: true,
   })
 
@@ -24,19 +24,19 @@ export function useCreatorCurrency() {
         if (response.ok) {
           const data = await response.json()
           setCurrencyData({
-            currency: data.currency || "USD",
+            currency: data.currency || "INR",
             loading: false,
           })
         } else {
           setCurrencyData({
-            currency: "USD",
+            currency: "INR",
             loading: false,
           })
         }
       } catch (error) {
         console.error("Error fetching creator currency:", error)
         setCurrencyData({
-          currency: "USD",
+          currency: "INR",
           loading: false,
         })
       }

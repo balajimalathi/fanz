@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     // Use currency fields
     const currency = creatorRecord.currency || 
-                     "USD"
+                     "INR"
 
     return NextResponse.json({
       currency,
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      currency: updatedRecord?.currency || "USD",
+      currency: updatedRecord?.currency || "INR",
     })
   } catch (error) {
     console.error("Error updating currency settings:", error)

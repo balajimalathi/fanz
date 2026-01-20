@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Save, Loader2 } from "lucide-react"
+import { Save, Loader2, Group } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -82,6 +82,7 @@ export function SocialMediaCard() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
+          <Group className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold text-primary">Social Media Handles</h2>
         </div>
         <Button onClick={handleSave} disabled={isSaving} size="sm">

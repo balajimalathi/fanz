@@ -111,7 +111,7 @@ export const creator = pgTable("creator", {
     youtube?: string;
     linkedin?: string;
   }>(),
-  currency: varchar("currency", { length: 3 }).default("USD"), // ISO 4217 currency code - creator's currency for pricing and payouts
+  currency: varchar("currency", { length: 3 }).default("INR"), // ISO 4217 currency code - creator's currency for pricing and payouts
   bankAccountDetails: jsonb("bank_account_details").$type<{
     pan?: string;
     accountNumber?: string;
@@ -362,7 +362,7 @@ export const paymentTransaction = pgTable("payment_transaction", {
   entityId: uuid("entity_id").notNull(), // membershipId, postId, or serviceId
   amount: integer("amount").notNull(), // Stored in smallest currency unit of originalCurrency
   originalCurrency: varchar("original_currency", { length: 3 }).default("INR"), // Fan's payment currency (ISO 4217)
-  baseCurrency: varchar("base_currency", { length: 3 }).default("USD"), // Platform base currency (ISO 4217)
+  baseCurrency: varchar("base_currency", { length: 3 }).default("INR"), // Platform base currency (ISO 4217)
   convertedAmount: integer("converted_amount"), // Amount in base currency subunits
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }), // Rate used for conversion
   processorFee: integer("processor_fee"), // Gateway forex fee if applicable
@@ -425,7 +425,7 @@ export const payout = pgTable("payout", {
   totalAmount: integer("total_amount").notNull(), // Sum of all transactions in base currency subunits
   platformFee: integer("platform_fee").notNull(), // Total platform fee in base currency subunits
   netAmount: integer("net_amount").notNull(), // Amount to be paid to creator in base currency subunits
-  payoutCurrency: varchar("payout_currency", { length: 3 }).default("USD"), // Creator's preferred payout currency (ISO 4217)
+  payoutCurrency: varchar("payout_currency", { length: 3 }).default("INR"), // Creator's preferred payout currency (ISO 4217)
   convertedFromAmount: integer("converted_from_amount"), // Amount in base currency before conversion
   convertedAmount: integer("converted_amount"), // Amount in payout currency subunits
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }), // Rate used for payout conversion
@@ -542,25 +542,6 @@ export const liveStreamPurchase = pgTable("live_stream_purchase", {
   uniqueUserStream: { unique: { columns: [table.userId, table.liveStreamId] } },
 }));
 
-export const exchangeRates = pgTable("exchange_rates", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  fromCurrency: varchar("from_currency", { length: 3 }).notNull(),
-  toCurrency: varchar("to_currency", { length: 3 }).notNull(),
-  rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
-  source: text("source").notNull(), // 'processor' or 'api'
-  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-}, (table) => ({
-  currencyPairIndex: { unique: { columns: [table.fromCurrency, table.toCurrency, table.fetchedAt] } },
-}));
-
-export const userCurrencyPreference = pgTable("user_currency_preference", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  currency: varchar("currency", { length: 3 }).notNull(), // ISO 4217 currency code
-  detectedFrom: text("detected_from").notNull(), // 'ip', 'browser', or 'manual'
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
 
 export const reportStatusEnum = pgEnum("report_status", ["pending", "reviewing", "resolved", "dismissed"]);
 export const reportTypeEnum = pgEnum("report_type", ["user", "creator", "post", "comment", "message", "other"]);

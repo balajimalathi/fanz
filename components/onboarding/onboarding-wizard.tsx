@@ -20,8 +20,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { COUNTRIES, parseDateFromInput, isAdult } from "@/lib/onboarding/utils"
 import { validateUsernameClient } from "@/lib/onboarding/validation-client"
-import { getCurrencyFromCountry } from "@/lib/currency/currency-config"
-import { SUPPORTED_CURRENCIES } from "@/lib/currency/currency-config"
 import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { CATEGORIES, GenderOption } from "@/types/onboarding"
@@ -70,7 +68,7 @@ export function OnboardingWizard() {
     mode: "onChange",
     defaultValues: {
       categories: [],
-      currency: "USD",
+      currency: "INR",
     },
   })
 
@@ -204,15 +202,10 @@ export function OnboardingWizard() {
     }
   }
 
-  // Auto-set currency based on country when country changes
+  // Currency is always INR
   useEffect(() => {
-    if (watchedCountry) {
-      const suggestedCurrency = getCurrencyFromCountry(watchedCountry)
-      if (suggestedCurrency && !form.getValues("currency")) {
-        setValue("currency", suggestedCurrency)
-      }
-    }
-  }, [watchedCountry, setValue, form])
+    setValue("currency", "INR")
+  }, [setValue])
 
   const getFieldsForStep = (step: number): (keyof OnboardingFormValues)[] => {
     switch (step) {
@@ -271,30 +264,13 @@ export function OnboardingWizard() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
-              <Select
-                value={form.watch("currency")}
-                onValueChange={(value) => setValue("currency", value)}
-              >
-                <SelectTrigger id="currency">
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((curr) => (
-                    <SelectItem key={curr} value={curr}>
-                      <span className="flex items-center gap-2">
-                        <span>{getCurrencySymbol(curr)}</span>
-                        <span>{curr}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.currency && (
-                <p className="text-sm text-destructive">{errors.currency.message}</p>
-              )}
+              <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
+                <span className="text-lg">{getCurrencySymbol("INR")}</span>
+                <span className="font-medium">INR (Indian Rupee)</span>
+              </div>
               <p className="text-sm text-muted-foreground">
-                This is the currency you'll use when setting prices for your content, memberships, and services.
-                All your earnings and payouts will be displayed in this currency.
+                All prices and payouts are in INR (Indian Rupee). This is the currency you'll use when setting prices for your content, memberships, and services.
+                Multicurrency support will be available in a future update.
               </p>
             </div>
           </div>

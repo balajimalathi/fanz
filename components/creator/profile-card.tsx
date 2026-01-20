@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Edit2, Eye, EyeOff, Save, Upload, X, Loader2, ExternalLink, Link2, Check } from "lucide-react"
+import { Edit2, Eye, EyeOff, Save, Upload, X, Loader2, ExternalLink, Link2, Check, User } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -236,6 +236,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold text-primary">Profile</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -405,7 +406,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
                         }
                       }
                       const shareLink = `${username}.${domain}`
-                      
+
                       await navigator.clipboard.writeText(shareLink)
                       setLinkCopied(true)
                       setTimeout(() => setLinkCopied(false), 2000)

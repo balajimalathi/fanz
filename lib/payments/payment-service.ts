@@ -18,7 +18,6 @@ import { GatewayService } from "./gateway/gateway-service";
 import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
-import { BASE_CURRENCY } from "@/lib/currency/currency-config";
 import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
 export type PaymentType = "membership" | "exclusive_post" | "service" | "live_stream" | "wallet_credit";
@@ -103,7 +102,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, membershipRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           // Calculate amount based on duration (bundle pricing)
           // Amount is stored in creator's currency subunits
@@ -137,7 +136,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, postRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           // Check if user already purchased this post
           const existingPurchase = await db.query.postPurchase.findFirst({
@@ -174,7 +173,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, serviceRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           amount = serviceRecord.price; // Already in creator's currency subunits
           creatorId = serviceRecord.creatorId;
@@ -198,7 +197,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, streamRecord.creatorId),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           // Check if user already purchased this stream
           const existingPurchase = await db.query.liveStreamPurchase.findFirst({
@@ -274,7 +273,7 @@ export class PaymentService {
           const creatorRecord = await db.query.creator.findFirst({
             where: (c, { eq: eqOp }) => eqOp(c.id, request.creatorId!),
           });
-          creatorCurrency = creatorRecord?.currency || BASE_CURRENCY;
+          creatorCurrency = creatorRecord?.currency || "INR";
 
           amount = planPrice; // Price in paise
           creatorId = request.creatorId; // Creator whose page they were on
@@ -364,9 +363,9 @@ export class PaymentService {
           creatorId,
           type: dbType,
           entityId: entityIdForInsert,
-          amount: paymentAmount, // Amount in creator's currency subunits
-          originalCurrency: creatorCurrency,
-          baseCurrency: creatorCurrency, // Use creator currency as base
+          amount: paymentAmount, // Amount in INR subunits
+          originalCurrency: "INR",
+          baseCurrency: "INR", // All transactions use INR
           convertedAmount: paymentAmount, // Same as amount (no conversion)
           exchangeRate: "1.0", // No conversion
           platformFee: split.platformFee,
@@ -390,8 +389,8 @@ export class PaymentService {
 
       // Initiate payment with gateway
       const gatewayResponse = await GatewayService.initiatePayment({
-        amount: paymentAmount, // Amount in creator's currency subunits
-        currency: creatorCurrency,
+        amount: paymentAmount, // Amount in INR subunits
+        currency: "INR",
         orderId,
         customerId: request.userId,
         customerEmail: user.email,
