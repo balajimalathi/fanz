@@ -74,30 +74,30 @@ export function HowItWorksSection() {
           </div>
 
           {/* Row 2: Step 3 - Full width, Light Green */}
-          <div className="relative overflow-hidden rounded-2xl bg-green-400/80 p-6 md:p-12 min-h-[400px] flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1">
+          <div className="relative overflow-hidden rounded-2xl bg-green-400/80 p-6 md:p-12 min-h-[400px] flex flex-col md:flex-row items-center gap-6 md:gap-8">
+            <div className="w-full md:flex-1 flex flex-col">
               <span className="inline-block bg-white text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
                 Step 3
               </span>
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+              <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
                 Share, monitor & plan
               </h3>
-              <p className="text-gray-700 text-base md:text-lg leading-relaxed mb-6 max-w-2xl">
+              <p className="text-gray-700 text-sm md:text-base lg:text-lg leading-relaxed mb-6 max-w-2xl">
                 Update the link in your social media profiles & dive into comprehensive statistics data related to your profile. Monitor link clicks, track engagement trends, and gain valuable insights to plan.
               </p>
-              <Button className="bg-black text-white hover:bg-black/90 px-8 py-6 text-base font-medium rounded-full">
+              <Button className="bg-black text-white hover:bg-black/90 px-6 py-4 md:px-8 md:py-6 text-sm md:text-base font-medium rounded-full w-full sm:w-auto">
                 Get Start for free
               </Button>
             </div>
 
             {/* Image Container */}
-            <div className="flex-1 relative w-full h-[300px] md:h-[350px] rounded-xl overflow-hidden">
+            <div className="w-full md:flex-1 relative h-[250px] sm:h-[300px] md:h-[350px] rounded-xl overflow-hidden shrink-0">
               <Image
                 src="/assets/carousel/1.jpg"
                 alt="Share, monitor & plan"
                 fill
                 className="object-cover rounded-xl"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, 50vw"
               />
             </div>
           </div>
