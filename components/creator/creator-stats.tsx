@@ -63,7 +63,7 @@ export function CreatorStats({ username }: CreatorStatsProps) {
     <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
       {/* Followers */}
       <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
+        <Users className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium">
           <span className="text-foreground">{formatNumber(stats.followers)}</span>
           <span className="text-muted-foreground ml-1">followers</span>
@@ -72,7 +72,7 @@ export function CreatorStats({ username }: CreatorStatsProps) {
 
       {/* Images */}
       <div className="flex items-center gap-2">
-        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+        <ImageIcon className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium">
           <span className="text-foreground">{formatNumber(stats.images)}</span>
           <span className="text-muted-foreground ml-1">images</span>
@@ -81,7 +81,7 @@ export function CreatorStats({ username }: CreatorStatsProps) {
 
       {/* Videos */}
       <div className="flex items-center gap-2">
-        <Video className="h-4 w-4 text-muted-foreground" />
+        <Video className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium">
           <span className="text-foreground">{formatNumber(stats.videos)}</span>
           <span className="text-muted-foreground ml-1">videos</span>
@@ -90,7 +90,7 @@ export function CreatorStats({ username }: CreatorStatsProps) {
 
       {/* Likes */}
       <div className="flex items-center gap-2">
-        <Heart className="h-4 w-4 text-muted-foreground" />
+        <Heart className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium">
           <span className="text-foreground">{formatNumber(stats.likes)}</span>
           <span className="text-muted-foreground ml-1">likes</span>

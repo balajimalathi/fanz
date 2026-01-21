@@ -1,22 +1,64 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Section, Container } from "@/components/craft";
-import {
-  CheckCircle,
-  Sparkles,
-  ArrowRight,
-} from "lucide-react";
-
-const valueProps = [
-  "Launch your page in under 5 minutes",
-  "Keep 90% of every payment",
-  "Subscriptions, tips, exclusive content - your way",
-  "Direct messaging and live calls with fans",
-  "Get paid weekly to your bank",
-];
+import { Input } from "../ui/input";
+import Image from "next/image";
+import { useEffect, useRef } from "react";
+import { animate } from "animejs";
 
 export function HeroSection() {
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!carouselRef.current || !trackRef.current) return;
+
+    const animation = animate(trackRef.current, {
+      translateX: ["0%", "-200%"],
+      easing: "linear",
+      duration: 1000,
+      autoplay: false,
+    });
+
+    const handleScroll = () => {
+      const carousel = carouselRef.current;
+      if (!carousel || !trackRef.current) return;
+
+      const rect = carousel.getBoundingClientRect();
+      const windowHeight =
+        window.innerHeight || document.documentElement.clientHeight;
+
+      // Progress from 0 (not visible) to 1 (fully scrolled past)
+      const totalScroll = rect.height + windowHeight;
+      const visible = Math.min(
+        totalScroll,
+        Math.max(0, windowHeight - rect.top)
+      );
+      let progress = visible / totalScroll;
+
+      // Handle infinite loop: reset seamlessly when reaching the end
+      if (progress >= 1) {
+        progress = progress % 1;
+        if (progress === 0) progress = 0.0001; // Avoid exact 0 to prevent reset flicker
+      }
+
+      animation.seek(animation.duration * progress);
+    };
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, []);
+
   return (
     <Section className="pt-24 md:pt-32 pb-16 md:pb-24 relative overflow-hidden">
       {/* Background gradient */}
@@ -27,62 +69,47 @@ export function HeroSection() {
         {/* Eyebrow */}
         <Badge
           variant="secondary"
-          className="mb-6 px-4 py-2 text-sm font-medium gap-2"
+          className="mt-4 px-4 py-2 text-sm font-medium gap-2"
         >
-          <Sparkles className="h-4 w-4" />
+          <Badge variant="secondary" className="bg-accent text-accent-foreground">New</Badge>
+
           For creators who want more than likes
         </Badge>
 
         {/* Headline */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight max-w-4xl mb-6">
-          Turn Your Passion Into Income.{" "}
-          <span className="text-primary">Connect Deeper With Your Fans.</span>
+        <h1 className="text-5xl md:text-5xl lg:text-6xl font-semibold tracking-tight max-w-4xl mt-4">
+          Build a brand that is <br /> Owned by you.
         </h1>
 
         {/* Subheadline */}
-        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-8">
+        <p className="text-lg md:text-xl text-muted-foreground/60 max-w-2xl mt-4">
           The creator platform that puts you first. Build your community, share
           exclusive content, and earn on your terms.
         </p>
 
-        {/* Value bullets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 text-left max-w-2xl">
-          {valueProps.map((prop, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
-              <span className="text-sm md:text-base text-muted-foreground">
-                {prop}
-              </span>
-            </div>
-          ))}
-        </div>
-
         {/* CTA */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Button asChild size="lg" className="text-base px-8 gap-2">
-            <Link href="/signup">
-              Start Creating - It&apos;s Free
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="text-base px-8">
-            <Link href="#how-it-works">See How It Works</Link>
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <Input type="text" placeholder="Pick a @yourname" className="rounded-full" />
+          <Button asChild variant="default" size="default" className="text-base px-8 rounded-full">
+            <Link href="#how-it-works">Claim your app</Link>
           </Button>
         </div>
-
-        {/* Friction remover */}
-        <p className="text-sm text-muted-foreground">
-          No fees until you earn. Cancel anytime.
-        </p>
 
         {/* Social proof placeholder */}
-        <div className="mt-12 flex items-center gap-3 text-sm text-muted-foreground">
+        <div className="mt-4 flex items-center gap-3 text-sm text-muted-foreground">
           <div className="flex -space-x-2">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/60 to-primary border-2 border-background"
-              />
+              >
+                <Image
+                  src={`/assets/carousel/avatar-${i}.png`}
+                  alt={`Carousel image ${i}`} height={32} width={32}
+                  className="object-cover rounded-full"
+                  sizes="32px"
+                />
+              </div>
             ))}
           </div>
           <span>
@@ -91,6 +118,34 @@ export function HeroSection() {
           </span>
         </div>
       </Container>
+
+      {/* Carousel */}
+      <div
+        ref={carouselRef}
+        className="mt-16 w-screen relative left-1/2 right-1/2 -mx-[50vw] overflow-hidden"
+      >
+        <div
+          ref={trackRef}
+          className="flex"
+        >
+          {/* Duplicate images for seamless looping */}
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((i, idx) => (
+            <div
+              key={`${i}-${idx}`}
+              className="relative shrink-0 w-[20vw] h-[260px] md:h-[340px] lg:h-[420px]"
+            >
+              <Image
+                src={`/assets/carousel/avatar-${i}.png`}
+                alt={`Carousel image ${i}`}
+                fill
+                className="object-cover rounded-3xl px-3 py-2"
+                sizes="20vw"
+                priority={idx === 0}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
     </Section>
   );
 }
