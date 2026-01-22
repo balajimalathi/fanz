@@ -89,15 +89,9 @@ export function HowItWorksSection() {
               </Button>
             </div>
 
-            {/* Image Container */}
+            {/* Share & Earn Widget */}
             <div className="w-full md:flex-1 relative h-[250px] sm:h-[300px] md:h-[350px] rounded-xl overflow-hidden shrink-0">
-              {/* <Image 
-              //   src={gridItems[2].image}
-              //   alt="Share, monitor & plan"
-              //   fill
-              //   className="object-cover rounded-xl"
-              //   sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, 50vw"
-              // />*/}
+              <FeaturePreviewWidget widgetType="share-earn" />
             </div>
           </div>
         </div>

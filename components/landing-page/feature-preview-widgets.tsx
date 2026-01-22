@@ -13,6 +13,16 @@ import {
   Image as ImageIcon,
   Users,
   Heart,
+  Link,
+  Copy,
+  TrendingUp,
+  Eye,
+  MousePointerClick,
+  Radio,
+  MessageCircle,
+  DollarSign,
+  Share2,
+  BarChart3,
 } from "lucide-react";
 export type FeatureWidgetType =
   | "av-calls"
@@ -22,7 +32,8 @@ export type FeatureWidgetType =
   | "chat"
   | "ppv"
   | "creator-profile"
-  | "feature-grid";
+  | "feature-grid"
+  | "share-earn";
 
 function AvCallsWidget({ className }: { className?: string }) {
   return (
@@ -306,121 +317,369 @@ function CreatorProfileWidget({ className }: { className?: string }) {
   );
 }
 
+type NotificationCard = {
+  icon: string;
+  title: string;
+  amount?: string;
+  description: string;
+  timestamp: string;
+  position: {
+    top?: string;
+    bottom?: string;
+    left?: string;
+    right?: string;
+  };
+  rotation: number;
+  width: string;
+  gradient: {
+    from: string;
+    to: string;
+    textColor: string;
+  };
+};
+const NOTIFICATION_CARDS: NotificationCard[] = [
+  {
+    icon: "🔓",
+    title: "PPV Unlocked",
+    amount: "₹25",
+    description: "Alex unlocked your exclusive video.",
+    timestamp: "just now",
+    position: { top: "1%", left: "2%" },
+    rotation: 4,
+    width: "46%",
+    gradient: {
+      from: "amber-100",
+      to: "orange-200",
+      textColor: "amber-700",
+    },
+  },
+  {
+    icon: "🎬",
+    title: "Custom Request",
+    amount: "₹150",
+    description: "New video request from David.",
+    timestamp: "2 min ago",
+    position: { top: "6%", right: "3%" },
+    rotation: -5,
+    width: "48%",
+    gradient: {
+      from: "emerald-100",
+      to: "teal-200",
+      textColor: "emerald-700",
+    },
+  },
+  {
+    icon: "✨",
+    title: "Membership",
+    amount: "₹99/mo",
+    description: "Sarah joined VIP tier!",
+    timestamp: "5 min ago",
+    position: { top: "18%", left: "1%" },
+    rotation: -3,
+    width: "50%",
+    gradient: {
+      from: "purple-100",
+      to: "pink-200",
+      textColor: "purple-700",
+    },
+  },
+  {
+    icon: "💝",
+    title: "Tip",
+    amount: "₹50",
+    description: "Emma sent you a tip!",
+    timestamp: "8 min ago",
+    position: { top: "24%", right: "6%" },
+    rotation: 6,
+    width: "44%",
+    gradient: {
+      from: "rose-100",
+      to: "red-200",
+      textColor: "rose-600",
+    },
+  },
+  {
+    icon: "💬",
+    title: "Message",
+    amount: "₹5",
+    description: "New message from Mike.",
+    timestamp: "12 min ago",
+    position: { top: "38%", left: "2%" },
+    rotation: 2,
+    width: "48%",
+    gradient: {
+      from: "sky-100",
+      to: "blue-200",
+      textColor: "sky-700",
+    },
+  },
+  {
+    icon: "📸",
+    title: "Photo Request",
+    amount: "₹75",
+    description: "Custom photo request from Jake.",
+    timestamp: "15 min ago",
+    position: { top: "42%", right: "-1%" },
+    rotation: -4,
+    width: "46%",
+    gradient: {
+      from: "violet-100",
+      to: "indigo-200",
+      textColor: "violet-700",
+    },
+  },
+  {
+    icon: "🔥",
+    title: "PPV",
+    amount: "₹35",
+    description: "3 fans unlocked your post!",
+    timestamp: "20 min ago",
+    position: { bottom: "26%", left: "1%" },
+    rotation: 5,
+    width: "48%",
+    gradient: {
+      from: "fuchsia-100",
+      to: "pink-200",
+      textColor: "fuchsia-700",
+    },
+  },
+  {
+    icon: "💰",
+    title: "Revenue",
+    description: "You earned ₹2,847 this week!",
+    timestamp: "1 hour ago",
+    position: { bottom: "20%", right: "1%" },
+    rotation: 3,
+    width: "52%",
+    gradient: {
+      from: "green-100",
+      to: "emerald-200",
+      textColor: "green-700",
+    },
+  },
+  {
+    icon: "👋",
+    title: "New Follower",
+    description: "+15 new followers today!",
+    timestamp: "2 hours ago",
+    position: { bottom: "8%", left: "1%" },
+    rotation: -3,
+    width: "42%",
+    gradient: {
+      from: "cyan-100",
+      to: "sky-200",
+      textColor: "cyan-700",
+    },
+  },
+  {
+    icon: "🔄",
+    title: "Renewal",
+    amount: "₹49/mo",
+    description: "Lisa renewed membership!",
+    timestamp: "3 hours ago",
+    position: { bottom: "5%", right: "6%" },
+    rotation: 5,
+    width: "48%",
+    gradient: {
+      from: "yellow-100",
+      to: "amber-200",
+      textColor: "yellow-700",
+    },
+  },
+];
+
+
 function FeatureGridWidget({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative h-full w-full p-3 overflow-hidden",
+        "relative h-full w-full p-3",
         className
       )}
     >
-      {/* Card 1: PPV Unlock */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform rotate-3 top-2 left-2 w-[48%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-amber-100 to-orange-200 text-amber-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">🔓</span>PPV Unlocked · ₹25
+      {NOTIFICATION_CARDS.map((card, index) => {
+        const positionStyles: React.CSSProperties = {
+          ...card.position,
+          width: card.width,
+          transform: `rotate(${card.rotation}deg)`,
+        };
+
+        const gradientClassMap: Record<string, string> = {
+          "amber-100-orange-200-amber-700": "bg-linear-to-r from-amber-100 to-orange-200 text-amber-700",
+          "emerald-100-teal-200-emerald-700": "bg-linear-to-r from-emerald-100 to-teal-200 text-emerald-700",
+          "purple-100-pink-200-purple-700": "bg-linear-to-r from-purple-100 to-pink-200 text-purple-700",
+          "rose-100-red-200-rose-600": "bg-linear-to-r from-rose-100 to-red-200 text-rose-600",
+          "sky-100-blue-200-sky-700": "bg-linear-to-r from-sky-100 to-blue-200 text-sky-700",
+          "violet-100-indigo-200-violet-700": "bg-linear-to-r from-violet-100 to-indigo-200 text-violet-700",
+          "fuchsia-100-pink-200-fuchsia-700": "bg-linear-to-r from-fuchsia-100 to-pink-200 text-fuchsia-700",
+          "green-100-emerald-200-green-700": "bg-linear-to-r from-green-100 to-emerald-200 text-green-700",
+          "cyan-100-sky-200-cyan-700": "bg-linear-to-r from-cyan-100 to-sky-200 text-cyan-700",
+          "yellow-100-amber-200-yellow-700": "bg-linear-to-r from-yellow-100 to-amber-200 text-yellow-700",
+        };
+
+        const gradientKey = `${card.gradient.from}-${card.gradient.to}-${card.gradient.textColor}`;
+        const gradientClass = gradientClassMap[gradientKey] || "";
+
+        return (
+          <div
+            key={index}
+            className="absolute backdrop-blur-md shadow-md bg-background flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-border transition-all duration-500"
+            style={positionStyles}
+          >
+            <div className={cn("w-full px-2.5 py-1.5 font-medium text-[12px] flex items-center", gradientClass)}>
+              <span className="text-[14px] mr-1">{card.icon}</span>
+              {card.title}
+              {card.amount && ` · ${card.amount}`}
+            </div>
+            <div className="text-[11px] font-normal text-foreground px-2 pt-1.5 pb-1.5">
+              {card.description}
+              <br />
+              <span className="text-[9px] text-muted-foreground">{card.timestamp}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ShareEarnWidget({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "relative h-full w-full bg-background p-4 overflow-hidden flex flex-col gap-3",
+        className
+      )}
+    >
+      {/* Link Sharing Card */}
+      <div className="bg-background rounded-xl border border-border/50 p-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="rounded-full bg-green-100 p-1.5">
+            <Link className="h-3.5 w-3.5 text-green-600" />
+          </div>
+          <span className="text-xs font-medium text-foreground">Your Creator Link</span>
         </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          Alex unlocked your exclusive video.<br />
-          <span className="text-[9px] text-gray-500">just now</span>
+        <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+          <span className="text-[11px] text-muted-foreground truncate flex-1">desifans.com/balaji</span>
+          <button className="flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+            <Copy className="h-3 w-3" />
+            Copy
+          </button>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-[10px] text-muted-foreground">Share on:</span>
+          <div className="flex gap-1.5">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <span className="text-[8px] text-white font-bold">IG</span>
+            </div>
+            <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center">
+              <span className="text-[8px] text-white font-bold">X</span>
+            </div>
+            <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+              <span className="text-[8px] text-white font-bold">FB</span>
+            </div>
+            <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+              <span className="text-[8px] text-white font-bold">YT</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Card 2: Custom Request */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform -rotate-2 top-2 right-2 w-[48%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-emerald-100 to-teal-200 text-emerald-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">🎬</span>Custom Request · ₹150
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-2 flex-1">
+        {/* Engagement Card */}
+        <div className="bg-background rounded-xl border border-border/50 p-2.5 shadow-sm flex flex-col">
+          <div className="flex items-center gap-1.5 mb-1">
+            <BarChart3 className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-[10px] font-medium text-muted-foreground">This Week</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold text-foreground">₹12,847</span>
+            <span className="text-[9px] text-green-500 font-medium flex items-center">
+              <TrendingUp className="h-2.5 w-2.5" />
+              +23%
+            </span>
+          </div>
+          <span className="text-[9px] text-muted-foreground">Total earnings</span>
         </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          New video request from David.<br />
-          <span className="text-[9px] text-gray-500">2 min ago</span>
+
+        {/* Live Status */}
+        <div className="bg-background rounded-xl border border-border/50 p-2.5 shadow-sm flex flex-col">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Radio className="h-3.5 w-3.5 text-red-500" />
+            <span className="text-[10px] font-medium text-muted-foreground">Go Live</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-auto">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[11px] font-medium text-foreground">247 watching</span>
+          </div>
+          <span className="text-[9px] text-muted-foreground">Start streaming</span>
+        </div>
+
+        {/* Profile Views */}
+        <div className="bg-background rounded-xl border border-border/50 p-2.5 shadow-sm flex flex-col">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Eye className="h-3.5 w-3.5 text-purple-500" />
+            <span className="text-[10px] font-medium text-muted-foreground">Views</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold text-foreground">3.2K</span>
+            <span className="text-[9px] text-green-500 font-medium flex items-center">
+              <TrendingUp className="h-2.5 w-2.5" />
+              +18%
+            </span>
+          </div>
+          <span className="text-[9px] text-muted-foreground">Profile visits</span>
+        </div>
+
+        {/* Link Clicks */}
+        <div className="bg-background rounded-xl border border-border/50 p-2.5 shadow-sm flex flex-col">
+          <div className="flex items-center gap-1.5 mb-1">
+            <MousePointerClick className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-[10px] font-medium text-muted-foreground">Clicks</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold text-foreground">892</span>
+            <span className="text-[9px] text-green-500 font-medium flex items-center">
+              <TrendingUp className="h-2.5 w-2.5" />
+              +31%
+            </span>
+          </div>
+          <span className="text-[9px] text-muted-foreground">Link clicks</span>
         </div>
       </div>
 
-      {/* Card 3: Membership */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform rotate-1 top-[30%] left-[5%] w-[50%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-purple-100 to-pink-200 text-purple-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">✨</span>Membership · ₹99/mo
+      {/* Recent Activity */}
+      <div className="bg-background rounded-xl border border-border/50 p-2.5 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-medium text-muted-foreground">Recent Activity</span>
+          <span className="text-[9px] text-primary">View all</span>
         </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          Sarah joined VIP tier!<br />
-          <span className="text-[9px] text-gray-500">5 min ago</span>
-        </div>
-      </div>
-
-      {/* Card 4: Tip */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform -rotate-3 top-[28%] right-[3%] w-[46%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-rose-100 to-red-200 text-rose-600 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">💝</span>Tip · ₹50
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          Emma sent you a tip!<br />
-          <span className="text-[9px] text-gray-500">8 min ago</span>
-        </div>
-      </div>
-
-      {/* Card 5: Message */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform rotate-2 top-[52%] left-[8%] w-[44%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-sky-100 to-blue-200 text-sky-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">💬</span>Message · ₹5
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          New message from Mike.<br />
-          <span className="text-[9px] text-gray-500">12 min ago</span>
-        </div>
-      </div>
-
-      {/* Card 6: Custom Image Request */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform -rotate-1 top-[50%] right-[5%] w-[48%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-violet-100 to-indigo-200 text-violet-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">📸</span>Photo Request · ₹75
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          Custom photo request from Jake.<br />
-          <span className="text-[9px] text-gray-500">15 min ago</span>
-        </div>
-      </div>
-
-      {/* Card 7: PPV Content */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform rotate-3 bottom-[18%] left-[3%] w-[46%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-fuchsia-100 to-pink-200 text-fuchsia-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">🔥</span>PPV · ₹35
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          3 fans unlocked your post!<br />
-          <span className="text-[9px] text-gray-500">20 min ago</span>
-        </div>
-      </div>
-
-      {/* Card 8: Revenue Summary */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform -rotate-2 bottom-[15%] right-[2%] w-[52%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-green-100 to-emerald-200 text-green-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">💰</span>Revenue
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          You earned ₹2,847 this week!<br />
-          <span className="text-[9px] text-gray-500">1 hour ago</span>
-        </div>
-      </div>
-
-      {/* Card 9: New Subscriber */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform rotate-1 bottom-2 left-[15%] w-[42%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-cyan-100 to-sky-200 text-cyan-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">👋</span>New Follower
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          +15 new followers today!<br />
-          <span className="text-[9px] text-gray-500">2 hours ago</span>
-        </div>
-      </div>
-
-      {/* Card 10: Membership Renewal */}
-      <div className="absolute backdrop-blur-md shadow-md bg-white flex overflow-hidden rounded-2xl flex-col items-start border-[5px] border-white transition-all duration-500 transform -rotate-3 bottom-2 right-[8%] w-[48%]">
-        <div className="w-full px-2.5 py-1.5 bg-linear-to-r from-yellow-100 to-amber-200 text-yellow-700 font-medium text-[12px] flex items-center">
-          <span className="text-[14px] mr-1">🔄</span>Renewal · ₹49/mo
-        </div>
-        <div className="text-[11px] font-normal text-gray-800 px-2 pt-1.5 pb-1.5">
-          Lisa renewed membership!<br />
-          <span className="text-[9px] text-gray-500">3 hours ago</span>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-5 w-5">
+              <AvatarImage src="/placeholders/avatar-6.png" />
+              <AvatarFallback className="text-[8px]">A</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-foreground truncate">
+                <span className="font-medium">Alex</span> sent you a message
+              </p>
+            </div>
+            <MessageCircle className="h-3 w-3 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Avatar className="h-5 w-5">
+              <AvatarImage src="/placeholders/avatar-8.png" />
+              <AvatarFallback className="text-[8px]">S</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-foreground truncate">
+                <span className="font-medium">Sarah</span> tipped ₹100
+              </p>
+            </div>
+            <DollarSign className="h-3 w-3 text-green-500" />
+          </div>
         </div>
       </div>
     </div>
@@ -439,6 +698,7 @@ const WIDGET_MAP: Record<
   ppv: PpvWidget,
   "creator-profile": CreatorProfileWidget,
   "feature-grid": FeatureGridWidget,
+  "share-earn": ShareEarnWidget,
 };
 
 export function FeaturePreviewWidget({
