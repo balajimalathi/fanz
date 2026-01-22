@@ -11,7 +11,7 @@ const archetypes = [
     title: "Artists & Illustrators",
     description:
       "Share exclusive art, behind-the-scenes process videos, tutorials, and early access to new work.",
-    features: ["Digital downloads", "Time-lapse videos", "Commission slots"],
+    features: ["Digital goods", "Time-lapse videos", "Commission slots"],
     color: "text-pink-500",
     bgColor: "bg-pink-500/10",
   },

@@ -2,26 +2,26 @@ import { Section, Container } from "@/components/craft";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "./section-header";
 import Image from "next/image";
+import { FeaturePreviewWidget } from "./feature-preview-widgets";
 
 
-
-const gridItems = [
-  {
-    title: "Sign up & manage your profile information",
-    description: "Update your profile picture, public name, social accounts, bio description that will be helpful for your audience to recognise you.",
-    image: "/assets/carousel/1.jpg",
-  },
-  {
-    title: "Manage links & customise your profile",
-    description: "Start adding all the links that you want your audience to view. Take control & customise the style as per your needs.",
-    image: "/assets/carousel/1.jpg",
-  },
-  {
-    title: "Share, monitor & plan",
-    description: "Update the link in your social media profiles & dive into comprehensive statistics data related to your profile. Monitor link clicks, track engagement trends, and gain valuable insights to plan.",
-    image: "/assets/carousel/1.jpg",
-  },
-];
+const gridItems: {
+  title: string;
+  description: string;
+}[] = [
+    {
+      title: "Create your page",
+      description: "Sign up, add your photo and bio, and claim your @yourname. Your creator page is ready in minutes.", 
+    },
+    {
+      title: "Set your offerings",
+      description: "Add memberships, custom requests, and PPV content. Set your prices. Customize your page to match your brand.", 
+    },
+    {
+      title: "Share & earn",
+      description: "Share your link, go live, chat with fans, and earn. Track clicks and engagement as you grow.", 
+    },
+  ];
 
 export function HowItWorksSection() {
   return (
@@ -45,16 +45,10 @@ export function HowItWorksSection() {
                   {gridItems[0].description}
                 </p>
               </div>
- 
-              {/* Image Container */}
+
+              {/* Creator Profile Widget */}
               <div className="relative w-full h-[300px] md:h-[350px] rounded-xl overflow-hidden">
-                <Image
-                  src={gridItems[0].image}
-                  alt="Share, monitor & plan"
-                  fill
-                  className="object-cover rounded-xl"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
+                <FeaturePreviewWidget widgetType="creator-profile" />
               </div>
             </div>
 
@@ -71,15 +65,9 @@ export function HowItWorksSection() {
                   {gridItems[1].description}
                 </p>
               </div>
-              {/* Image Container */}
+              {/* Feature Grid Widget */}
               <div className="relative w-full h-[300px] md:h-[350px] rounded-xl overflow-hidden">
-                <Image
-                  src={gridItems[1].image}
-                  alt="Share, monitor & plan"
-                  fill
-                  className="object-cover rounded-xl"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
+                <FeaturePreviewWidget widgetType="feature-grid" />
               </div>
             </div>
           </div>
@@ -103,13 +91,13 @@ export function HowItWorksSection() {
 
             {/* Image Container */}
             <div className="w-full md:flex-1 relative h-[250px] sm:h-[300px] md:h-[350px] rounded-xl overflow-hidden shrink-0">
-              <Image
-                src={gridItems[2].image}
-                alt="Share, monitor & plan"
-                fill
-                className="object-cover rounded-xl"
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, 50vw"
-              />
+              {/* <Image 
+              //   src={gridItems[2].image}
+              //   alt="Share, monitor & plan"
+              //   fill
+              //   className="object-cover rounded-xl"
+              //   sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, 50vw"
+              // />*/}
             </div>
           </div>
         </div>
