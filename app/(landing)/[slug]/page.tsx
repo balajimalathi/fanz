@@ -7,6 +7,7 @@ import "@/styles/mdx.css";
 import { Metadata } from "next";
 
 import { constructMetadata, getBlurDataURL } from "@/lib/utils";
+import { siteConfig } from "@/site.config";
 
 export async function generateStaticParams() {
   const pages = await getAllPages();
@@ -29,7 +30,7 @@ export async function generateMetadata({
   const { title, description } = page;
 
   return constructMetadata({
-    title: `${title} - Exclusivz`,
+    title: `${title} - ${siteConfig.site_name}`,
     description: description,
   });
 }

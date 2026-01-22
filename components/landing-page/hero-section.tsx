@@ -8,6 +8,7 @@ import { Input } from "../ui/input";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { animate } from "animejs";
+import { siteConfig } from "@/site.config";
 
 export function HeroSection() {
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -183,7 +184,7 @@ export function HeroSection() {
           </div>
           <span>
             Join <strong className="text-foreground">1,000+</strong> creators
-            already earning on Exclusivz
+            already earning on {siteConfig.site_name}
           </span>
         </div>
       </Container>

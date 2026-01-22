@@ -12,6 +12,7 @@ import "@/styles/mdx.css";
 import { Metadata } from "next";
 
 import { constructMetadata, getBlurDataURL } from "@/lib/utils";
+import { siteConfig } from "@/site.config";
 
 interface DocPageProps {
   params: Promise<{
@@ -39,7 +40,7 @@ export async function generateMetadata({
   const { title, description } = doc;
 
   return constructMetadata({
-    title: `${title} | Exclusivz`,
+    title: `${title} | ${siteConfig.site_name}`,
     description: description,
   });
 }

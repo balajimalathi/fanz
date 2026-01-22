@@ -83,7 +83,7 @@ export function CreatorProfileTabs({
       {/* Single Tabs component wrapping both navigation and content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* Navigation Tabs */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border">
+        <div className="sticky top-0 z-20 bg-background border-b border-border">
           <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
             <div className="flex items-center justify-between py-2">
               <TabsList>

@@ -1,7 +1,9 @@
 import { Section, Container } from "@/components/craft";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Palette, Dumbbell, Music, GraduationCap } from "lucide-react";
+import { Palette, Dumbbell, Music, GraduationCap, Book, Video } from "lucide-react";
+import { siteConfig } from "@/site.config";
+import { SectionHeader } from "./section-header";
 
 const archetypes = [
   {
@@ -40,24 +42,32 @@ const archetypes = [
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
   },
+  {
+    icon: Book,
+    title: "Writers & Bloggers",
+    description:
+      "Publish exclusive articles, ebooks, newsletters, and create content series.",
+    features: ["Exclusive articles", "Ebooks", "Content series"],
+    color: "text-green-500",
+    bgColor: "bg-green-500/10",
+  },
+  {
+    icon: Video,
+    title: "Vloggers & Content Creators",
+    description:
+      "Create exclusive video content, behind-the-scenes footage, and create content series.",
+    features: ["Exclusive videos", "Behind-the-scenes", "Content series"],
+    color: "text-red-500",
+    bgColor: "bg-red-500/10",
+  },
 ];
 
 export function CreatorArchetypesSection() {
   return (
     <Section className="py-16 md:py-24">
       <Container>
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            Who We Help
-          </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-            Creators Like You Are Thriving
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            From artists to educators, creators of all kinds are building
-            sustainable businesses on Exclusivz.
-          </p>
-        </div>
+        <SectionHeader title="Creators Like You Are Thriving" description={`From artists to educators, creators of all kinds are building sustainable businesses on ${siteConfig.site_name}.`} badgeColor="cyan" badge="Who We Help" />
+
 
         <div className="grid md:grid-cols-2 gap-6">
           {archetypes.map((archetype, index) => (

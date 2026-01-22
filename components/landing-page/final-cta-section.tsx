@@ -40,18 +40,18 @@ export function FinalCTASection() {
           </p>
 
           {/* Benefits list */}
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-10">
+          {/* <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-10">
             {benefits.map((benefit, index) => (
               <div key={index} className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                 <span className="text-sm md:text-base">{benefit}</span>
               </div>
             ))}
-          </div>
+          </div> */}
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-            <Button asChild size="lg" className="text-lg px-10 py-6 gap-2">
+            <Button asChild className="text-lg px-10 py-6 gap-2 rounded-full">
               <Link href="/signup">
                 Start Creating Now
                 <ArrowRight className="h-5 w-5" />

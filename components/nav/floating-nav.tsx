@@ -12,6 +12,7 @@ import { mainMenu } from "@/menu.config";
 import { cn } from "@/lib/utils";
 
 import Logo from "@/public/logo.svg";
+import { siteConfig } from "@/site.config";
 
 export function FloatingNav() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -46,7 +47,7 @@ export function FloatingNav() {
       <nav
         className={cn(
           "fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl",
-          "rounded-2xl border px-4 py-3",
+          "rounded-full border px-4 py-3",
           "transition-all duration-300 ease-out",
           isScrolled
             ? "bg-background/80 backdrop-blur-xl shadow-lg border-border/50"
@@ -57,15 +58,16 @@ export function FloatingNav() {
           {/* Logo - Left */}
           <Link
             href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity" 
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <Image
               src={Logo}
-              alt="Exclusivz"
+              alt={siteConfig.site_name}
               width={32}
               height={20}
               className="dark:invert"
             />
+            <span className="font-semibold">{siteConfig.site_name}</span>
           </Link>
 
           {/* Menu - Center (Desktop) */}
@@ -100,7 +102,7 @@ export function FloatingNav() {
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
             {/* Login Button (Desktop) */}
-            <Button asChild className="hidden sm:flex rounded-lg">
+            <Button asChild className="hidden sm:flex rounded-full">
               <Link href="/login">Login</Link>
             </Button>
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Section, Container } from "@/components/craft";
-import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -10,6 +9,8 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SectionHeader } from "./section-header";
+import { siteConfig } from "@/site.config";
 
 const faqs = [
   {
@@ -58,17 +59,7 @@ export function FAQSection() {
   return (
     <Section id="faq" className="py-16 md:py-24 bg-muted/30">
       <Container className="max-w-3xl">
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            FAQ
-          </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-            Got Questions? We&apos;ve Got Answers
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Everything you need to know about getting started with Exclusivz.
-          </p>
-        </div>
+        <SectionHeader title="Got Questions? We've Got Answers" description={`Everything you need to know about getting started with ${siteConfig.site_name}.`} badgeColor="purple" badge="FAQ"/> 
 
         <div className="space-y-3">
           {faqs.map((faq, index) => (

@@ -17,15 +17,19 @@ export default function Home() {
       <HeroSection />
       <BentoGrid />
       <HowItWorksSection />
+      <CreatorArchetypesSection />
       <Testimonials />
+      <FAQSection />
+      <FinalCTASection /> 
+
       {/*  <SocialProofSection />
       <BenefitsSection />
       <DifferentiatorsSection />
       
       <OfferSection />
       <AboutSection />
-      <CreatorArchetypesSection />
-      <FAQSection />
+    
+      
       <FinalCTASection /> */}
     </main>
   );

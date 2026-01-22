@@ -14,7 +14,7 @@ const Footer = () => {
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src={Logo}
-                alt="Exclusivz"
+                alt={siteConfig.site_name}
                 className="dark:invert"
                 width={32}
                 height={20}

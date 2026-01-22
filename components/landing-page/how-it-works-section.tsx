@@ -2,16 +2,27 @@ import { Section, Container } from "@/components/craft";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "./section-header";
 import Image from "next/image";
-import { MoreVertical, Share2, Lock, Eye } from "lucide-react";
 
 
-{/* <Section id="how-it-works" className="py-16 md:py-24 bg-muted/30">
-<Container>
-  <SectionHeader title="Start Earning in 3 Simple Steps" badge="Get Started" badgeColor="cyan" />
 
-   <></>
-</Container>
-</Section> */}
+const gridItems = [
+  {
+    title: "Sign up & manage your profile information",
+    description: "Update your profile picture, public name, social accounts, bio description that will be helpful for your audience to recognise you.",
+    image: "/assets/carousel/1.jpg",
+  },
+  {
+    title: "Manage links & customise your profile",
+    description: "Start adding all the links that you want your audience to view. Take control & customise the style as per your needs.",
+    image: "/assets/carousel/1.jpg",
+  },
+  {
+    title: "Share, monitor & plan",
+    description: "Update the link in your social media profiles & dive into comprehensive statistics data related to your profile. Monitor link clicks, track engagement trends, and gain valuable insights to plan.",
+    image: "/assets/carousel/1.jpg",
+  },
+];
+
 export function HowItWorksSection() {
   return (
     <Section id="how-it-works" className="py-16 md:py-24 bg-muted">
@@ -28,17 +39,17 @@ export function HowItWorksSection() {
                   Step 1
                 </span>
                 <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                  Sign up & manage your profile information
+                  {gridItems[0].title}
                 </h3>
                 <p className="text-white/90 text-base leading-relaxed">
-                  Update your profile picture, public name, social accounts, bio description that will be helpful for your audience to recognise you.
+                  {gridItems[0].description}
                 </p>
               </div>
  
               {/* Image Container */}
               <div className="relative w-full h-[300px] md:h-[350px] rounded-xl overflow-hidden">
                 <Image
-                  src="/assets/carousel/1.jpg"
+                  src={gridItems[0].image}
                   alt="Share, monitor & plan"
                   fill
                   className="object-cover rounded-xl"
@@ -54,16 +65,16 @@ export function HowItWorksSection() {
                   Step 2
                 </span>
                 <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-                  Manage links & customise your profile
+                  {gridItems[1].title}
                 </h3>
                 <p className="text-gray-700 text-base leading-relaxed">
-                  Start adding all the links that you want your audience to view. Take control & customise the style as per your needs.
+                  {gridItems[1].description}
                 </p>
               </div>
               {/* Image Container */}
               <div className="relative w-full h-[300px] md:h-[350px] rounded-xl overflow-hidden">
                 <Image
-                  src="/assets/carousel/1.jpg"
+                  src={gridItems[1].image}
                   alt="Share, monitor & plan"
                   fill
                   className="object-cover rounded-xl"
@@ -80,10 +91,10 @@ export function HowItWorksSection() {
                 Step 3
               </span>
               <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-                Share, monitor & plan
+                {gridItems[2].title}
               </h3>
               <p className="text-gray-700 text-sm md:text-base lg:text-lg leading-relaxed mb-6 max-w-2xl">
-                Update the link in your social media profiles & dive into comprehensive statistics data related to your profile. Monitor link clicks, track engagement trends, and gain valuable insights to plan.
+                {gridItems[2].description}
               </p>
               <Button className="bg-black text-white hover:bg-black/90 px-6 py-4 md:px-8 md:py-6 text-sm md:text-base font-medium rounded-full w-full sm:w-auto">
                 Get Start for free
@@ -93,7 +104,7 @@ export function HowItWorksSection() {
             {/* Image Container */}
             <div className="w-full md:flex-1 relative h-[250px] sm:h-[300px] md:h-[350px] rounded-xl overflow-hidden shrink-0">
               <Image
-                src="/assets/carousel/1.jpg"
+                src={gridItems[2].image}
                 alt="Share, monitor & plan"
                 fill
                 className="object-cover rounded-xl"

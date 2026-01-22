@@ -1,4 +1,5 @@
 import { Section, Container } from "@/components/craft";
+import { siteConfig } from "@/site.config";
 import { Heart } from "lucide-react";
 
 export function AboutSection() {
@@ -16,7 +17,7 @@ export function AboutSection() {
 
           <div className="space-y-4 text-lg text-muted-foreground leading-relaxed">
             <p>
-              We started Exclusivz because we believe creators deserve better.
+              We started {siteConfig.site_name} because we believe creators deserve better.
               Better payouts. Better tools. Better respect.
             </p>
             <p>
