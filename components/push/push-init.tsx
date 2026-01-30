@@ -25,12 +25,16 @@ export function PushInit() {
     // Listen for foreground messages
     const unsubscribe = onForegroundMessage((payload) => {
       console.log("Foreground message received:", payload)
-      // You can show a custom notification or update UI here
-      if (payload.notification) {
-        new Notification(payload.notification.title || "New Notification", {
-          body: payload.notification.body,
-          icon: payload.notification.icon || "/logo.svg"
-        })
+      if (!payload?.notification) return
+      try {
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          new Notification(payload.notification.title || "New Notification", {
+            body: payload.notification.body,
+            icon: payload.notification.icon || "/logo.svg",
+          })
+        }
+      } catch (err) {
+        console.warn("Could not show foreground notification:", err)
       }
     })
 

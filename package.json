@@ -3,8 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "generate-sw": "node scripts/generate-sw.js",
+    "dev": "npm run generate-sw && next dev --turbopack",
+    "build": "npm run generate-sw && next build --turbopack",
     "start": "next start -p 4000",
     "knip": "knip",
     "postbuild": "next-sitemap",

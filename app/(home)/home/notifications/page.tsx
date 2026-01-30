@@ -39,6 +39,7 @@ const notificationTypeConfig: Record<string, { icon: LucideIcon; bgColor: string
   // Content related
   new_post: { icon: FileText, bgColor: "bg-indigo-100 dark:bg-indigo-950", iconColor: "text-indigo-600 dark:text-indigo-400" },
   broadcast: { icon: Megaphone, bgColor: "bg-orange-100 dark:bg-orange-950", iconColor: "text-orange-600 dark:text-orange-400" },
+  announcement: { icon: Megaphone, bgColor: "bg-teal-100 dark:bg-teal-950", iconColor: "text-teal-600 dark:text-teal-400" },
   
   // Social interactions
   new_follower: { icon: UserPlus, bgColor: "bg-cyan-100 dark:bg-cyan-950", iconColor: "text-cyan-600 dark:text-cyan-400" },

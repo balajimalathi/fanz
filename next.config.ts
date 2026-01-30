@@ -46,6 +46,11 @@ const nextConfig: NextConfig = {
       "https://www.googletagmanager.com",
       "https://www.clarity.ms",
       "https://scripts.clarity.ms",
+      // Firebase Cloud Messaging (FCM) / push notifications
+      "https://firebaseinstallations.googleapis.com",
+      "https://fcmregistrations.googleapis.com",
+      "https://fcmtoken.googleapis.com",
+      "https://www.googleapis.com",
     ];
 
     const mediaSrc = ["'self'", "blob:", "data:"];

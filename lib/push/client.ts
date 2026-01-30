@@ -197,13 +197,33 @@ export function onForegroundMessage(
 }
 
 /**
- * Check if notifications are supported
+ * Check if notifications are supported (secure context, Notification API, service worker, Push)
  */
 export function isNotificationSupported(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-  return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  return (
+    typeof window.isSecureContext === "boolean" &&
+    window.isSecureContext &&
+    "Notification" in window &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window
+  );
+}
+
+/**
+ * Check if Firebase/VAPID config is present for push (avoids showing Enable when push will fail)
+ */
+export function hasFirebaseConfig(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID &&
+    process.env.NEXT_PUBLIC_FIREBASE_APP_ID &&
+    process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+  );
 }
 
 /**

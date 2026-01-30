@@ -97,6 +97,7 @@ export default function SendNotificationPage() {
       return
     }
 
+    const targetCount = sendToAll ? followers.length : selectedFollowerIds.size
     setIsSubmitting(true)
     try {
       const response = await fetch("/api/notifications/send", {
@@ -113,24 +114,61 @@ export default function SendNotificationPage() {
         }),
       })
 
-      const data = await response.json()
+      const contentType = response.headers.get("content-type")
+      let data: {
+        message?: string
+        error?: string
+        pushNotificationsSent?: number
+        pushNotificationsFailed?: number
+        notificationsCreated?: number
+      } = {}
+      if (contentType?.includes("application/json")) {
+        try {
+          data = await response.json()
+        } catch {
+          toast.error(`Request failed (${response.status}). Invalid response.`)
+          return
+        }
+      } else {
+        const text = await response.text()
+        console.error("Non-JSON response:", text?.slice(0, 200))
+        toast.error(
+          response.status === 403
+            ? "Creator role required to send notifications."
+            : response.status === 401
+              ? "Please log in again."
+              : `Request failed (${response.status}). Please try again.`
+        )
+        return
+      }
 
       if (response.ok) {
-        toast.success(data.message || "Notifications sent successfully!")
-        // Reset form
+        const sent = data.pushNotificationsSent ?? 0
+        const failed = data.pushNotificationsFailed ?? 0
+        const created = data.notificationsCreated ?? 0
+        let successMessage: string
+        if (created === 0) {
+          successMessage = data.message ?? "No followers to notify."
+        } else if (sent === 0) {
+          successMessage = `${created} notification(s) saved, but no push notifications were delivered. Followers may need to enable notifications.`
+        } else if (failed > 0) {
+          successMessage = `${sent} push notification(s) delivered, ${failed} failed. ${data.message ?? ""}`
+        } else {
+          successMessage = `${sent} push notification(s) delivered. ${data.message ?? ""}`
+        }
+        toast.success(successMessage.trim())
         setTitle("")
         setMessage("")
         setLink("")
         setSendToAll(false)
         setSelectedFollowerIds(new Set())
-        // Navigate back to notifications page
         router.push("/home/notifications")
       } else {
         toast.error(data.error || "Failed to send notifications")
       }
     } catch (error) {
       console.error("Error sending notifications:", error)
-      toast.error("Failed to send notifications")
+      toast.error("Failed to send notifications. Check your connection and try again.")
     } finally {
       setIsSubmitting(false)
     }

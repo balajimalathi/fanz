@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Bell, BellOff, X } from "lucide-react"
+import { Bell, BellOff } from "lucide-react"
 import {
   subscribeToPushNotifications,
   getNotificationPermission,
@@ -16,24 +16,36 @@ interface NotificationPermissionProps {
 
 export function NotificationPermission({ className }: NotificationPermissionProps) {
   const [permission, setPermission] = useState<NotificationPermission>("default")
+  const [preferenceEnabled, setPreferenceEnabled] = useState<boolean | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSupported, setIsSupported] = useState(false)
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await fetch("/api/push/preferences")
+      if (response.ok) {
+        const data = await response.json()
+        setPreferenceEnabled(data.enabled ?? true)
+      } else {
+        setPreferenceEnabled(true)
+      }
+    } catch {
+      setPreferenceEnabled(true)
+    }
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return
 
     setIsSupported(isNotificationSupported())
     setPermission(getNotificationPermission())
+    void fetchPreferences()
 
-    // Listen for permission changes
     if ("Notification" in window) {
       const checkPermission = () => {
         setPermission(Notification.permission)
       }
-
-      // Check permission periodically (in case user changes it in browser settings)
       const interval = setInterval(checkPermission, 5000)
-
       return () => clearInterval(interval)
     }
   }, [])
@@ -91,6 +103,7 @@ export function NotificationPermission({ className }: NotificationPermissionProp
         console.log("Subscription registered successfully:", data)
         toast.success("Notifications enabled! You'll receive updates from creators you follow.")
         setPermission("granted")
+        setPreferenceEnabled(true)
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error("Failed to register subscription:", errorData)
@@ -130,8 +143,7 @@ export function NotificationPermission({ className }: NotificationPermissionProp
 
       if (response.ok) {
         toast.success("Notifications disabled")
-        // Note: We don't change the permission state here because the browser permission
-        // is still granted, we just disabled the app-level preference
+        setPreferenceEnabled(false)
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error("Failed to disable notifications:", errorData)
@@ -149,7 +161,9 @@ export function NotificationPermission({ className }: NotificationPermissionProp
     return null
   }
 
-  if (permission === "granted") {
+  const notificationsOn = permission === "granted" && preferenceEnabled === true
+
+  if (notificationsOn) {
     return (
       <Button
         variant="outline"
@@ -183,7 +197,7 @@ export function NotificationPermission({ className }: NotificationPermissionProp
       className={className}
     >
       <Bell className="h-4 w-4" />
-      {isLoading ? "Enabling..." : ""}
+      {isLoading ? "Enabling..." : "Enable notifications"}
     </Button>
   )
 }

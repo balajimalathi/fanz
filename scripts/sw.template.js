@@ -11,12 +11,12 @@ if (typeof importScripts !== 'undefined') {
 
     if (self.firebase && self.firebase.messaging) {
       var firebaseConfig = {
-        apiKey: 'AIzaSyCi6ncq73p2LnfEdv8AiO6jmCRzGLv4ZKs',
-        authDomain: 'skndan-dev.firebaseapp.com',
-        projectId: 'skndan-dev',
-        storageBucket: 'skndan-dev.firebasestorage.app',
-        messagingSenderId: '556363759464',
-        appId: '1:556363759464:web:a648a8cc163c5c0635e0dd',
+        apiKey: '__NEXT_PUBLIC_FIREBASE_API_KEY__',
+        authDomain: '__NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN__',
+        projectId: '__NEXT_PUBLIC_FIREBASE_PROJECT_ID__',
+        storageBucket: '__NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET__',
+        messagingSenderId: '__NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID__',
+        appId: '__NEXT_PUBLIC_FIREBASE_APP_ID__',
       };
       var hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagingSenderId && firebaseConfig.appId;
       if (hasConfig) {
