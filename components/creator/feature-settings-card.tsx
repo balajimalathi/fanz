@@ -223,11 +223,10 @@ export function FeatureSettingsCard() {
 
         {/* Save Button */}
         {hasChanges && (
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t flex justify-end">
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full"
             >
               {isSaving ? (
                 <>

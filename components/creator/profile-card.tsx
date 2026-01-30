@@ -436,12 +436,13 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
         )}
 
         {/* Profile Images Section */}
-        <div className="pt-4 border-t space-y-4">
-          <div className="space-y-2">
-            <Label>Profile Image (400×400px)</Label>
-            <div className="flex items-center gap-4">
+        <div className="pt-4 border-t">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
+            {/* Profile Image */}
+            <div className="flex flex-col space-y-2 shrink-0">
+              <Label>Profile Image (400x400px)</Label>
               {profileImageUrl ? (
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-border">
+                <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-border">
                   <Image
                     src={profileImageUrl}
                     alt="Profile"
@@ -450,7 +451,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
                   />
                 </div>
               ) : (
-                <div className="w-24 h-24 rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
                   <Upload className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
@@ -483,11 +484,10 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
                 onChange={(e) => handleFileChange(e, "profile")}
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Profile Cover (1200×400px)</Label>
-            <div className="flex items-center gap-4">
+            {/* Profile Cover */}
+            <div className="flex flex-col space-y-2 flex-1 min-w-0">
+              <Label>Profile Cover (1200x400px)</Label>
               {profileCoverUrl ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 border-border">
                   <Image
