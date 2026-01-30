@@ -199,10 +199,21 @@ export function ProfileHeader({
                     onClick={chatOrdersHandler.onNotificationsClick}
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9"
-                    aria-label="Notifications"
+                    className="relative h-9 w-9"
+                    aria-label={
+                      chatOrdersHandler.unreadNotificationCount > 0
+                        ? `Notifications (${chatOrdersHandler.unreadNotificationCount} unread)`
+                        : "Notifications"
+                    }
                   >
                     <Bell className="h-4 w-4" />
+                    {chatOrdersHandler.unreadNotificationCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
+                        {chatOrdersHandler.unreadNotificationCount > 99
+                          ? "99+"
+                          : chatOrdersHandler.unreadNotificationCount}
+                      </span>
+                    )}
                   </Button>
                   {chatOrdersHandler.chatEnabled && (
                     <Button

@@ -34,6 +34,7 @@ export function CreatorPageClient({
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [hasOrdersFromCreator, setHasOrdersFromCreator] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [liveStreamData, setLiveStreamData] = useState<{
     streamId: string;
     streamType: "free" | "follower_only" | "paid";
@@ -67,6 +68,26 @@ export function CreatorPageClient({
     checkOrders();
   }, [creatorId, isCreator, session?.user]);
 
+  const fetchUnreadNotificationCount = async () => {
+    if (isCreator || !session?.user) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+    try {
+      const response = await fetch("/api/notifications?limit=1&offset=0");
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadNotificationCount(data.unreadCount ?? 0);
+      }
+    } catch {
+      setUnreadNotificationCount(0);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadNotificationCount();
+  }, [isCreator, session?.user]);
+
   const handleLiveClick = (streamId: string, streamType: "free" | "follower_only" | "paid", price?: number | null) => {
     setLiveStreamData({ streamId, streamType, price });
     setShowLiveModal(true);
@@ -79,6 +100,7 @@ export function CreatorPageClient({
           chatEnabled={chatEnabled}
           hasOrdersFromCreator={hasOrdersFromCreator}
           isCreator={isCreator}
+          unreadNotificationCount={unreadNotificationCount}
           onChatClick={() => setShowChat(true)}
           onOrdersClick={() => setShowOrdersModal(true)}
           onNotificationsClick={() => setShowNotificationsModal(true)}
@@ -121,7 +143,10 @@ export function CreatorPageClient({
       {/* Fan Notifications Modal */}
       <FanNotificationsModal
         open={showNotificationsModal}
-        onOpenChange={setShowNotificationsModal}
+        onOpenChange={(open) => {
+          setShowNotificationsModal(open);
+          if (!open) void fetchUnreadNotificationCount();
+        }}
       />
       </CallGlobalWrapper>
     </LiveHandlerProvider>

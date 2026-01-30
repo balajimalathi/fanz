@@ -6,6 +6,7 @@ interface ChatOrdersHandlerContextType {
   chatEnabled: boolean;
   hasOrdersFromCreator: boolean;
   isCreator: boolean;
+  unreadNotificationCount: number;
   onChatClick: () => void;
   onOrdersClick: () => void;
   onNotificationsClick: () => void;
@@ -18,6 +19,7 @@ export function ChatOrdersHandlerProvider({
   chatEnabled,
   hasOrdersFromCreator,
   isCreator,
+  unreadNotificationCount,
   onChatClick,
   onOrdersClick,
   onNotificationsClick,
@@ -26,6 +28,7 @@ export function ChatOrdersHandlerProvider({
   chatEnabled: boolean;
   hasOrdersFromCreator: boolean;
   isCreator: boolean;
+  unreadNotificationCount: number;
   onChatClick: () => void;
   onOrdersClick: () => void;
   onNotificationsClick: () => void;
@@ -36,6 +39,7 @@ export function ChatOrdersHandlerProvider({
         chatEnabled,
         hasOrdersFromCreator,
         isCreator,
+        unreadNotificationCount,
         onChatClick,
         onOrdersClick,
         onNotificationsClick,
