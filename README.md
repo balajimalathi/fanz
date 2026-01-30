@@ -1,6 +1,6 @@
-# Exclusivz Web (DesiFans)
+# Exclusivz Web
 
-**Exclusivz Web** (also known as DesiFans) is a comprehensive content creator platform designed to empower creators with subscriptions, exclusive content, live streaming, and direct audience interaction tools. Built with modern web technologies, it offers a scalable and high-performance alternative to traditional creator platforms.
+**Exclusivz Web** is a comprehensive content creator platform designed to empower creators with subscriptions, exclusive content, live streaming, and direct audience interaction tools. Built with modern web technologies, it offers a scalable and high-performance alternative to traditional creator platforms.
 
 ## 🚀 Tech Stack
 

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   loki:
     image: grafana/loki:3.1.1
-    container_name: desifans-loki
+    container_name: exclusivz-loki
     ports:
       - "3100:3100"
     volumes:
@@ -22,7 +22,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.2.0
-    container_name: desifans-grafana
+    container_name: exclusivz-grafana
     ports:
       - "3001:3000"
     environment:
@@ -49,13 +49,13 @@ services:
 
   promtail:
     image: grafana/promtail:3.1.1
-    container_name: desifans-promtail
+    container_name: exclusivz-promtail
     volumes:
       - ./promtail-config.yaml:/etc/promtail/config.yml:ro
       # For Windows local dev with Next.js running outside Docker:
       # Mount the local logs directory using absolute Windows path
       # Note: On Windows, use /c/Users/... format for Git Bash or \\wsl$\ for WSL
-      - F:/skndan/saas/goa/desifans/logs:/var/log/app:ro
+      - F:/skndan/saas/goa/exclusivz/logs:/var/log/app:ro
       # Alternative: Use relative path (may not work on all Windows setups)
       # - ../logs:/var/log/app:ro
       # For production with Next.js in Docker, use named volume instead:

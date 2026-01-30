@@ -101,8 +101,8 @@ A pre-configured dashboard is available at `grafana/dashboards/nextjs-logs.json`
 ### Logs not appearing in Grafana
 
 1. Check if Promtail is running: `docker ps | grep promtail`
-2. Check Promtail logs: `docker logs desifans-promtail`
-3. Verify log files exist: `docker exec desifans-promtail ls -la /var/log/app`
+2. Check Promtail logs: `docker logs exclusivz-promtail`
+3. Verify log files exist: `docker exec exclusivz-promtail ls -la /var/log/app`
 4. Check if the volume is mounted correctly in your app container
 
 ### Loki connection issues

@@ -1,4 +1,4 @@
-# DesiFans Feature Analysis Report
+# Exclusivz Feature Analysis Report
 
 > **Generated:** January 4, 2026  
 > **Purpose:** Compare required go-live features against current implementation status
@@ -25,7 +25,7 @@
 | Pricing display | ✅ Done | `membership-display-card.tsx`, `service-display-card.tsx` |
 | Preview content | ✅ Done | Public profile at `/u/[username]` with post visibility |
 
-**Files:** [schema.ts](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L85-L120), [profile-card.tsx](file:///f:/skndan/saas/goa/desifans/components/creator/profile-card.tsx)
+**Files:** [schema.ts](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L85-L120), [profile-card.tsx](file:///f:/skndan/saas/goa/exclusivz/components/creator/profile-card.tsx)
 
 ---
 
@@ -38,7 +38,7 @@
 | Auto-renew option | ⚠️ Partial | Backend ready, needs explicit UI toggle |
 | Easy cancel for users | ✅ Done | Subscription status field supports cancellation |
 
-**Files:** [memberships/route.ts](file:///f:/skndan/saas/goa/desifans/app/api/memberships/route.ts)
+**Files:** [memberships/route.ts](file:///f:/skndan/saas/goa/exclusivz/app/api/memberships/route.ts)
 
 ---
 
@@ -51,7 +51,7 @@
 | Subscriber-only | ✅ Done | `postMembership` linking table |
 | Pay-per-post (locked) | ✅ Done | `post.postType = 'exclusive'` with `price` field |
 
-**Files:** [posts/route.ts](file:///f:/skndan/saas/goa/desifans/app/api/posts/route.ts), [post_media schema](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L163-L176)
+**Files:** [posts/route.ts](file:///f:/skndan/saas/goa/exclusivz/app/api/posts/route.ts), [post_media schema](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L163-L176)
 
 ---
 
@@ -65,7 +65,7 @@
 | Calls pricing | ✅ Done | `service.price` for audio/video calls |
 | Paid messages pricing | ⚠️ Partial | Service-based (shoutout), not per-message |
 
-**Files:** [service schema](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L122-L134), [service-card.tsx](file:///f:/skndan/saas/goa/desifans/components/creator/service-card.tsx)
+**Files:** [service schema](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L122-L134), [service-card.tsx](file:///f:/skndan/saas/goa/exclusivz/components/creator/service-card.tsx)
 
 ---
 
@@ -90,7 +90,7 @@
 | Charge per reply | ❌ Missing | Not implemented |
 | Enable/disable paid DMs | ❌ Missing | Only `isEnabled` on conversation level |
 
-**Files:** [conversations/route.ts](file:///f:/skndan/saas/goa/desifans/app/api/conversations/route.ts), [chat_message schema](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L431-L445)
+**Files:** [conversations/route.ts](file:///f:/skndan/saas/goa/exclusivz/app/api/conversations/route.ts), [chat_message schema](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L431-L445)
 
 ---
 
@@ -104,7 +104,7 @@
 | Time limits | ⚠️ Partial | `call.duration` tracked but no hard limits |
 | Auto cut-off | ❌ Missing | No automatic disconnection logic |
 
-**Files:** [calls/initiate/route.ts](file:///f:/skndan/saas/goa/desifans/app/api/calls/initiate/route.ts), [call schema](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L447-L464)
+**Files:** [calls/initiate/route.ts](file:///f:/skndan/saas/goa/exclusivz/app/api/calls/initiate/route.ts), [call schema](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L447-L464)
 
 ---
 
@@ -128,7 +128,7 @@
 | Screenshot warning | ❌ Missing | No frontend protection |
 | Screen-record warning | ❌ Missing | No DRM implementation |
 
-> **Note:** [features-showcase.tsx](file:///f:/skndan/saas/goa/desifans/components/landing-page/features-showcase.tsx#L36) mentions watermarks in marketing, but backend implementation is absent.
+> **Note:** [features-showcase.tsx](file:///f:/skndan/saas/goa/exclusivz/components/landing-page/features-showcase.tsx#L36) mentions watermarks in marketing, but backend implementation is absent.
 
 ---
 
@@ -140,7 +140,7 @@
 | Weekly/bi-weekly payouts | ✅ Done | `payout.periodStart/periodEnd` |
 | Minimum payout threshold | ✅ Done | `creator.payoutSettings.minimumThreshold` |
 
-**Files:** [payout schema](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L380-L400), [payouts API](file:///f:/skndan/saas/goa/desifans/app/api/creator/payouts)
+**Files:** [payout schema](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L380-L400), [payouts API](file:///f:/skndan/saas/goa/exclusivz/app/api/creator/payouts)
 
 ---
 
@@ -171,7 +171,7 @@
 | User reports handling | ❌ Missing | No reports table |
 | Dispute handling | ❌ Missing | No dispute system |
 
-**Files:** [admin/creators API](file:///f:/skndan/saas/goa/desifans/app/api/admin/creators), [admin/payouts API](file:///f:/skndan/saas/goa/desifans/app/api/admin/payouts)
+**Files:** [admin/creators API](file:///f:/skndan/saas/goa/exclusivz/app/api/admin/creators), [admin/payouts API](file:///f:/skndan/saas/goa/exclusivz/app/api/admin/payouts)
 
 ---
 
@@ -184,7 +184,7 @@
 | Content performance | ✅ Done | `getEngagementMetrics()` |
 | Admin revenue tracking | ⚠️ Partial | Transaction APIs exist, no admin dashboard UI |
 
-**Files:** [revenue-data.ts](file:///f:/skndan/saas/goa/desifans/lib/dashboard/revenue-data.ts), [subscriber-data.ts](file:///f:/skndan/saas/goa/desifans/lib/dashboard/subscriber-data.ts), [engagement-data.ts](file:///f:/skndan/saas/goa/desifans/lib/dashboard/engagement-data.ts)
+**Files:** [revenue-data.ts](file:///f:/skndan/saas/goa/exclusivz/lib/dashboard/revenue-data.ts), [subscriber-data.ts](file:///f:/skndan/saas/goa/exclusivz/lib/dashboard/subscriber-data.ts), [engagement-data.ts](file:///f:/skndan/saas/goa/exclusivz/lib/dashboard/engagement-data.ts)
 
 ---
 
@@ -192,10 +192,10 @@
 
 | Sub-feature | Status | Evidence |
 |-------------|--------|----------|
-| Terms of Service | ✅ Done | [terms.mdx](file:///f:/skndan/saas/goa/desifans/content/pages/terms.mdx) |
-| Privacy Policy | ✅ Done | [privacy.mdx](file:///f:/skndan/saas/goa/desifans/content/pages/privacy.mdx) |
+| Terms of Service | ✅ Done | [terms.mdx](file:///f:/skndan/saas/goa/exclusivz/content/pages/terms.mdx) |
+| Privacy Policy | ✅ Done | [privacy.mdx](file:///f:/skndan/saas/goa/exclusivz/content/pages/privacy.mdx) |
 | Content takedown flow | ❌ Missing | No DMCA/takedown API |
-| Refund policy | ✅ Done | [refunds.mdx](file:///f:/skndan/saas/goa/desifans/content/pages/refunds.mdx) |
+| Refund policy | ✅ Done | [refunds.mdx](file:///f:/skndan/saas/goa/exclusivz/content/pages/refunds.mdx) |
 | Abuse prevention | ⚠️ Partial | `user.banned` field exists |
 
 ---
@@ -230,8 +230,8 @@ The following features exist in the codebase but were **not** in the original re
 
 Full LiveKit integration for paid/free/follower-only live streams.
 
-- [liveStream schema](file:///f:/skndan/saas/goa/desifans/lib/db/schema.ts#L466-L479)
-- [live/start API](file:///f:/skndan/saas/goa/desifans/app/api/live/start/route.ts)
+- [liveStream schema](file:///f:/skndan/saas/goa/exclusivz/lib/db/schema.ts#L466-L479)
+- [live/start API](file:///f:/skndan/saas/goa/exclusivz/app/api/live/start/route.ts)
 
 ### 2. Multi-Currency Support 💱
 

@@ -4,7 +4,7 @@ services:
   # Valkey (Redis-compatible) for job queue
   valkey:
     image: valkey/valkey:7.2-alpine
-    container_name: desifans-valkey
+    container_name: exclusivz-valkey
     ports:
       - "6379:6379"
     volumes:
@@ -22,7 +22,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: desifans-app
+    container_name: exclusivz-app
     ports:
       - "3000:3000"
       - "4000:4000"

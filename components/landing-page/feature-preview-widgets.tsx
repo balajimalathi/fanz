@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { animate } from "animejs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -36,19 +40,94 @@ export type FeatureWidgetType =
   | "share-earn";
 
 function AvCallsWidget({ className }: { className?: string }) {
+  const timerRef = useRef<HTMLSpanElement>(null);
+  const ripple1Ref = useRef<HTMLDivElement>(null);
+  const ripple2Ref = useRef<HTMLDivElement>(null);
+  const ripple3Ref = useRef<HTMLDivElement>(null);
+  const [timerText, setTimerText] = useState("02:34");
+
+  useEffect(() => {
+    // Parse initial time: 02:34 = 2 minutes 34 seconds = 154 seconds
+    const initialSeconds = 2 * 60 + 34;
+    let totalSeconds = initialSeconds;
+
+    // Format seconds to MM:SS
+    const formatTime = (seconds: number) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    };
+
+    // Create a counter object for animejs to animate
+    const counter = { value: initialSeconds };
+
+    // Animate timer counting up using animejs
+    if (timerRef.current) {
+      animate(counter, {
+        value: initialSeconds + 100, // Count up 100 more seconds
+        duration: 100000, // 100 seconds of animation
+        easing: "linear",
+        update: () => {
+          totalSeconds = Math.floor(counter.value);
+          setTimerText(formatTime(totalSeconds));
+        },
+      });
+    }
+
+    // Ripple effect animations
+    const rippleElements = [
+      { ref: ripple1Ref, delay: 0 },
+      { ref: ripple2Ref, delay: 1000 },
+      { ref: ripple3Ref, delay: 2000 },
+    ];
+
+    rippleElements.forEach(({ ref, delay }) => {
+      if (!ref.current) return;
+
+      // Animate ripple outward - scale from center, fade out
+      animate(ref.current, {
+        scale: [0.8, 1.6],
+        opacity: [0.6, 0],
+        duration: 2000,
+        delay: delay,
+        easing: "easeOutQuad",
+        loop: true,
+      });
+    });
+  }, []);
+
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 h-full w-full bg-muted/80 p-3",
+        "relative flex flex-col items-center justify-center gap-2 h-full w-full bg-muted/80 p-3 overflow-hidden",
         className
       )}
     >
-      <Avatar className="h-12 w-12 border-2 border-primary/30">
+      {/* Ripple effects */}
+      <div
+        ref={ripple1Ref}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-2 border-primary/40 pointer-events-none"
+        style={{ opacity: 0 }}
+      />
+      <div
+        ref={ripple2Ref}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-2 border-primary/40 pointer-events-none"
+        style={{ opacity: 0 }}
+      />
+      <div
+        ref={ripple3Ref}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-2 border-primary/40 pointer-events-none"
+        style={{ opacity: 0 }}
+      />
+
+      <Avatar className="h-12 w-12 border-2 border-primary/30 relative z-10">
         <AvatarImage src={`/placeholders/avatar-5.png`} />
         <AvatarFallback className="bg-primary/20 text-primary text-sm">CR</AvatarFallback>
       </Avatar>
-      <span className="text-xs font-mono font-medium text-foreground/80">02:34</span>
-      <div className="flex gap-1.5">
+      <span ref={timerRef} className="text-xs font-mono font-medium text-foreground/80 relative z-10">
+        {timerText}
+      </span>
+      <div className="flex gap-1.5 relative z-10">
         <div className="rounded-full bg-background p-1.5 shadow-sm">
           <Mic className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
@@ -73,7 +152,7 @@ function LivestreamWidget({ className }: { className?: string }) {
     >
       <div className="relative flex-[0.65] bg-black/80 min-w-0 min-h-0">
         <NextImage
-          src="/placeholders/stream.jpeg"
+          src="/placeholders/grok-video.gif"
           alt=""
           fill
           className="object-cover"
@@ -112,38 +191,114 @@ function LivestreamWidget({ className }: { className?: string }) {
   );
 }
 
+const REQUEST_TYPES = [
+  { type: "video" as const, title: "Custom video", Icon: Video, min: 199, max: 999 },
+  { type: "image" as const, title: "Custom image", Icon: ImageIcon, min: 99, max: 499 },
+  { type: "shoutout" as const, title: "Custom shoutout", Icon: MessageCircle, min: 49, max: 299 },
+  { type: "voice" as const, title: "Voice note", Icon: Mic, min: 79, max: 399 },
+];
+
+function pickRandomRequest() {
+  const r = REQUEST_TYPES[Math.floor(Math.random() * REQUEST_TYPES.length)];
+  const amount = Math.floor(r.min + Math.random() * (r.max - r.min + 1));
+  return {
+    id: Math.random().toString(36).slice(2),
+    ...r,
+    amount,
+  };
+}
+
 function CustomRequestsWidget({ className }: { className?: string }) {
+  const [requests, setRequests] = useState(() => [
+    pickRandomRequest(),
+    pickRandomRequest(),
+  ]);
+  const firstCardRef = useRef<HTMLDivElement>(null);
+  const nextCardRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isCyclingRef = useRef(false);
+
+  const scheduleCycle = useRef(() => {
+    if (isCyclingRef.current) return;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      isCyclingRef.current = true;
+      const newReq = pickRandomRequest();
+      const firstEl = firstCardRef.current;
+
+      const done = () => {
+        setRequests((prev) => [prev[1], newReq]);
+        isCyclingRef.current = false;
+        timeoutRef.current = null;
+        scheduleCycle.current();
+      };
+
+      if (firstEl) {
+        animate(firstEl, {
+          opacity: [1, 0],
+          translateY: [0, -6],
+          duration: 450,
+          easing: "easeOutQuad",
+          complete: done,
+        });
+      } else {
+        done();
+      }
+    }, 3200);
+  });
+
+  useEffect(() => {
+    scheduleCycle.current();
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = nextCardRef.current;
+    if (!el) return;
+    el.style.opacity = "0";
+    el.style.transform = "translateY(4px)";
+    const anim = animate(el, {
+      opacity: [0, 1],
+      translateY: [4, 0],
+      duration: 350,
+      easing: "easeOutQuad",
+    });
+    return () => {
+      anim?.pause?.();
+    };
+  }, [requests]);
+
   return (
     <div
       className={cn(
-        "flex flex-col justify-center h-full w-full bg-muted/80 p-3 gap-2",
+        "flex flex-col justify-center h-full w-full bg-muted/80 p-3 gap-2 overflow-hidden",
         className
       )}
     >
-      <div className="flex items-center gap-2 rounded-lg bg-background border border-border/50 px-2.5 py-2">
-        <div className="rounded bg-primary/10 p-1.5">
-          <Video className="h-3.5 w-3.5 text-primary" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-foreground truncate">Custom video</p>
-          <p className="text-[10px] text-primary font-semibold">₹499</p>
-        </div>
-        <Badge variant="secondary" className="text-[9px] shrink-0">
-          Pending
-        </Badge>
-      </div>
-      <div className="flex items-center gap-2 rounded-lg bg-background border border-border/50 px-2.5 py-2">
-        <div className="rounded bg-primary/10 p-1.5">
-          <ImageIcon className="h-3.5 w-3.5 text-primary" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-foreground truncate">Custom image</p>
-          <p className="text-[10px] text-primary font-semibold">₹199</p>
-        </div>
-        <Badge variant="secondary" className="text-[9px] shrink-0">
-          Pending
-        </Badge>
-      </div>
+      {requests.map((req, i) => {
+        const Icon = req.Icon;
+        const ref = i === 0 ? firstCardRef : nextCardRef;
+        return (
+          <div
+            key={req.id}
+            ref={ref}
+            className="flex items-center gap-2 rounded-lg bg-background border border-border/50 px-2.5 py-2 shrink-0"
+          >
+            <div className="rounded bg-primary/10 p-1.5">
+              <Icon className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-foreground truncate">{req.title}</p>
+              <p className="text-[10px] text-primary font-semibold">₹{req.amount}</p>
+            </div>
+            <Badge variant="secondary" className="text-[9px] shrink-0">
+              Pending
+            </Badge>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -265,8 +420,8 @@ function CreatorProfileWidget({ className }: { className?: string }) {
         {/* Name and Follow Button */}
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="text-base font-bold text-foreground">Balaji</h3>
-            <p className="text-xs text-muted-foreground">@balaji</p>
+            <h3 className="text-base font-bold text-foreground">Anshika Sharma</h3>
+            <p className="text-xs text-muted-foreground">@anshika</p>
           </div>
           <button className="rounded-full bg-fuchsia-500 hover:bg-fuchsia-600 text-white px-4 py-1.5 text-xs font-medium transition-colors">
             Follow
@@ -306,7 +461,7 @@ function CreatorProfileWidget({ className }: { className?: string }) {
               <AvatarFallback className="text-[8px]">B</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-medium text-foreground truncate">Balaji</p>
+              <p className="text-[10px] font-medium text-foreground truncate">Anshika Sharma</p>
               <p className="text-[8px] text-muted-foreground">8 days ago</p>
             </div>
           </div>
@@ -557,10 +712,10 @@ function ShareEarnWidget({ className }: { className?: string }) {
           <div className="rounded-full bg-green-100 p-1.5">
             <Link className="h-3.5 w-3.5 text-green-600" />
           </div>
-          <span className="text-xs font-medium text-foreground">Your Creator Link</span>
+          <span className="text-xs font-medium text-foreground">Your Creator App</span>
         </div>
         <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-          <span className="text-[11px] text-muted-foreground truncate flex-1">desifans.com/balaji</span>
+          <span className="text-[11px] text-muted-foreground truncate flex-1">anshika.exclusivz.com</span>
           <button className="flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
             <Copy className="h-3 w-3" />
             Copy

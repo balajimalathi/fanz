@@ -59,12 +59,12 @@ networks:
 2. Check if log files are being created:
    ```bash
    # In your app container
-   docker exec desifans-app ls -la /var/log/app
+   docker exec exclusivz-app ls -la /var/log/app
    ```
 
 3. Check Promtail logs:
    ```bash
-   docker logs desifans-promtail
+   docker logs exclusivz-promtail
    ```
 
 ## Step 4: View Logs in Grafana
@@ -111,22 +111,22 @@ sum(count_over_time({job="nextjs", level="error"}[5m])) by (location)
 
 1. **Check if Promtail can see the log files:**
    ```bash
-   docker exec desifans-promtail ls -la /var/log/app
+   docker exec exclusivz-promtail ls -la /var/log/app
    ```
 
 2. **Check Promtail is reading files:**
    ```bash
-   docker logs desifans-promtail | tail -20
+   docker logs exclusivz-promtail | tail -20
    ```
 
 3. **Verify network connectivity:**
    ```bash
-   docker exec desifans-promtail wget -qO- http://loki:3100/ready
+   docker exec exclusivz-promtail wget -qO- http://loki:3100/ready
    ```
 
 4. **Check if your app is writing logs:**
    ```bash
-   docker exec desifans-app cat /var/log/app/console.log | tail -10
+   docker exec exclusivz-app cat /var/log/app/console.log | tail -10
    ```
 
 ### Grafana not connecting to Loki?

@@ -56,8 +56,8 @@ export function CreatorProfileTabs({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${creator.displayName} on DesiFans`,
-          text: `Check out ${creator.displayName} on DesiFans`,
+          title: `${creator.displayName} on Exclusivz`,
+          text: `Check out ${creator.displayName} on Exclusivz`,
           url: url,
         })
       } catch (error) {

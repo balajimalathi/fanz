@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { CreatorChatWindow } from "./creator-chat-window";
-import { Button } from "@/components/ui/button";
-import { MessageCircle, ShoppingBag } from "lucide-react";
 import { useSession } from "@/lib/auth/auth-client";
 import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper";
 import { LiveViewerModal } from "@/components/livekit/live-viewer-modal";
 import { LiveHandlerProvider } from "./live-handler-context";
 import { FanOrdersModal } from "@/components/orders/fan-orders-modal";
+import { ChatOrdersHandlerProvider } from "./chat-orders-handler-context";
 
 interface CreatorPageClientProps {
   creatorId: string;
@@ -74,31 +73,15 @@ export function CreatorPageClient({
   return (
     <LiveHandlerProvider onLiveClick={handleLiveClick}>
       <CallGlobalWrapper>
-        {children}
-      
-      {/* Floating Action Buttons */}
-      {!isCreator && (
-        <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-3">
-          {chatEnabled && (
-            <Button
-              onClick={() => setShowChat(true)}
-              size="lg"
-              className="rounded-full shadow-lg h-14 w-14 p-0"
-            >
-              <MessageCircle className="h-6 w-6" />
-            </Button>
-          )}
-          {hasOrdersFromCreator && (
-            <Button
-              onClick={() => setShowOrdersModal(true)}
-              size="lg"
-              className="rounded-full shadow-lg h-14 w-14 p-0"
-            >
-              <ShoppingBag className="h-6 w-6" />
-            </Button>
-          )}
-        </div>
-      )}
+        <ChatOrdersHandlerProvider
+          chatEnabled={chatEnabled}
+          hasOrdersFromCreator={hasOrdersFromCreator}
+          isCreator={isCreator}
+          onChatClick={() => setShowChat(true)}
+          onOrdersClick={() => setShowOrdersModal(true)}
+        >
+          {children}
+        </ChatOrdersHandlerProvider>
 
       {/* Chat Window */}
       {showChat && (

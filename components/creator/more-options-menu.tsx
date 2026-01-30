@@ -36,8 +36,8 @@ export function MoreOptionsMenu({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${creatorName} on DesiFans`,
-          text: `Check out ${creatorName} on DesiFans`,
+          title: `${creatorName} on Exclusivz`,
+          text: `Check out ${creatorName} on Exclusivz`,
           url: url,
         })
       } catch (error) {

@@ -190,8 +190,8 @@ sum(count_over_time({job="nextjs", level="error"}[5m])) by (location)
 
 ### Logs not appearing in Grafana?
 
-1. Check Promtail logs: `docker logs desifans-promtail`
-2. Verify log files exist: `docker exec desifans-promtail ls -la /var/log/app`
+1. Check Promtail logs: `docker logs exclusivz-promtail`
+2. Verify log files exist: `docker exec exclusivz-promtail ls -la /var/log/app`
 3. Check Loki is running: `curl http://localhost:3100/ready`
 4. Verify network: `docker network inspect docker_logging-network`
 
@@ -253,6 +253,6 @@ For detailed documentation, see:
 - `docker/QUICKSTART.md` - Quick start guide
 
 For issues, check:
-- Promtail logs: `docker logs desifans-promtail`
-- Loki logs: `docker logs desifans-loki`
-- Grafana logs: `docker logs desifans-grafana`
+- Promtail logs: `docker logs exclusivz-promtail`
+- Loki logs: `docker logs exclusivz-loki`
+- Grafana logs: `docker logs exclusivz-grafana`

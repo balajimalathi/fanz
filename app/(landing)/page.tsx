@@ -18,19 +18,15 @@ export default function Home() {
       <BentoGrid />
       <HowItWorksSection />
       <CreatorArchetypesSection />
-      <Testimonials />
+      {/* <Testimonials /> */}
       <FAQSection />
       <FinalCTASection /> 
 
-      {/*  <SocialProofSection />
+      {/* <SocialProofSection />
       <BenefitsSection />
       <DifferentiatorsSection />
-      
       <OfferSection />
-      <AboutSection />
-    
-      
-      <FinalCTASection /> */}
+      <AboutSection /> */}
     </main>
   );
 }

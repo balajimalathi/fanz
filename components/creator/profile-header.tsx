@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FollowButton } from "./follow-button"
 import { CustomerProfileModal } from "./customer-profile-modal"
 import { Button } from "@/components/ui/button"
-import { User, Flag } from "lucide-react"
+import { User, Flag, MessageCircle, ShoppingBag } from "lucide-react"
 import { useSession } from "@/lib/auth/auth-client"
 import { NotificationPermission } from "@/components/push/notification-permission"
 import { PWAInstallButton } from "@/components/push/pwa-install-button"
@@ -17,13 +17,14 @@ import { FanCreditsDisplay } from "./fan-credits-display"
 import { CreatorStats } from "./creator-stats"
 import { Icons } from "@/components/ui/icons"
 import Link from "next/link"
+import { useChatOrdersHandler } from "@/app/(app)/u/[username]/_components/chat-orders-handler-context"
 
 // Helper function to construct social media URLs from handles
 function getSocialMediaUrl(platform: string, handle: string): string {
   if (!handle) return ""
-  
+
   const normalizedHandle = handle.replace(/^@+/, "")
-  
+
   switch (platform) {
     case "instagram":
       return `https://instagram.com/${normalizedHandle}`
@@ -79,7 +80,7 @@ export function ProfileHeader({
   const [showReportDialog, setShowReportDialog] = useState(false)
   const isAuthenticated = !!session?.user
   const liveHandler = useLiveHandler()
-  
+
   // Don't show report button if user is reporting themselves
   const canReport = isAuthenticated && session?.user?.id !== creatorId
 
@@ -180,13 +181,44 @@ export function ProfileHeader({
               {liveHandler && (
                 <LiveIndicator creatorId={creatorId} onClick={liveHandler.onLiveClick} />
               )}
+              {/* Primary Actions - Follow and Credits */}
+              <div className="flex items-center gap-2">
+                {isAuthenticated && <FanCreditsDisplay creatorId={creatorId} />}
+                <FollowButton creatorId={creatorId} />
+              </div>
             </div>
-            
-            {/* Primary Actions - Follow and Credits */}
-            <div className="flex items-center gap-2">
-              {isAuthenticated && <FanCreditsDisplay creatorId={creatorId} />}
-              <FollowButton creatorId={creatorId} />
-            </div>
+            {/* Chat and Order Buttons */}
+            {(() => {
+              const chatOrdersHandler = useChatOrdersHandler()
+              if (!chatOrdersHandler || chatOrdersHandler.isCreator) {
+                return null
+              }
+              return (
+                <div className="flex items-center gap-2">
+                  {chatOrdersHandler.chatEnabled && (
+                    <Button
+                      onClick={chatOrdersHandler.onChatClick}
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {chatOrdersHandler.hasOrdersFromCreator && (
+                    <Button
+                      onClick={chatOrdersHandler.onOrdersClick}
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              )
+            })()}
+
           </div>
         </div>
 

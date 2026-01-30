@@ -17,7 +17,7 @@ scrape_configs:
           - localhost
         labels:
           job: nextjs
-          app: desifans
+          app: exclusivz
           environment: production
           __path__: /var/log/app/console.log
 
@@ -45,7 +45,7 @@ scrape_configs:
           - localhost
         labels:
           job: nextjs-errors
-          app: desifans
+          app: exclusivz
           log_type: error
           environment: production
           __path__: /var/log/app/error.log
