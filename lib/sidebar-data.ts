@@ -75,7 +75,6 @@ export const sidebarDataSerializable = {
       title: "Inbox",
       url: "/home/inbox",
       icon: "Inbox",
-      // badge: "10",
     },
   ],
 }
@@ -137,27 +136,19 @@ export const sidebarData = {
       badge: "10",
     },
   ],
+  navSidebar: [
+    {
+      title: "Orders",
+      url: "/home/orders",
+      icon: FileText,
+    },
+  ],
   navSecondary: [
-    // {
-    //   title: "Calendar",
-    //   url: "#",
-    //   icon: Calendar,
-    // },
     {
       title: "Settings",
       url: "/home/settings",
       icon: Settings2,
     },
-    // {
-    //   title: "Templates",
-    //   url: "#",
-    //   icon: Blocks,
-    // },
-    // {
-    //   title: "Trash",
-    //   url: "#",
-    //   icon: Trash2,
-    // },
     {
       title: "Help",
       url: "#",

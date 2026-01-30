@@ -8,16 +8,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { SubHeading } from "@/components/ui/sub-heading"
-import { Loader2 } from "lucide-react"
+import { Loader2, Lock } from "lucide-react"
 import toast from "react-hot-toast"
 import { getCurrencySymbol } from "@/lib/currency/currency-utils"
+import { CURRENCY_METADATA, DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 export default function CurrencySettingsPage() {
-  const [currency, setCurrency] = useState<string>("INR")
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY)
+  const [readOnly, setReadOnly] = useState(true)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,7 +33,8 @@ export default function CurrencySettingsPage() {
         throw new Error("Failed to fetch currency settings")
       }
       const data = await response.json()
-      setCurrency(data.currency || "INR")
+      setCurrency(data.currency || DEFAULT_CURRENCY)
+      setReadOnly(data.readOnly ?? true)
     } catch (error) {
       console.error("Error fetching currency settings:", error)
       toast.error("Failed to load currency settings")
@@ -40,7 +42,6 @@ export default function CurrencySettingsPage() {
       setLoading(false)
     }
   }
-
 
   if (loading) {
     return (
@@ -50,30 +51,45 @@ export default function CurrencySettingsPage() {
     )
   }
 
+  const currencyName =
+    currency in CURRENCY_METADATA
+      ? CURRENCY_METADATA[currency as keyof typeof CURRENCY_METADATA].name
+      : currency
+
   return (
     <div className="space-y-6">
       <SubHeading
         title="Currency Settings"
-        description="Your currency is set to INR (Indian Rupee) for all pricing and payouts."
+        description={
+          readOnly
+            ? "Your currency was set during onboarding and cannot be changed."
+            : `Your currency is set to ${currency} for all pricing and payouts.`
+        }
       />
       <Separator />
 
       <Card>
         <CardHeader>
-          <CardTitle>Currency</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Currency
+          </CardTitle>
           <CardDescription>
-            All prices and payouts are in INR (Indian Rupee). This is the currency you'll use when setting prices for your content, memberships, and services.
+            {readOnly
+              ? "This is the currency you selected during onboarding. All prices, memberships, and payouts use this currency. Currency cannot be changed after onboarding."
+              : "This is the currency you'll use when setting prices for your content, memberships, and services."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
+            
             <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
-              <span className="text-lg">{getCurrencySymbol("INR")}</span>
-              <span className="font-medium">INR (Indian Rupee)</span>
+              <span className="text-lg">{getCurrencySymbol(currency)}</span>
+              <span className="font-medium">{currency} ({currencyName})</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              All transactions and payouts are processed in INR. Multicurrency support will be available in a future update.
+              {readOnly
+                ? "All transactions and payouts are processed in this currency. This setting is locked after onboarding."
+                : "All transactions and payouts will be processed in this currency."}
             </p>
           </div>
         </CardContent>

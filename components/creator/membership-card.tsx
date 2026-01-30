@@ -537,7 +537,7 @@ function MembershipSection({
               {description && (
                 <p className="text-sm text-muted-foreground">{description}</p>
               )}
-              <p className="text-primary font-medium">
+              <div className="text-primary font-medium">
                 {!creatorCurrency ? (
                   <Skeleton className="h-4 w-24 inline-block" />
                 ) : selectedFeeOption?.label ? (
@@ -545,7 +545,7 @@ function MembershipSection({
                 ) : (
                   <><PriceDisplay amount={membership.monthlyRecurringFee} currency={creatorCurrency} />/month</>
                 )}
-              </p>
+              </div>
             </div>
             <div className="flex items-center gap-2 ml-4">
               <Button

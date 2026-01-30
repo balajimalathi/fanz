@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       currency,
+      readOnly: creatorRecord.onboarded,
     })
   } catch (error) {
     console.error("Error fetching currency settings:", error)

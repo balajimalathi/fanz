@@ -11,6 +11,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { NavUser } from "./nav-user"
 import { useSession } from "@/lib/auth/auth-client"
@@ -39,6 +40,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <TeamSwitcher teams={sidebarData.teams} />
         {!isMobileOrTablet && <NavMain items={sidebarData.navMain} />}
+        {isMobileOrTablet && <SidebarSeparator /> }
+        {isMobileOrTablet && <NavMain items={sidebarData.navSidebar} />}
       </SidebarHeader>
       <SidebarContent> 
         <NavSecondary items={sidebarData.navSecondary} className="md:mt-auto" />
