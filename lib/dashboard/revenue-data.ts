@@ -4,7 +4,8 @@ import {
   payout,
 } from "@/lib/db/schema";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/currency/currency-utils";
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config";
 
 export interface RevenueMetrics {
   totalRevenue: number; // in paise
@@ -111,7 +112,8 @@ export async function getPendingPayouts(creatorId: string): Promise<number> {
  */
 export async function getRecentTransactions(
   creatorId: string,
-  limit: number = 10
+  limit: number = 10,
+  currency: string = DEFAULT_CURRENCY
 ): Promise<RecentTransaction[]> {
   const transactions = await db
     .select({
@@ -132,7 +134,7 @@ export async function getRecentTransactions(
     amount: Number(t.amount),
     status: t.status,
     createdAt: t.createdAt,
-    formattedAmount: formatCurrency(Number(t.amount)),
+    formattedAmount: formatCurrency(Number(t.amount), currency),
   }));
 }
 

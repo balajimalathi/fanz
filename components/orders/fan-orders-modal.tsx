@@ -25,6 +25,7 @@ interface Order {
   fulfillmentNotes: string | null
   fulfillmentMediaUrl: string | null
   customerFulfilledAt: string | null
+  creatorFulfilledAt: string | null
   activatedAt: string | null
   deadlineDate: string | null
   isDeadlinePassed: boolean

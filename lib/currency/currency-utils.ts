@@ -1,54 +1,32 @@
 /**
  * Currency Utilities
- * Helper functions for currency formatting, conversion, and validation
+ * Unified functions for currency formatting and conversion
+ * All amounts are stored in subunits (paise, cents, penny)
+ * Use formatCurrency() for display - the single source for amount formatting
  */
 
-/**
- * Currency metadata
- * Decimal places and formatting information for each currency
- */
-const CURRENCY_METADATA: Record<
-  string,
-  {
-    symbol: string;
-    name: string;
-    decimals: number;
-    symbolPosition: "before" | "after";
-  }
-> = {
-  USD: { symbol: "$", name: "US Dollar", decimals: 2, symbolPosition: "before" },
-  EUR: { symbol: "€", name: "Euro", decimals: 2, symbolPosition: "before" },
-  GBP: { symbol: "£", name: "British Pound", decimals: 2, symbolPosition: "before" },
-  INR: { symbol: "₹", name: "Indian Rupee", decimals: 2, symbolPosition: "before" },
-  CAD: { symbol: "C$", name: "Canadian Dollar", decimals: 2, symbolPosition: "before" },
-  AUD: { symbol: "A$", name: "Australian Dollar", decimals: 2, symbolPosition: "before" },
-  JPY: { symbol: "¥", name: "Japanese Yen", decimals: 0, symbolPosition: "before" },
-  CNY: { symbol: "¥", name: "Chinese Yuan", decimals: 2, symbolPosition: "before" },
-  SGD: { symbol: "S$", name: "Singapore Dollar", decimals: 2, symbolPosition: "before" },
-  AED: { symbol: "د.إ", name: "UAE Dirham", decimals: 2, symbolPosition: "before" },
-  SAR: { symbol: "﷼", name: "Saudi Riyal", decimals: 2, symbolPosition: "before" },
-  BRL: { symbol: "R$", name: "Brazilian Real", decimals: 2, symbolPosition: "before" },
-  MXN: { symbol: "$", name: "Mexican Peso", decimals: 2, symbolPosition: "before" },
-  ZAR: { symbol: "R", name: "South African Rand", decimals: 2, symbolPosition: "before" },
-  NZD: { symbol: "NZ$", name: "New Zealand Dollar", decimals: 2, symbolPosition: "before" },
-};
+import {
+  CURRENCY_METADATA,
+  DEFAULT_CURRENCY,
+  isSupportedCurrency,
+  type SupportedCurrency,
+} from "@/lib/currency/currency-config";
 
-/**
- * Get currency metadata
- */
 function getCurrencyMetadata(currency: string) {
-  return (
-    CURRENCY_METADATA[currency.toUpperCase()] || {
-      symbol: currency,
-      name: currency,
-      decimals: 2,
-      symbolPosition: "before" as const,
-    }
-  );
+  const upper = currency.toUpperCase().trim();
+  if (isSupportedCurrency(upper)) {
+    return CURRENCY_METADATA[upper];
+  }
+  return {
+    symbol: upper,
+    name: upper,
+    decimals: 2,
+    subunitName: "subunit",
+  };
 }
 
 /**
- * Get currency symbol
+ * Get currency symbol (never hardcode - use this)
  */
 export function getCurrencySymbol(currency: string): string {
   return getCurrencyMetadata(currency).symbol;
@@ -62,10 +40,10 @@ export function getCurrencyDecimals(currency: string): number {
 }
 
 /**
- * Convert amount from subunits (e.g., cents, paise) to display amount
+ * Convert amount from subunits (paise, cents, penny) to display amount
  * @param amountInSubunits - Amount in smallest currency unit
- * @param currency - Currency code
- * @returns Display amount (e.g., 10.50 for 1050 cents)
+ * @param currency - Currency code (required)
+ * @returns Display amount (e.g., 10.50 for 1050 subunits)
  */
 export function fromSubunits(amountInSubunits: number, currency: string): number {
   const decimals = getCurrencyDecimals(currency);
@@ -73,10 +51,10 @@ export function fromSubunits(amountInSubunits: number, currency: string): number
 }
 
 /**
- * Convert display amount to subunits (e.g., cents, paise)
+ * Convert display amount to subunits (paise, cents, penny)
  * @param displayAmount - Display amount (e.g., 10.50)
- * @param currency - Currency code
- * @returns Amount in smallest currency unit (e.g., 1050 cents)
+ * @param currency - Currency code (required)
+ * @returns Amount in smallest currency unit
  */
 export function toSubunits(displayAmount: number, currency: string): number {
   const decimals = getCurrencyDecimals(currency);
@@ -84,11 +62,11 @@ export function toSubunits(displayAmount: number, currency: string): number {
 }
 
 /**
- * Format currency for display
+ * Format currency for display - THE single function for displaying amounts
  * @param amountInSubunits - Amount in smallest currency unit
- * @param currency - Currency code (ISO 4217)
+ * @param currency - Currency code (required, no default)
  * @param options - Formatting options
- * @returns Formatted string (e.g., "$10.50" or "$500.00")
+ * @returns Formatted string (e.g., "₹99.00" or "$10.50")
  */
 export function formatCurrency(
   amountInSubunits: number,
@@ -100,9 +78,8 @@ export function formatCurrency(
 ): string {
   const metadata = getCurrencyMetadata(currency);
   const displayAmount = fromSubunits(amountInSubunits, currency);
-  const locale = options?.locale || "en-US";
+  const locale = options?.locale ?? "en-US";
 
-  // Use Intl.NumberFormat for proper localization
   const formatter = new Intl.NumberFormat(locale, {
     style: options?.showSymbol !== false ? "currency" : "decimal",
     currency: currency.toUpperCase(),
@@ -110,25 +87,40 @@ export function formatCurrency(
     maximumFractionDigits: metadata.decimals,
   });
 
-  if (options?.showSymbol === false) {
-    // Return just the number without currency symbol
-    return formatter.format(displayAmount);
-  }
-
   return formatter.format(displayAmount);
 }
 
 /**
- * Validate currency code (ISO 4217)
+ * Format currency in compact notation (e.g., "₹1.2L", "$5.4K")
  */
+export function formatCurrencyCompact(
+  amountInSubunits: number,
+  currency: string
+): string {
+  if (currency === "-") return "-";
+
+  const symbol = getCurrencySymbol(currency);
+  const displayAmount = fromSubunits(amountInSubunits, currency);
+
+  if (displayAmount >= 10000000) {
+    return `${symbol}${(displayAmount / 10000000).toFixed(1)}Cr`;
+  }
+  if (displayAmount >= 100000) {
+    return `${symbol}${(displayAmount / 100000).toFixed(1)}L`;
+  }
+  if (displayAmount >= 1000) {
+    return `${symbol}${(displayAmount / 1000).toFixed(1)}K`;
+  }
+  return formatCurrency(amountInSubunits, currency);
+}
+
 export function isValidCurrencyCode(currency: string): boolean {
   return /^[A-Z]{3}$/.test(currency.toUpperCase());
 }
 
-/**
- * Normalize currency code to uppercase
- */
 export function normalizeCurrency(currency: string): string {
   return currency.toUpperCase().trim();
 }
 
+export { isSupportedCurrency, DEFAULT_CURRENCY };
+export type { SupportedCurrency };

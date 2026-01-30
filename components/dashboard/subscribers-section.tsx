@@ -9,7 +9,8 @@ import {
 import { SubscriberMetrics } from "@/lib/dashboard/subscriber-data";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { format } from "date-fns";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, DEFAULT_CURRENCY } from "@/lib/currency/currency-utils";
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency";
 import { TrendingUp } from "lucide-react";
 
 interface SubscribersSectionProps {
@@ -21,6 +22,7 @@ export function SubscribersSection({
   subscriberMetrics,
   chartData,
 }: SubscribersSectionProps) {
+  const { currency } = useCreatorCurrency();
   const chartConfig = {
     subscribers: {
       label: "Subscribers",
@@ -123,7 +125,7 @@ export function SubscribersSection({
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{membership.membershipTitle}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrency(membership.monthlyFee)}/month
+                      {formatCurrency(membership.monthlyFee, currency ?? DEFAULT_CURRENCY)}/month
                     </p>
                   </div>
                   <div className="text-right">

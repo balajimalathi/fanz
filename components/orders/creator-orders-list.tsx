@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, MoveUpRight, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { formatDateLocal } from "@/lib/utils/date-formatting"
+import { formatCurrency } from "@/lib/currency/currency-utils"
 
 interface Order {
   id: string
@@ -23,7 +24,8 @@ interface Order {
   deadlineDate: string | null
   isDeadlinePassed: boolean
   waitingForFanConfirmation: boolean
-  amount: number
+  amount: number // in subunits
+  currency: string
   createdAt: string
 }
 
@@ -176,7 +178,7 @@ function CreatorOrderCard({ order }: { order: Order }) {
         </div>
         <div className="flex flex-col items-end gap-1 text-sm">
           <span className="text-muted-foreground">Amount</span>
-          <span className="font-semibold">₹{order.amount.toFixed(2)}</span>
+          <span className="font-semibold">{formatCurrency(order.amount, order.currency)}</span>
         </div>
       </div>
 

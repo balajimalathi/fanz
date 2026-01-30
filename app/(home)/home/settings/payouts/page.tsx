@@ -15,7 +15,7 @@ import { SubHeading } from "@/components/ui/sub-heading"
 import { PayoutDetailsModal } from "@/components/settings/payout-details-modal"
 import { Eye, Loader2, DollarSign } from "lucide-react"
 import toast from "react-hot-toast"
-import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
+import { formatCurrency as formatCurrencyUtil, DEFAULT_CURRENCY } from "@/lib/currency/currency-utils"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 import { getCurrencySymbol } from "@/lib/currency/currency-utils"
 import { formatDateLocal } from "@/lib/utils/date-formatting"
@@ -73,8 +73,8 @@ export default function PayoutsPage() {
     automaticPayout: false,
   })
 
-  const currency = currencyLoading ? "USD" : creatorCurrency
-  const currencySymbol = getCurrencySymbol(currency)
+  const currency = creatorCurrency
+  const currencySymbol = currency ? getCurrencySymbol(currency) : ""
 
   useEffect(() => {
     fetchPayouts()
@@ -121,8 +121,9 @@ export default function PayoutsPage() {
     const pendingAmountDisplay = pendingAmount
 
     if (pendingAmountDisplay < minimumThreshold) {
-      const thresholdFormatted = formatCurrencyUtil(minimumThreshold * 100, currency)
-      const pendingFormatted = formatCurrencyUtil(pendingAmountDisplay * 100, currency)
+      const curr = currency ?? DEFAULT_CURRENCY
+      const thresholdFormatted = formatCurrencyUtil(minimumThreshold * 100, curr)
+      const pendingFormatted = formatCurrencyUtil(pendingAmountDisplay * 100, curr)
       toast.error(
         `Minimum threshold of ${thresholdFormatted} not met. Current pending amount: ${pendingFormatted}`
       )
@@ -200,13 +201,13 @@ export default function PayoutsPage() {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-3xl font-bold">
-              {formatCurrencyUtil(pendingAmount * 100, currency)}
+              {formatCurrencyUtil(pendingAmount * 100, currency ?? DEFAULT_CURRENCY)}
             </div>
             {canRequestPayout && !meetsThreshold && (
               <p className="text-sm text-muted-foreground">
                 Minimum threshold: {formatCurrencyUtil(
                   (payoutSettings.minimumThreshold || 1000) * 100,
-                  currency
+                  currency ?? DEFAULT_CURRENCY
                 )}
               </p>
             )}
@@ -253,7 +254,7 @@ export default function PayoutsPage() {
                         </div>
                       </td>
                       <td className="p-3 text-sm font-medium">
-                        {formatCurrencyUtil(payout.netAmount * 100, currency)}
+                        {formatCurrencyUtil(payout.netAmount * 100, currency ?? DEFAULT_CURRENCY)}
                       </td>
                       <td className="p-3">
                         <Badge variant={getStatusBadgeVariant(payout.status)}>

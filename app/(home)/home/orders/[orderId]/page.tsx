@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { creator, serviceOrder, service, user, paymentTransaction } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 import { CreatorOrderDetail } from "@/components/orders/creator-order-detail"
 
 export const dynamic = "force-dynamic"
@@ -89,7 +90,8 @@ export default async function OrderDetailPage({
       deadlineDate: deadlineDate?.toISOString() || null,
       isDeadlinePassed,
       waitingForFanConfirmation,
-      amount: transaction?.amount ? transaction.amount / 100 : 0,
+      amount: transaction?.amount ?? 0,
+      currency: creatorRecord.currency ?? DEFAULT_CURRENCY,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
     }

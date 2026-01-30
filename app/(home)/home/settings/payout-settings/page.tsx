@@ -33,8 +33,8 @@ export default function PayoutSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  const currency = currencyLoading ? "USD" : creatorCurrency
-  const currencySymbol = getCurrencySymbol(currency)
+  const currency = creatorCurrency
+  const currencySymbol = currency ? getCurrencySymbol(currency) : ""
 
   useEffect(() => {
     fetchSettings()

@@ -29,8 +29,8 @@ export function StartLiveModal({ open, onOpenChange }: StartLiveModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const currency = currencyLoading ? "USD" : creatorCurrency;
-  const currencySymbol = getCurrencySymbol(currency);
+  const currency = creatorCurrency;
+  const currencySymbol = currency ? getCurrencySymbol(currency) : "";
 
   const handleStart = async () => {
     setIsLoading(true);

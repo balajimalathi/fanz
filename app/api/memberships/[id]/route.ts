@@ -46,13 +46,7 @@ export async function GET(
       )
     }
 
-    // Convert monthlyRecurringFee from paise to rupees
-    const membershipWithRupees = {
-      ...membershipRecord,
-      monthlyRecurringFee: membershipRecord.monthlyRecurringFee / 100,
-    }
-
-    return NextResponse.json(membershipWithRupees)
+    return NextResponse.json(membershipRecord)
   } catch (error) {
     console.error("Error fetching membership:", error)
     return NextResponse.json(
@@ -148,12 +142,7 @@ export async function PATCH(
       .returning()
 
     // Convert monthlyRecurringFee back to rupees
-    const membershipWithRupees = {
-      ...updatedMembership,
-      monthlyRecurringFee: updatedMembership.monthlyRecurringFee / 100,
-    }
-
-    return NextResponse.json(membershipWithRupees)
+    return NextResponse.json(updatedMembership)
   } catch (error) {
     console.error("Error updating membership:", error)
     return NextResponse.json(

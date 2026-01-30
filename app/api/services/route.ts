@@ -44,13 +44,8 @@ export async function GET(request: NextRequest) {
       orderBy: (s, { desc }) => [desc(s.createdAt)],
     })
 
-    // Convert price from paise to rupees for response
-    const servicesWithRupees = services.map((s) => ({
-      ...s,
-      price: s.price / 100, // Convert paise to rupees
-    }))
-
-    return NextResponse.json(servicesWithRupees)
+    // Return price in subunits - clients use formatCurrency for display
+    return NextResponse.json(services)
   } catch (error) {
     console.error("Error fetching services:", error)
     return NextResponse.json(
@@ -131,13 +126,7 @@ export async function POST(request: NextRequest) {
       })
       .returning()
 
-    // Convert price back to rupees for response
-    const serviceWithRupees = {
-      ...newService,
-      price: newService.price / 100,
-    }
-
-    return NextResponse.json(serviceWithRupees, { status: 201 })
+    return NextResponse.json(newService, { status: 201 })
   } catch (error) {
     console.error("Error creating service:", error)
     return NextResponse.json(

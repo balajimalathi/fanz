@@ -6,12 +6,11 @@ import { Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PaymentModal } from "./payment-modal"
 import { PriceDisplay } from "@/components/currency/price-display"
-import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface ExclusivePostOverlayProps {
   postId: string
-  price: number // Price in display format (e.g., 500 for $500)
-  currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
+  price: number // Price in subunits
+  currency?: string
   caption?: string | null
   onPurchaseComplete?: () => void
 }
@@ -19,7 +18,7 @@ interface ExclusivePostOverlayProps {
 export function ExclusivePostOverlay({
   postId,
   price,
-  currency = "INR",
+  currency,
   caption,
   onPurchaseComplete,
 }: ExclusivePostOverlayProps) {
@@ -41,8 +40,8 @@ export function ExclusivePostOverlay({
             )}
             <p className="text-2xl font-bold mb-4">
               <PriceDisplay
-                amount={toSubunits(price, currency)}
-                originalCurrency={currency}
+                amount={price}
+                currency={currency}
                 className="text-2xl font-bold"
               />
             </p>
@@ -63,6 +62,7 @@ export function ExclusivePostOverlay({
         type="exclusive_post"
         entityId={postId}
         amount={price}
+        currency={currency}
         title="Purchase Exclusive Post"
         description="Unlock this exclusive content by purchasing it"
         originUrl={currentOriginUrl}

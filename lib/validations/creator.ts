@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isReservedSubdomain } from "@/lib/onboarding/validation-client";
+import { ONBOARDING_CURRENCIES } from "@/lib/currency/currency-config";
 
 // Regex for alphanumeric, hyphens, and underscores
 const usernameRegex = /^[a-zA-Z0-9_-]+$/;
@@ -95,16 +96,16 @@ export type PayoutSettingsInput = z.infer<typeof payoutSettingsSchema>;
 
 /**
  * Currency validation schema
- * Currently only INR is supported
+ * Uses ONBOARDING_CURRENCIES from config - expand as payment gateways support more
  */
 export const currencySchema = z
   .string()
   .length(3, "Currency code must be 3 characters")
   .regex(/^[A-Z]{3}$/, "Currency code must be uppercase letters only")
   .refine(
-    (val) => val === "INR",
+    (val) => ONBOARDING_CURRENCIES.includes(val as (typeof ONBOARDING_CURRENCIES)[number]),
     {
-      message: "Currency must be INR (Indian Rupee)",
+      message: `Currency must be one of: ${ONBOARDING_CURRENCIES.join(", ")}`,
     }
   );
 

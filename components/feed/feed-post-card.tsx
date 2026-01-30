@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical, Flag } from "lucide-react"
-import { toSubunits } from "@/lib/currency/currency-utils"
 import { formatPostDate } from "@/lib/utils/feed"
 import { PriceDisplay } from "../currency/price-display"
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar"
@@ -120,8 +119,8 @@ export function FeedPostCard({
           {post.postType === "exclusive" && post.price && (
             <Badge variant="outline">
               <PriceDisplay
-                amount={toSubunits(post.price, post.priceCurrency || "INR")}
-                originalCurrency={post.priceCurrency || "INR"}
+                amount={post.price}
+                currency={post.priceCurrency}
               />
             </Badge>
           )}
@@ -141,7 +140,7 @@ export function FeedPostCard({
                 <ExclusivePostOverlay
                   postId={post.id}
                   price={post.price}
-                  currency={post.priceCurrency || "INR"}
+                  currency={post.priceCurrency}
                   caption={post.caption}
                   onPurchaseComplete={() => {
                     // Reload page to show unlocked content

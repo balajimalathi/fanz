@@ -86,7 +86,7 @@ export default async function HomePage() {
     recentActivity,
   ] = await Promise.all([
     getRevenueMetrics(creatorId),
-    getRecentTransactions(creatorId, 10),
+    getRecentTransactions(creatorId, 10, creatorRecord.currency ?? undefined),
     getRevenueChartData(creatorId),
     getSubscriberMetrics(creatorId),
     getSubscriberGrowthChartData(creatorId),

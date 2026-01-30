@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { serviceSchema } from "@/lib/validations/service"
 import { PriceDisplay } from "@/components/currency/price-display"
-import { getCurrencySymbol } from "@/lib/currency/currency-utils"
+import { getCurrencySymbol, getCurrencyDecimals, fromSubunits, toSubunits } from "@/lib/currency/currency-utils"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Service {
   id: string
@@ -31,12 +33,11 @@ export function ServiceCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
 
   // Fetch services on mount
   useEffect(() => {
     fetchServices()
-    fetchCreatorCurrency()
   }, [])
 
   const fetchServices = async () => {
@@ -56,18 +57,6 @@ export function ServiceCard() {
       setTimeout(() => setMessage(null), 5000)
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const fetchCreatorCurrency = async () => {
-    try {
-      const response = await fetch("/api/creator/currency")
-      if (response.ok) {
-        const data = await response.json()
-        setCreatorCurrency(data.currency || "USD")
-      }
-    } catch (error) {
-      console.error("Error fetching creator currency:", error)
     }
   }
 
@@ -284,7 +273,7 @@ interface ServiceCardProps {
   onCancel: () => void
   onDelete: (id: string) => void
   onToggleVisibility: (id: string) => void
-  creatorCurrency?: string
+  creatorCurrency: string | null
 }
 
 function ServiceSection({
@@ -295,11 +284,13 @@ function ServiceSection({
   onCancel,
   onDelete,
   onToggleVisibility,
-  creatorCurrency = "USD",
+  creatorCurrency,
 }: ServiceCardProps) {
   const [name, setName] = useState(service.name)
   const [description, setDescription] = useState(service.description)
-  const [price, setPrice] = useState(service.price.toString())
+  const [price, setPrice] = useState(
+    creatorCurrency ? fromSubunits(service.price, creatorCurrency).toString() : ""
+  )
   const [serviceType, setServiceType] = useState<"shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message">(
     service.serviceType as "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message"
   )
@@ -338,7 +329,7 @@ function ServiceSection({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`service-price-${service.id}`}>Price ({getCurrencySymbol(creatorCurrency)})</Label>
+            <Label htmlFor={`service-price-${service.id}`}>Price ({creatorCurrency ? getCurrencySymbol(creatorCurrency) : "..."})</Label>
             <Input
               id={`service-price-${service.id}`}
               type="number"
@@ -443,12 +434,11 @@ function ServiceSection({
               <p className="text-sm text-muted-foreground">{description}</p>
             )}
             <p className="text-primary font-medium">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: creatorCurrency,
-                minimumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
-                maximumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
-              }).format(service.price)}
+              {!creatorCurrency ? (
+                <Skeleton className="h-4 w-16 inline-block" />
+              ) : (
+                <PriceDisplay amount={service.price} currency={creatorCurrency} />
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2 ml-4">
@@ -482,10 +472,10 @@ function ServiceSection({
 interface ServiceFormProps {
   onSave: (service: Omit<Service, "id">) => void
   onCancel: () => void
-  creatorCurrency?: string
+  creatorCurrency: string | null
 }
 
-function ServiceForm({ onSave, onCancel, creatorCurrency = "USD" }: ServiceFormProps) {
+function ServiceForm({ onSave, onCancel, creatorCurrency }: ServiceFormProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
@@ -535,7 +525,7 @@ function ServiceForm({ onSave, onCancel, creatorCurrency = "USD" }: ServiceFormP
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-service-price">Price ({getCurrencySymbol(creatorCurrency)})</Label>
+            <Label htmlFor="new-service-price">Price ({creatorCurrency ? getCurrencySymbol(creatorCurrency) : "..."})</Label>
             <Input
               id="new-service-price"
               type="number"

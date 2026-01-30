@@ -26,7 +26,6 @@ import {
   type BundleDuration,
 } from "@/lib/utils/membership-pricing"
 import { PriceDisplay } from "@/components/currency/price-display"
-import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface MembershipSelectionModalProps {
   open: boolean
@@ -64,7 +63,7 @@ export function MembershipSelectionModal({
     (typeof window !== "undefined" ? window.location.href : pathname || "/")
 
   const selectedMembership = memberships.find((m) => m.id === selectedMembershipId)
-  const membershipCurrency = selectedMembership?.currency || "INR"
+  const membershipCurrency = selectedMembership?.currency
 
   // Calculate pricing for selected duration
   const bundlePrice =
@@ -145,8 +144,8 @@ export function MembershipSelectionModal({
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold">
                     <PriceDisplay
-                      amount={toSubunits(membership.monthlyRecurringFee, membership.currency || "INR")}
-                      originalCurrency={membership.currency || "INR"}
+                      amount={membership.monthlyRecurringFee}
+                      currency={membership.currency}
                       className="text-2xl font-bold"
                     />
                     <span className="text-sm font-normal text-muted-foreground">/month</span>
@@ -224,8 +223,8 @@ export function MembershipSelectionModal({
                     <span className="text-sm text-muted-foreground">Monthly Price</span>
                     <span className="font-medium">
                       <PriceDisplay
-                        amount={toSubunits(selectedMembership.monthlyRecurringFee, membershipCurrency)}
-                        originalCurrency={membershipCurrency}
+                        amount={selectedMembership.monthlyRecurringFee}
+                        currency={membershipCurrency}
                       />
                       /month
                     </span>
@@ -242,8 +241,8 @@ export function MembershipSelectionModal({
                         <span className="text-sm text-muted-foreground">You Save</span>
                         <span className="font-medium text-green-600">
                           <PriceDisplay
-                            amount={toSubunits(savings, membershipCurrency)}
-                            originalCurrency={membershipCurrency}
+                            amount={savings}
+                            currency={membershipCurrency}
                           />
                         </span>
                       </div>
@@ -254,8 +253,8 @@ export function MembershipSelectionModal({
                       <span className="text-base font-semibold">Total Amount</span>
                       <span className="text-2xl font-bold">
                         <PriceDisplay
-                          amount={toSubunits(bundlePrice, membershipCurrency)}
-                          originalCurrency={membershipCurrency}
+                          amount={bundlePrice}
+                          currency={membershipCurrency}
                           className="text-2xl font-bold"
                         />
                       </span>

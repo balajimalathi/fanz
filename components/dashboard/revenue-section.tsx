@@ -6,12 +6,12 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, getCurrencySymbol, getCurrencyDecimals } from "@/lib/currency/currency-utils";
 import { RevenueMetrics, RecentTransaction } from "@/lib/dashboard/revenue-data";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { format } from "date-fns";
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency";
-import { getCurrencySymbol } from "@/lib/currency/currency-utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RevenueSectionProps {
   revenueMetrics: RevenueMetrics;
@@ -25,8 +25,9 @@ export function RevenueSection({
   chartData,
 }: RevenueSectionProps) {
   const { currency: creatorCurrency, loading } = useCreatorCurrency();
-  const currency = loading ? "INR" : creatorCurrency;
-  const currencySymbol = getCurrencySymbol(currency);
+  const currencySymbol = creatorCurrency ? getCurrencySymbol(creatorCurrency) : "";
+  const decimals = creatorCurrency ? getCurrencyDecimals(creatorCurrency) : 2;
+  const divisor = Math.pow(10, decimals);
 
   const chartConfig = {
     revenue: {
@@ -34,11 +35,6 @@ export function RevenueSection({
       color: "hsl(var(--chart-1))",
     },
   };
-
-  // Format chart data for display - amounts are in subunits, need to convert based on currency decimals
-  const { getCurrencyDecimals } = require("@/lib/currency/currency-utils");
-  const decimals = getCurrencyDecimals(currency);
-  const divisor = Math.pow(10, decimals);
   
   const formattedChartData = chartData.map((item) => ({
     date: format(new Date(item.date), "MMM dd"),
@@ -57,25 +53,25 @@ export function RevenueSection({
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total Revenue</span>
               <span className="text-lg font-semibold">
-                {formatCurrency(revenueMetrics.totalRevenue, currency)}
+                {loading || !creatorCurrency ? <Skeleton className="h-6 w-20" /> : formatCurrency(revenueMetrics.totalRevenue, creatorCurrency)}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">This Month</span>
               <span className="text-base font-medium">
-                {formatCurrency(revenueMetrics.thisMonthRevenue, currency)}
+                {loading || !creatorCurrency ? <Skeleton className="h-5 w-16" /> : formatCurrency(revenueMetrics.thisMonthRevenue, creatorCurrency)}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">This Week</span>
               <span className="text-base font-medium">
-                {formatCurrency(revenueMetrics.thisWeekRevenue, currency)}
+                {loading || !creatorCurrency ? <Skeleton className="h-5 w-16" /> : formatCurrency(revenueMetrics.thisWeekRevenue, creatorCurrency)}
               </span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="text-sm font-medium">Pending Payout</span>
               <span className="text-lg font-semibold text-orange-600">
-                {formatCurrency(revenueMetrics.pendingPayoutAmount, currency)}
+                {loading || !creatorCurrency ? <Skeleton className="h-6 w-20" /> : formatCurrency(revenueMetrics.pendingPayoutAmount, creatorCurrency)}
               </span>
             </div>
           </div>
@@ -101,7 +97,7 @@ export function RevenueSection({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => `${currencySymbol}${value}`}
+                tickFormatter={(value) => loading || !creatorCurrency ? "" : `${currencySymbol}${value}`}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Line

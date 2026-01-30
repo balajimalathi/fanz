@@ -33,17 +33,3 @@ export function calculateSplitPayment(amount: number): SplitPaymentResult {
   };
 }
 
-/**
- * Convert rupees to paise
- */
-export function rupeesToPaise(rupees: number): number {
-  return Math.round(rupees * 100);
-}
-
-/**
- * Convert paise to rupees
- */
-export function paiseToRupees(paise: number): number {
-  return paise / 100;
-}
-

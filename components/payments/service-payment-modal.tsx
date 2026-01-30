@@ -14,13 +14,12 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { PriceDisplay } from "@/components/currency/price-display"
-import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface ServicePaymentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   serviceId: string
-  amount: number // Amount in display format
+  amount: number // Amount in subunits
   currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
   title: string
   description?: string
@@ -33,7 +32,7 @@ export function ServicePaymentModal({
   onOpenChange,
   serviceId,
   amount,
-  currency = "INR",
+  currency,
   title,
   description,
   originUrl,
@@ -148,8 +147,8 @@ export function ServicePaymentModal({
             <span className="text-sm font-medium">Total Amount</span>
             <span className="text-2xl font-bold">
               <PriceDisplay
-                amount={toSubunits(amount, currency || "INR")}
-                originalCurrency={currency || "INR"}
+                amount={amount}
+                currency={currency}
               />
             </span>
           </div>

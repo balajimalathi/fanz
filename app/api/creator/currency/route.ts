@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client"
 import { creator } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { creatorCurrencySchema } from "@/lib/validations/creator"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 // GET - Fetch currency settings
 /**
@@ -35,9 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 })
     }
 
-    // Use currency fields
-    const currency = creatorRecord.currency || 
-                     "INR"
+    const currency = creatorRecord.currency ?? DEFAULT_CURRENCY
 
     return NextResponse.json({
       currency,
@@ -133,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      currency: updatedRecord?.currency || "INR",
+      currency: updatedRecord?.currency ?? DEFAULT_CURRENCY,
     })
   } catch (error) {
     console.error("Error updating currency settings:", error)

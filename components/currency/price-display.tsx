@@ -1,40 +1,31 @@
 "use client";
 
 import { formatCurrency } from "@/lib/currency/currency-utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PriceDisplayProps {
-  amount: number; // Amount in original currency's smallest unit
-  originalCurrency: string; // ISO 4217 currency code
+  amount: number; // Amount in subunits (paise, cents, penny)
+  currency?: string; // ISO 4217 currency code
+  originalCurrency?: string; // Alias for currency (for backwards compatibility)
+  loading?: boolean;
   className?: string;
 }
 
 /**
- * Price display component
- * Displays prices in the original currency
+ * Unified price display component
+ * Shows shimmer/skeleton when loading - never displays default currency symbol
  */
 export function PriceDisplay({
   amount,
+  currency: currencyProp,
   originalCurrency,
+  loading = false,
   className,
 }: PriceDisplayProps) {
-  const formattedPrice = formatCurrency(amount, originalCurrency);
+  const currency = currencyProp ?? originalCurrency;
 
-  return <span className={className}>{formattedPrice}</span>;
-}
-
-/**
- * Simple price display without conversion
- * Use when you already have the amount in the correct currency
- */
-export function SimplePriceDisplay({
-  amount,
-  currency,
-  className,
-}: {
-  amount: number;
-  currency: string;
-  className?: string;
-}) {
+  if (loading || !currency) {
+    return <Skeleton className="inline-block h-4 w-16 align-baseline" />;
+  }
   return <span className={className}>{formatCurrency(amount, currency)}</span>;
 }
-

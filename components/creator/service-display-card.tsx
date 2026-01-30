@@ -7,14 +7,13 @@ import { Button } from "@/components/ui/button"
 import { useSession } from "@/lib/auth/auth-client"
 import { ServicePaymentModal } from "@/components/payments/service-payment-modal"
 import { PriceDisplay } from "@/components/currency/price-display"
-import { toSubunits } from "@/lib/currency/currency-utils"
 
 interface ServiceDisplayCardProps {
   id: string
   name: string
   description: string
-  price: number // Price in display format
-  currency?: string // ISO 4217 currency code (defaults to INR for backward compatibility)
+  price: number // Price in subunits
+  currency?: string
   creatorId: string
 }
 
@@ -23,7 +22,7 @@ export function ServiceDisplayCard({
   name,
   description,
   price,
-  currency = "INR",
+  currency,
   creatorId,
 }: ServiceDisplayCardProps) {
   const { data: session } = useSession()
@@ -54,8 +53,8 @@ export function ServiceDisplayCard({
             <div className="pt-2 border-t">
               <p className="text-primary font-semibold text-lg">
                 <PriceDisplay
-                  amount={toSubunits(price, currency)}
-                  originalCurrency={currency}
+                  amount={price}
+                  currency={currency}
                 />
               </p>
             </div>

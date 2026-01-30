@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/currency"
+import { formatCurrency as formatCurrencyUtil, DEFAULT_CURRENCY } from "@/lib/currency/currency-utils"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 
 interface CustomerProfileModalProps {
@@ -84,7 +84,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<Subscription | null>(null)
   
-  const currency = currencyLoading ? "USD" : creatorCurrency
+  const currency = creatorCurrency
 
   useEffect(() => {
     if (open) {
@@ -357,7 +357,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                                 <div>
                                   <p className="text-muted-foreground">Monthly Fee</p>
                                   <p className="font-medium">
-                                    {formatCurrencyUtil(getSubscriptionPrice(subscription), currency)}
+                                    {formatCurrencyUtil(getSubscriptionPrice(subscription), currency ?? DEFAULT_CURRENCY)}
                                   </p>
                                 </div>
                                 <div>
@@ -469,16 +469,14 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                             <div className="text-right">
                               <p className="text-sm font-semibold">
                                 {formatCurrencyUtil(
-                                  transaction.convertedAmount 
-                                    ? transaction.convertedAmount / 100 
-                                    : transaction.amount / 100,
-                                  transaction.baseCurrency || transaction.originalCurrency || currency
+                                  transaction.convertedAmount ?? transaction.amount,
+                                  (transaction.baseCurrency || transaction.originalCurrency || currency) ?? DEFAULT_CURRENCY
                                 )}
                               </p>
                               {transaction.originalCurrency && transaction.baseCurrency && 
                                transaction.originalCurrency !== transaction.baseCurrency && (
                                 <p className="text-xs text-muted-foreground">
-                                  {formatCurrencyUtil(transaction.amount / 100, transaction.originalCurrency)}
+                                  {formatCurrencyUtil(transaction.amount, transaction.originalCurrency)}
                                 </p>
                               )}
                             </div>
@@ -547,7 +545,7 @@ export function CustomerProfileModal({ open, onOpenChange }: CustomerProfileModa
                                 transaction.amount >= 0 ? "text-green-600" : "text-red-600"
                               }`}>
                                 {transaction.amount >= 0 ? "+" : ""}
-                                {formatCurrencyUtil(Math.abs(transaction.amount) / 100, currency)}
+                                {formatCurrencyUtil(Math.abs(transaction.amount), currency ?? DEFAULT_CURRENCY)}
                               </p>
                             </div>
                           </div>

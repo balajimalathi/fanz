@@ -11,13 +11,14 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/currency";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/currency/currency-utils";
 import { cn } from "@/lib/utils";
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatCardProps {
   title: string;
-  value: string;
+  value: React.ReactNode;
   description?: string;
   icon: React.ComponentType<{ className?: string }>;
   trend?: {
@@ -85,14 +86,11 @@ export function StatsOverview({
   // In a real implementation, you'd fetch last month's revenue
   const revenueTrend = thisMonthRevenue > 0 ? { value: 0, isPositive: true } : undefined;
 
-  // Use creator currency for all revenue displays
-  const currency = loading ? "INR" : creatorCurrency;
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StatCard
         title="Total Revenue"
-        value={formatCurrencyCompact(totalRevenue, currency)}
+        value={loading || !creatorCurrency ? <Skeleton className="h-8 w-24" /> : formatCurrencyCompact(totalRevenue, creatorCurrency)}
         description="All-time earnings"
         icon={DollarSign}
         trend={revenueTrend}
@@ -111,7 +109,7 @@ export function StatsOverview({
       />
       <StatCard
         title="Pending Payouts"
-        value={formatCurrencyCompact(pendingPayoutAmount, currency)}
+        value={loading || !creatorCurrency ? <Skeleton className="h-8 w-24" /> : formatCurrencyCompact(pendingPayoutAmount, creatorCurrency)}
         description="Awaiting processing"
         icon={CreditCard}
       />

@@ -44,13 +44,7 @@ export async function GET(request: NextRequest) {
       orderBy: (m, { desc }) => [desc(m.createdAt)],
     })
 
-    // Convert monthlyRecurringFee from paise to rupees for response
-    const membershipsWithRupees = memberships.map((m) => ({
-      ...m,
-      monthlyRecurringFee: m.monthlyRecurringFee / 100, // Convert paise to rupees
-    }))
-
-    return NextResponse.json(membershipsWithRupees)
+    return NextResponse.json(memberships)
   } catch (error) {
     console.error("Error fetching memberships:", error)
     return NextResponse.json(
@@ -129,13 +123,7 @@ export async function POST(request: NextRequest) {
       })
       .returning()
 
-    // Convert monthlyRecurringFee back to rupees for response
-    const membershipWithRupees = {
-      ...newMembership,
-      monthlyRecurringFee: newMembership.monthlyRecurringFee / 100,
-    }
-
-    return NextResponse.json(membershipWithRupees, { status: 201 })
+    return NextResponse.json(newMembership, { status: 201 })
   } catch (error) {
     console.error("Error creating membership:", error)
     return NextResponse.json(

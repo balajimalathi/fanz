@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { serviceOrder, service, user, paymentTransaction } from "@/lib/db/schema"
 import { eq, and, desc, inArray } from "drizzle-orm"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 export async function GET(request: NextRequest) {
   try {
@@ -89,7 +90,8 @@ export async function GET(request: NextRequest) {
         deadlineDate: deadlineDate?.toISOString() || null,
         isDeadlinePassed,
         waitingForFanConfirmation,
-        amount: transaction?.amount ? transaction.amount / 100 : 0,
+        amount: transaction?.amount ?? 0,
+        currency: creatorRecord.currency ?? DEFAULT_CURRENCY,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
       }

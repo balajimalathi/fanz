@@ -46,13 +46,7 @@ export async function GET(
       )
     }
 
-    // Convert price from paise to rupees
-    const serviceWithRupees = {
-      ...serviceRecord,
-      price: serviceRecord.price / 100,
-    }
-
-    return NextResponse.json(serviceWithRupees)
+    return NextResponse.json(serviceRecord)
   } catch (error) {
     console.error("Error fetching service:", error)
     return NextResponse.json(
@@ -147,13 +141,7 @@ export async function PATCH(
       .where(eq(service.id, id))
       .returning()
 
-    // Convert price back to rupees
-    const serviceWithRupees = {
-      ...updatedService,
-      price: updatedService.price / 100,
-    }
-
-    return NextResponse.json(serviceWithRupees)
+    return NextResponse.json(updatedService)
   } catch (error) {
     console.error("Error updating service:", error)
     return NextResponse.json(

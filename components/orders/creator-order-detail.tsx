@@ -26,7 +26,7 @@ import {
   FileVideo,
   Image as ImageIcon
 } from "lucide-react"
-import { formatCurrency } from "@/lib/utils/currency"
+import { formatCurrency } from "@/lib/currency/currency-utils"
 import { formatRelativeTime, formatDateTimeLocal, formatDateLocal } from "@/lib/utils/date-formatting"
 
 interface Order {
@@ -51,6 +51,7 @@ interface Order {
   isDeadlinePassed: boolean
   waitingForFanConfirmation: boolean
   amount: number
+  currency: string
   createdAt: string
   updatedAt: string
 }
@@ -324,7 +325,7 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
             <div>
               <Label className="text-muted-foreground">Amount</Label>
               <p className="font-semibold text-lg text-green-400">
-                {formatCurrency(order.amount * 100, "INR")}
+                {formatCurrency(order.amount, order.currency)}
               </p>
             </div>
           </CardContent>

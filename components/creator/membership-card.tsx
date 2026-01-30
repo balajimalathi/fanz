@@ -19,7 +19,10 @@ import { cn } from "@/lib/utils"
 import { membershipSchema } from "@/lib/validations/membership"
 import Image from "next/image"
 import toast from "react-hot-toast"
-import { getCurrencySymbol } from "@/lib/currency/currency-utils"
+import { getCurrencySymbol, getCurrencyDecimals, fromSubunits } from "@/lib/currency/currency-utils"
+import { PriceDisplay } from "@/components/currency/price-display"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Membership {
   id: string
@@ -36,12 +39,12 @@ interface Membership {
 const MONTHLY_FEE_VALUES = [99, 199, 299, 499, 999, 1499, 1999, 2999, 4999]
 
 const getMonthlyFeeOptions = (currency: string) => {
-  const symbol = getCurrencySymbol(currency)
+  const decimals = getCurrencyDecimals(currency)
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
-    minimumFractionDigits: currency === "JPY" ? 0 : 2,
-    maximumFractionDigits: currency === "JPY" ? 0 : 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   })
 
   return MONTHLY_FEE_VALUES.map((value) => ({
@@ -58,12 +61,11 @@ export function MembershipCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [creatorCurrency, setCreatorCurrency] = useState<string>("USD")
+  const { currency: creatorCurrency, loading: currencyLoading } = useCreatorCurrency()
 
   // Fetch memberships on mount
   useEffect(() => {
     fetchMemberships()
-    fetchCreatorCurrency()
   }, [])
 
   const fetchMemberships = async () => {
@@ -83,18 +85,6 @@ export function MembershipCard() {
       setTimeout(() => setMessage(null), 5000)
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const fetchCreatorCurrency = async () => {
-    try {
-      const response = await fetch("/api/creator/currency")
-      if (response.ok) {
-        const data = await response.json()
-        setCreatorCurrency(data.currency || "USD")
-      }
-    } catch (error) {
-      console.error("Error fetching creator currency:", error)
     }
   }
 
@@ -333,7 +323,7 @@ interface MembershipCardProps {
   onCancel: () => void
   onDelete: (id: string) => void
   onToggleVisibility: (id: string) => void
-  creatorCurrency?: string
+  creatorCurrency: string | null
 }
 
 function MembershipSection({
@@ -344,11 +334,13 @@ function MembershipSection({
   onCancel,
   onDelete,
   onToggleVisibility,
-  creatorCurrency = "USD",
+  creatorCurrency,
 }: MembershipCardProps) {
   const [title, setTitle] = useState(membership.title)
   const [description, setDescription] = useState(membership.description)
-  const [monthlyRecurringFee, setMonthlyRecurringFee] = useState(membership.monthlyRecurringFee.toString())
+  const [monthlyRecurringFee, setMonthlyRecurringFee] = useState(
+    creatorCurrency ? fromSubunits(membership.monthlyRecurringFee, creatorCurrency).toString() : membership.monthlyRecurringFee.toString()
+  )
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(membership.coverImageUrl || null)
   const [showCropper, setShowCropper] = useState(false)
   const [cropperImage, setCropperImage] = useState<File | null>(null)
@@ -412,8 +404,9 @@ function MembershipSection({
     }
   }
 
-  const monthlyFeeOptions = getMonthlyFeeOptions(creatorCurrency)
-  const selectedFeeOption = monthlyFeeOptions.find(opt => opt.value === membership.monthlyRecurringFee)
+  const monthlyFeeOptions = creatorCurrency ? getMonthlyFeeOptions(creatorCurrency) : []
+  const displayFee = creatorCurrency ? fromSubunits(membership.monthlyRecurringFee, creatorCurrency) : membership.monthlyRecurringFee
+  const selectedFeeOption = monthlyFeeOptions.find(opt => opt.value === displayFee)
 
   if (isEditing) {
     return (
@@ -448,7 +441,7 @@ function MembershipSection({
                 <SelectValue placeholder="Select monthly fee" />
               </SelectTrigger>
               <SelectContent>
-                {getMonthlyFeeOptions(creatorCurrency).map((option) => (
+                {monthlyFeeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value.toString()}>
                     {option.label}
                   </SelectItem>
@@ -498,7 +491,7 @@ function MembershipSection({
                   onCancel()
                   setTitle(membership.title)
                   setDescription(membership.description)
-                  setMonthlyRecurringFee(membership.monthlyRecurringFee.toString())
+                  setMonthlyRecurringFee(creatorCurrency ? fromSubunits(membership.monthlyRecurringFee, creatorCurrency).toString() : membership.monthlyRecurringFee.toString())
                 }}
               >
                 Cancel
@@ -545,13 +538,13 @@ function MembershipSection({
                 <p className="text-sm text-muted-foreground">{description}</p>
               )}
               <p className="text-primary font-medium">
-                {selectedFeeOption?.label ||
-                  `${new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: creatorCurrency,
-                    minimumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
-                    maximumFractionDigits: creatorCurrency === "JPY" ? 0 : 2,
-                  }).format(membership.monthlyRecurringFee)}/month`}
+                {!creatorCurrency ? (
+                  <Skeleton className="h-4 w-24 inline-block" />
+                ) : selectedFeeOption?.label ? (
+                  selectedFeeOption.label
+                ) : (
+                  <><PriceDisplay amount={membership.monthlyRecurringFee} currency={creatorCurrency} />/month</>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2 ml-4">
@@ -608,10 +601,10 @@ function MembershipSection({
 interface MembershipFormProps {
   onSave: (membership: Omit<Membership, "id">, croppedImageBlob?: Blob) => void
   onCancel: () => void
-  creatorCurrency?: string
+  creatorCurrency: string | null
 }
 
-function MembershipForm({ onSave, onCancel, creatorCurrency = "USD" }: MembershipFormProps) {
+function MembershipForm({ onSave, onCancel, creatorCurrency }: MembershipFormProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [monthlyRecurringFee, setMonthlyRecurringFee] = useState("")
@@ -702,22 +695,26 @@ function MembershipForm({ onSave, onCancel, creatorCurrency = "USD" }: Membershi
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-membership-fee">Monthly Recurring Fee</Label>
-            <Select
-              value={monthlyRecurringFee}
-              onValueChange={setMonthlyRecurringFee}
-              required
-            >
-              <SelectTrigger id="new-membership-fee">
-                <SelectValue placeholder="Select monthly fee" />
-              </SelectTrigger>
-              <SelectContent>
-                {getMonthlyFeeOptions(creatorCurrency).map((option) => (
-                  <SelectItem key={option.value} value={option.value.toString()}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!creatorCurrency ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select
+                value={monthlyRecurringFee}
+                onValueChange={setMonthlyRecurringFee}
+                required
+              >
+                <SelectTrigger id="new-membership-fee">
+                  <SelectValue placeholder="Select monthly fee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getMonthlyFeeOptions(creatorCurrency).map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="pt-4 border-t space-y-2">
             <Label>Cover Image (1200×600px)</Label>

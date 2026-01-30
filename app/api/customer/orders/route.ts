@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { serviceOrder, service, creator, user, paymentTransaction } from "@/lib/db/schema"
 import { eq, desc, inArray, and } from "drizzle-orm"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 // GET - Fetch all service orders for the authenticated fan
 // Optional query parameter: creatorId - filter orders by specific creator
@@ -92,8 +93,8 @@ export async function GET(request: NextRequest) {
         deadlineDate: deadlineDate?.toISOString() || null,
         isDeadlinePassed,
         canFulfill,
-        amount: transaction?.amount ? transaction.amount / 100 : 0,
-        currency: creator?.currency || "USD",
+        amount: transaction?.amount ?? 0,
+        currency: creator?.currency ?? DEFAULT_CURRENCY,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
       }

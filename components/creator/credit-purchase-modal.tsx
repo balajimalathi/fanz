@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Coins, Sparkles } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { PriceDisplay } from "@/components/currency/price-display"
-import { toSubunits } from "@/lib/currency/currency-utils"
+import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 import { WalletService } from "@/lib/wallet/wallet-service"
 
 interface CreditPlan {
@@ -39,6 +39,7 @@ export function CreditPurchaseModal({
   onPurchaseSuccess,
 }: CreditPurchaseModalProps) {
   const pathname = usePathname()
+  const { currency } = useCreatorCurrency()
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedPlan, setSelectedPlan] = useState<CreditPlan | null>(null)
@@ -206,7 +207,7 @@ export function CreditPurchaseModal({
                         <span className="text-3xl font-bold">
                           <PriceDisplay
                             amount={plan.price}
-                            originalCurrency="INR"
+                            currency={currency ?? undefined}
                           />
                         </span>
                       </div>

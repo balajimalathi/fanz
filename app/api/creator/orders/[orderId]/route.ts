@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
-import { serviceOrder, service, user, paymentTransaction } from "@/lib/db/schema"
+import { serviceOrder, service, user, paymentTransaction, creator } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 // GET - Fetch single order details
 export async function GET(
@@ -47,6 +48,11 @@ export async function GET(
       where: (pt, { eq: eqOp }) => eqOp(pt.id, order.transactionId),
     })
 
+    const creatorRecord = await db.query.creator.findFirst({
+      where: (c, { eq: eqOp }) => eqOp(c.id, order.creatorId),
+      columns: { currency: true },
+    })
+
     // Calculate fulfillment deadline
     const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
     const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
@@ -78,7 +84,8 @@ export async function GET(
       deadlineDate: deadlineDate?.toISOString() || null,
       isDeadlinePassed,
       waitingForFanConfirmation,
-      amount: transaction?.amount ? transaction.amount / 100 : 0,
+      amount: transaction?.amount ?? 0,
+      currency: creatorRecord?.currency ?? DEFAULT_CURRENCY,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
     }

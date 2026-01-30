@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FulfillmentCountdown } from "./fulfillment-countdown"
 import { CheckCircle2, Clock, XCircle, Loader2, FileVideo, Image as ImageIcon, ExternalLink } from "lucide-react"
-import { formatCurrency } from "@/lib/utils/currency"
+import { formatCurrency } from "@/lib/currency/currency-utils"
 import { formatRelativeTime } from "@/lib/utils/date-formatting"
 
 interface OrderCardProps {
@@ -154,7 +154,7 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
 
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Amount</span>
-          <span className="font-semibold">{formatCurrency(order.amount * 100, order.currency)}</span>
+          <span className="font-semibold">{formatCurrency(order.amount, order.currency)}</span>
         </div>
 
         <div className="flex items-center justify-between text-sm">

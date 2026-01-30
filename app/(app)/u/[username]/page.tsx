@@ -32,17 +32,15 @@ async function getCreatorProfile(username: string) {
     })
 
     // Get creator's preferred currency
-    const creatorCurrency = creatorRecord.currency || "USD"
-    const { getCurrencyDecimals } = await import("@/lib/currency/currency-utils")
-    const currencyDecimals = getCurrencyDecimals(creatorCurrency)
-    const currencyDivisor = Math.pow(10, currencyDecimals)
+    const { DEFAULT_CURRENCY } = await import("@/lib/currency/currency-config")
+    const creatorCurrency = creatorRecord.currency ?? DEFAULT_CURRENCY
 
-    // Convert prices from subunits to display format
+    // Pass prices in subunits - display components use formatCurrency
     const servicesWithDisplay = services.map((s) => ({
       id: s.id,
       name: s.name,
       description: s.description,
-      price: s.price / currencyDivisor, // Convert subunits to display format
+      price: s.price,
       currency: creatorCurrency,
       serviceType: s.serviceType,
     }))
@@ -51,12 +49,13 @@ async function getCreatorProfile(username: string) {
       id: m.id,
       title: m.title,
       description: m.description,
-      monthlyRecurringFee: m.monthlyRecurringFee / currencyDivisor, // Convert subunits to display format
+      monthlyRecurringFee: m.monthlyRecurringFee,
       currency: creatorCurrency,
       coverImageUrl: m.coverImageUrl,
     }))
 
     return {
+      creatorCurrency,
       creator: {
         id: creatorRecord.id,
         username: creatorRecord.username,
@@ -93,15 +92,15 @@ export default async function Page({
     notFound()
   }
 
-  const { creator, services, memberships } = data
+  const { creator, services, memberships, creatorCurrency } = data
 
   // Get creator user details for chat window
   const creatorUser = await db.query.user.findFirst({
     where: (u, { eq: eqOp }) => eqOp(u.id, creator.id),
   })
 
-  // Use currency from services/memberships (already converted) or default
-  const currency = services[0]?.currency || memberships[0]?.currency || "USD"
+  // Currency from creator (all services/memberships use same currency)
+  const currency = services[0]?.currency ?? memberships[0]?.currency ?? creatorCurrency
 
   return (
     <>
