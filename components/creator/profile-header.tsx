@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FollowButton } from "./follow-button"
 import { CustomerProfileModal } from "./customer-profile-modal"
 import { Button } from "@/components/ui/button"
-import { User, Flag, MessageCircle, ShoppingBag } from "lucide-react"
+import { User, Flag, MessageCircle, ShoppingBag, Bell } from "lucide-react"
 import { useSession } from "@/lib/auth/auth-client"
 import { NotificationPermission } from "@/components/push/notification-permission"
 import { PWAInstallButton } from "@/components/push/pwa-install-button"
@@ -187,7 +187,7 @@ export function ProfileHeader({
                 <FollowButton creatorId={creatorId} />
               </div>
             </div>
-            {/* Chat and Order Buttons */}
+            {/* Chat, Orders, and Notifications Buttons */}
             {(() => {
               const chatOrdersHandler = useChatOrdersHandler()
               if (!chatOrdersHandler || chatOrdersHandler.isCreator) {
@@ -195,6 +195,15 @@ export function ProfileHeader({
               }
               return (
                 <div className="flex items-center gap-2">
+                  <Button
+                    onClick={chatOrdersHandler.onNotificationsClick}
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    aria-label="Notifications"
+                  >
+                    <Bell className="h-4 w-4" />
+                  </Button>
                   {chatOrdersHandler.chatEnabled && (
                     <Button
                       onClick={chatOrdersHandler.onChatClick}

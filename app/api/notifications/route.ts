@@ -20,16 +20,18 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 50);
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10));
     const unreadOnly = searchParams.get("unreadOnly") === "true";
 
-    // Build query
+    // Build query with offset for pagination
     let notifications = await db
       .select()
       .from(notification)
       .where(eq(notification.userId, session.user.id))
       .orderBy(desc(notification.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
 
     if (unreadOnly) {
       notifications = notifications.filter((n) => !n.read);
@@ -45,7 +47,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       notifications,
-      unreadCount: unreadCount,
+      unreadCount,
+      hasMore: notifications.length === limit,
     });
   } catch (error) {
     console.error("Error fetching notifications:", error);

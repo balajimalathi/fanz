@@ -45,7 +45,9 @@ if (messaging) {
       silent: false,
     };
 
-    return self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(notificationTitle, notificationOptions).catch(function (err) {
+      console.error('onBackgroundMessage showNotification failed:', err);
+    });
   });
 }
 
@@ -90,19 +92,29 @@ self.addEventListener('push', function (event) {
     }
   }
 
-  var notificationTitle = data.title || 'New Notification';
+  // FCM sends { notification: { title, body, icon }, data: { link, ... } }; also support flat { title, body }
+  var notif = data.notification || data;
+  var payloadData = data.data || data;
+  var notificationTitle = notif.title || data.title || 'New Notification';
+  var body = notif.body || data.body || '';
+  var icon = notif.icon || data.icon || '/logo.svg';
+  var image = notif.image || data.image;
+  var link = payloadData.link || payloadData.click_action || data.click_action;
+
   var notificationOptions = {
-    body: data.body || '',
-    icon: data.icon || '/logo.svg',
-    image: data.image,
+    body: body,
+    icon: icon,
+    image: image,
     badge: '/logo.svg',
-    tag: data.tag || 'default',
-    data: data.data || {},
+    tag: payloadData.tag || data.tag || 'default',
+    data: Object.assign({}, payloadData, link ? { link: link, click_action: link } : {}),
     requireInteraction: false,
     silent: false,
   };
 
   event.waitUntil(
-    self.registration.showNotification(notificationTitle, notificationOptions)
+    self.registration.showNotification(notificationTitle, notificationOptions).catch(function (err) {
+      console.error('Service worker showNotification failed:', err);
+    })
   );
 });

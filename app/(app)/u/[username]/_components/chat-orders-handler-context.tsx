@@ -8,33 +8,39 @@ interface ChatOrdersHandlerContextType {
   isCreator: boolean;
   onChatClick: () => void;
   onOrdersClick: () => void;
+  onNotificationsClick: () => void;
 }
 
 const ChatOrdersHandlerContext = createContext<ChatOrdersHandlerContextType | null>(null);
 
-export function ChatOrdersHandlerProvider({ 
-  children, 
+export function ChatOrdersHandlerProvider({
+  children,
   chatEnabled,
   hasOrdersFromCreator,
   isCreator,
   onChatClick,
   onOrdersClick,
-}: { 
+  onNotificationsClick,
+}: {
   children: ReactNode;
   chatEnabled: boolean;
   hasOrdersFromCreator: boolean;
   isCreator: boolean;
   onChatClick: () => void;
   onOrdersClick: () => void;
+  onNotificationsClick: () => void;
 }) {
   return (
-    <ChatOrdersHandlerContext.Provider value={{ 
-      chatEnabled,
-      hasOrdersFromCreator,
-      isCreator,
-      onChatClick,
-      onOrdersClick,
-    }}>
+    <ChatOrdersHandlerContext.Provider
+      value={{
+        chatEnabled,
+        hasOrdersFromCreator,
+        isCreator,
+        onChatClick,
+        onOrdersClick,
+        onNotificationsClick,
+      }}
+    >
       {children}
     </ChatOrdersHandlerContext.Provider>
   );

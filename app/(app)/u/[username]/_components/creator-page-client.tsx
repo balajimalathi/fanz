@@ -7,6 +7,7 @@ import { CallGlobalWrapper } from "@/components/livekit/call-global-wrapper";
 import { LiveViewerModal } from "@/components/livekit/live-viewer-modal";
 import { LiveHandlerProvider } from "./live-handler-context";
 import { FanOrdersModal } from "@/components/orders/fan-orders-modal";
+import { FanNotificationsModal } from "@/components/notifications/fan-notifications-modal";
 import { ChatOrdersHandlerProvider } from "./chat-orders-handler-context";
 
 interface CreatorPageClientProps {
@@ -31,6 +32,7 @@ export function CreatorPageClient({
   const [showChat, setShowChat] = useState(false);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [hasOrdersFromCreator, setHasOrdersFromCreator] = useState(false);
   const [liveStreamData, setLiveStreamData] = useState<{
     streamId: string;
@@ -79,6 +81,7 @@ export function CreatorPageClient({
           isCreator={isCreator}
           onChatClick={() => setShowChat(true)}
           onOrdersClick={() => setShowOrdersModal(true)}
+          onNotificationsClick={() => setShowNotificationsModal(true)}
         >
           {children}
         </ChatOrdersHandlerProvider>
@@ -113,6 +116,12 @@ export function CreatorPageClient({
         onOpenChange={setShowOrdersModal}
         creatorId={creatorId}
         creatorName={creatorName}
+      />
+
+      {/* Fan Notifications Modal */}
+      <FanNotificationsModal
+        open={showNotificationsModal}
+        onOpenChange={setShowNotificationsModal}
       />
       </CallGlobalWrapper>
     </LiveHandlerProvider>

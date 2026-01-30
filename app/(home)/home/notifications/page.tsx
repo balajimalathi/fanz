@@ -5,62 +5,17 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Loader2, 
-  Bell, 
-  Check, 
-  ShoppingBag, 
-  CreditCard, 
-  UserPlus, 
-  Video, 
-  FileText, 
-  CheckCircle2, 
-  PlayCircle,
-  MessageSquare,
-  Heart,
-  Megaphone,
-  AlertCircle,
-  type LucideIcon
-} from "lucide-react"
+import { Loader2, Bell, Check } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date-formatting"
+import { getNotificationConfig } from "@/lib/notifications/config"
+import type { NotificationItem } from "@/lib/notifications/config"
 
-// Notification type configuration with icons and colors
-const notificationTypeConfig: Record<string, { icon: LucideIcon; bgColor: string; iconColor: string }> = {
-  // Service & Order related
-  service_order: { icon: ShoppingBag, bgColor: "bg-blue-100 dark:bg-blue-950", iconColor: "text-blue-600 dark:text-blue-400" },
-  service_order_activated: { icon: PlayCircle, bgColor: "bg-purple-100 dark:bg-purple-950", iconColor: "text-purple-600 dark:text-purple-400" },
-  service_order_fulfilled: { icon: CheckCircle2, bgColor: "bg-green-100 dark:bg-green-950", iconColor: "text-green-600 dark:text-green-400" },
-  
-  // Payment related
-  membership_subscription: { icon: UserPlus, bgColor: "bg-emerald-100 dark:bg-emerald-950", iconColor: "text-emerald-600 dark:text-emerald-400" },
-  post_purchase: { icon: CreditCard, bgColor: "bg-amber-100 dark:bg-amber-950", iconColor: "text-amber-600 dark:text-amber-400" },
-  live_stream_purchase: { icon: Video, bgColor: "bg-pink-100 dark:bg-pink-950", iconColor: "text-pink-600 dark:text-pink-400" },
-  
-  // Content related
-  new_post: { icon: FileText, bgColor: "bg-indigo-100 dark:bg-indigo-950", iconColor: "text-indigo-600 dark:text-indigo-400" },
-  broadcast: { icon: Megaphone, bgColor: "bg-orange-100 dark:bg-orange-950", iconColor: "text-orange-600 dark:text-orange-400" },
-  announcement: { icon: Megaphone, bgColor: "bg-teal-100 dark:bg-teal-950", iconColor: "text-teal-600 dark:text-teal-400" },
-  
-  // Social interactions
-  new_follower: { icon: UserPlus, bgColor: "bg-cyan-100 dark:bg-cyan-950", iconColor: "text-cyan-600 dark:text-cyan-400" },
-  new_message: { icon: MessageSquare, bgColor: "bg-violet-100 dark:bg-violet-950", iconColor: "text-violet-600 dark:text-violet-400" },
-  comment: { icon: MessageSquare, bgColor: "bg-sky-100 dark:bg-sky-950", iconColor: "text-sky-600 dark:text-sky-400" },
-  like: { icon: Heart, bgColor: "bg-rose-100 dark:bg-rose-950", iconColor: "text-rose-600 dark:text-rose-400" },
-  
-  // System/Alert
-  system: { icon: AlertCircle, bgColor: "bg-gray-100 dark:bg-gray-800", iconColor: "text-gray-600 dark:text-gray-400" },
-}
-
-const getNotificationConfig = (type: string) => {
-  return notificationTypeConfig[type] || { icon: Bell, bgColor: "bg-gray-100 dark:bg-gray-800", iconColor: "text-gray-600 dark:text-gray-400" }
-}
-
-function NotificationCard({ 
-  notification, 
-  onMarkAsRead 
-}: { 
-  notification: Notification
-  onMarkAsRead: (id: string) => void 
+function NotificationCard({
+  notification,
+  onMarkAsRead,
+}: {
+  notification: NotificationItem
+  onMarkAsRead: (id: string) => void
 }) {
   const config = getNotificationConfig(notification.type)
   const NotificationIcon = config.icon
@@ -116,18 +71,8 @@ function NotificationCard({
   )
 }
 
-interface Notification {
-  id: string
-  type: string
-  title: string
-  message: string
-  link: string | null
-  read: boolean
-  createdAt: string
-}
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
 

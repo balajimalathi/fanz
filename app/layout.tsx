@@ -90,9 +90,10 @@ export default function RootLayout({
             <PushInit />
             {children}
             <Toaster
-            position="bottom-center"
+            position="top-center"
+            containerStyle={{ zIndex: 99999 }}
             toastOptions={{
-              duration: 4000,
+              duration: 5000,
               success: {
                 iconTheme: {
                   primary: "hsl(142.1 76.2% 36.3%)",

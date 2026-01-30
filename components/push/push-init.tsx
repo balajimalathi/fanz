@@ -1,47 +1,60 @@
 "use client"
 
 import { useEffect } from "react"
+import toast from "react-hot-toast"
 import { initializeFirebase, onForegroundMessage } from "@/lib/push/client"
 
 export function PushInit() {
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    // Initialize Firebase
     initializeFirebase()
 
-    // Register service worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
-        .then((registration) => {
-          console.log("Service Worker registered:", registration)
-        })
+        .then(() => {})
         .catch((error) => {
           console.error("Service Worker registration failed:", error)
         })
     }
 
-    // Listen for foreground messages
     const unsubscribe = onForegroundMessage((payload) => {
       console.log("Foreground message received:", payload)
-      if (!payload?.notification) return
+      const title =
+        payload?.notification?.title ??
+        payload?.data?.title ??
+        "New notification"
+      const body =
+        payload?.notification?.body ??
+        payload?.data?.body ??
+        ""
+      const messageText = body ? `${title}: ${body}` : title
       try {
-        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-          new Notification(payload.notification.title || "New Notification", {
-            body: payload.notification.body,
-            icon: payload.notification.icon || "/logo.svg",
+        toast.success(messageText, { duration: 5000 })
+      } catch (e) {
+        console.warn("Toast failed:", e)
+      }
+      if (
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          new Notification(title, {
+            body,
+            icon:
+              payload?.notification?.icon ??
+              payload?.data?.icon ??
+              "/logo.svg",
           })
+        } catch (err) {
+          console.warn("Browser notification failed:", err)
         }
-      } catch (err) {
-        console.warn("Could not show foreground notification:", err)
       }
     })
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe()
-      }
+      if (unsubscribe) unsubscribe()
     }
   }, [])
 

@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // TODO: Add a creator specific link instead of the default link
     // Create notification link if not provided
     const notificationLink = link || `${env.NEXT_PUBLIC_APP_URL}/u/${creatorRecord.username || creatorRecord.id}`
 
