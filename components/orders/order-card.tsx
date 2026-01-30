@@ -23,6 +23,7 @@ interface OrderCardProps {
     fulfillmentNotes: string | null
     fulfillmentMediaUrl: string | null
     customerFulfilledAt: string | null
+    creatorFulfilledAt: string | null
     activatedAt: string | null
     deadlineDate: string | null
     isDeadlinePassed: boolean
@@ -56,6 +57,22 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
       console.error("Error fulfilling order:", error)
     } finally {
       setIsFulfilling(false)
+    }
+  }
+
+  // Check if this is a video/photo service that can be auto-confirmed
+  const isVideoOrPhoto = order.serviceType === "custom_video" || order.serviceType === "custom_photo"
+  const canAutoConfirm = isVideoOrPhoto && 
+    order.status === "fulfilled" && 
+    !order.customerFulfilledAt && 
+    onFulfill
+
+  // Auto-confirm fulfillment when fan clicks on media for video/photo services
+  const handleMediaClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (canAutoConfirm) {
+      // Don't prevent default - let the link open
+      // But trigger the fulfillment in the background
+      handleFulfill()
     }
   }
 
@@ -105,6 +122,7 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
               href={order.fulfillmentMediaUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleMediaClick}
               className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
             >
               {order.serviceType === "custom_video" ? (
@@ -115,6 +133,15 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
               View {order.serviceType === "custom_video" ? "Video" : "Image"}
               <ExternalLink className="h-3 w-3" />
             </a>
+            {isVideoOrPhoto && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {order.customerFulfilledAt 
+                  ? "Order automatically confirmed" 
+                  : canAutoConfirm 
+                    ? "Clicking will automatically confirm this order"
+                    : null}
+              </p>
+            )}
           </div>
         )}
 
@@ -127,13 +154,20 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
 
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Amount</span>
-          <span className="font-semibold">{formatCurrency(order.amount, order.currency)}</span>
+          <span className="font-semibold">{formatCurrency(order.amount * 100, order.currency)}</span>
         </div>
 
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Order Date</span>
           <span>{formatRelativeTime(order.createdAt)}</span>
         </div>
+
+        {order.creatorFulfilledAt && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Fulfilled Date</span>
+            <span>{formatRelativeTime(order.creatorFulfilledAt)}</span>
+          </div>
+        )}
 
         {order.activatedAt && order.status === "fulfilled" && !order.customerFulfilledAt && (
           <div className="space-y-2 pt-2 border-t">
@@ -144,7 +178,8 @@ export function OrderCard({ order, onFulfill }: OrderCardProps) {
                 isDeadlinePassed={order.isDeadlinePassed}
               />
             </div>
-            {order.canFulfill && onFulfill && (
+            {/* Show manual confirmation button only for non-video/photo services */}
+            {order.canFulfill && onFulfill && order.serviceType !== "custom_video" && order.serviceType !== "custom_photo" && (
               <Button
                 onClick={handleFulfill}
                 disabled={isFulfilling || order.isDeadlinePassed}

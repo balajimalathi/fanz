@@ -70,6 +70,23 @@ export async function POST(
       )
     }
 
+    // Check if deadline has passed (creator cannot upload after deadline)
+    if (order.activatedAt) {
+      const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
+      const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
+      const deadlineDate = new Date(order.activatedAt.getTime() + deadlineHours * 60 * 60 * 1000)
+      
+      if (new Date() > deadlineDate) {
+        return NextResponse.json(
+          { 
+            error: "Cannot upload fulfillment media after deadline has passed. The order is eligible for refund.",
+            deadlineDate: deadlineDate.toISOString(),
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     const formData = await request.formData()
     const file = formData.get("file") as File | null
 

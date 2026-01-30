@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
         customerJoinedAt: order.customerJoinedAt?.toISOString() || null,
         creatorJoinedAt: order.creatorJoinedAt?.toISOString() || null,
         customerFulfilledAt: order.customerFulfilledAt?.toISOString() || null,
+        creatorFulfilledAt: order.creatorFulfilledAt?.toISOString() || null,
         deadlineDate: deadlineDate?.toISOString() || null,
         isDeadlinePassed,
         waitingForFanConfirmation,

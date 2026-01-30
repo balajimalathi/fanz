@@ -74,6 +74,7 @@ export async function GET(
       customerJoinedAt: order.customerJoinedAt?.toISOString() || null,
       creatorJoinedAt: order.creatorJoinedAt?.toISOString() || null,
       customerFulfilledAt: order.customerFulfilledAt?.toISOString() || null,
+      creatorFulfilledAt: order.creatorFulfilledAt?.toISOString() || null,
       deadlineDate: deadlineDate?.toISOString() || null,
       isDeadlinePassed,
       waitingForFanConfirmation,
@@ -137,8 +138,25 @@ export async function PATCH(
       );
     }
 
-    // If fulfilling, validate based on service type
+    // If fulfilling, validate based on service type and deadline
     if (status === "fulfilled") {
+      // Check if deadline has passed (creator cannot fulfill after deadline)
+      if (order.activatedAt) {
+        const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
+        const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
+        const deadlineDate = new Date(order.activatedAt.getTime() + deadlineHours * 60 * 60 * 1000)
+        
+        if (new Date() > deadlineDate) {
+          return NextResponse.json(
+            { 
+              error: "Cannot fulfill order after deadline has passed. The order is eligible for refund.",
+              deadlineDate: deadlineDate.toISOString(),
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       const serviceRecord = await db.query.service.findFirst({
         where: (s, { eq: eqOp }) => eqOp(s.id, order.serviceId),
       });
@@ -163,13 +181,20 @@ export async function PATCH(
     }
 
     // Update order
+    const updateData: any = {
+      status: status as "pending" | "active" | "fulfilled" | "cancelled",
+      fulfillmentNotes: fulfillmentNotes || null,
+      updatedAt: new Date(),
+    };
+
+    // Set creatorFulfilledAt when marking as fulfilled
+    if (status === "fulfilled" && order.status !== "fulfilled") {
+      updateData.creatorFulfilledAt = new Date();
+    }
+
     await db
       .update(serviceOrder)
-      .set({
-        status: status as "pending" | "active" | "fulfilled" | "cancelled",
-        fulfillmentNotes: fulfillmentNotes || null,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(serviceOrder.id, orderId))
 
     return NextResponse.json({ success: true })

@@ -510,6 +510,7 @@ export function CreatorOrderDetail({ initialOrder }: CreatorOrderDetailProps) {
                   <Label>
                     Fulfillment File {order.serviceType === "custom_video" ? "(Video)" : "(Image)"} *
                   </Label>
+                  <p className="text-xs text-muted-foreground">For more files, please zip the files and upload the zip file.</p>
                   {order.fulfillmentMediaUrl ? (
                     <div className="space-y-2">
                       <div className="p-3 bg-muted rounded-md flex items-center justify-between">

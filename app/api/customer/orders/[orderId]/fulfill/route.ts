@@ -64,28 +64,38 @@ export async function POST(
       )
     }
 
-    // Check fulfillment deadline
-    const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
-    const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
+    // Get service to check service type
+    const serviceRecord = await db.query.service.findFirst({
+      where: (s, { eq: eqOp }) => eqOp(s.id, order.serviceId),
+    })
 
-    if (!order.activatedAt) {
-      return NextResponse.json(
-        { error: "Order has not been activated yet" },
-        { status: 400 }
-      )
-    }
+    const serviceType = serviceRecord?.serviceType
+    const isVideoOrPhoto = serviceType === "custom_video" || serviceType === "custom_photo"
 
-    const deadlineDate = new Date(order.activatedAt.getTime() + deadlineHours * 60 * 60 * 1000)
-    const now = new Date()
+    // Check fulfillment deadline (skip for video/photo services - they can confirm anytime by viewing)
+    if (!isVideoOrPhoto) {
+      const defaultDeadlineHours = parseInt(process.env.FULFILLMENT_DEADLINE_HOURS || "12", 10)
+      const deadlineHours = order.fulfillmentDeadlineHours || defaultDeadlineHours
 
-    if (now > deadlineDate) {
-      return NextResponse.json(
-        {
-          error: "Fulfillment deadline has passed",
-          deadlineDate: deadlineDate.toISOString(),
-        },
-        { status: 400 }
-      )
+      if (!order.activatedAt) {
+        return NextResponse.json(
+          { error: "Order has not been activated yet" },
+          { status: 400 }
+        )
+      }
+
+      const deadlineDate = new Date(order.activatedAt.getTime() + deadlineHours * 60 * 60 * 1000)
+      const now = new Date()
+
+      if (now > deadlineDate) {
+        return NextResponse.json(
+          {
+            error: "Fulfillment deadline has passed",
+            deadlineDate: deadlineDate.toISOString(),
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // Update order with fan fulfillment confirmation
@@ -97,11 +107,7 @@ export async function POST(
       })
       .where(eq(serviceOrder.id, orderId))
 
-    // Get service and creator details for notification
-    const serviceRecord = await db.query.service.findFirst({
-      where: (s, { eq: eqOp }) => eqOp(s.id, order.serviceId),
-    })
-
+    // Get fan details for notification
     const fanUser = await db.query.user.findFirst({
       where: (u, { eq: eqOp }) => eqOp(u.id, session.user.id),
     })

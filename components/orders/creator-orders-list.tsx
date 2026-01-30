@@ -4,9 +4,9 @@ import { useState, useEffect } from "react"
 import { OrderCard } from "./order-card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, ShoppingBag } from "lucide-react"
+import { Loader2, MoveUpRight, ShoppingBag } from "lucide-react"
 import Link from "next/link"
-import { formatDateTimeLocal, formatDateLocal } from "@/lib/utils/date-formatting"
+import { formatDateLocal } from "@/lib/utils/date-formatting"
 
 interface Order {
   id: string
@@ -19,6 +19,7 @@ interface Order {
   fulfillmentNotes: string | null
   activatedAt: string | null
   customerFulfilledAt: string | null
+  creatorFulfilledAt: string | null
   deadlineDate: string | null
   isDeadlinePassed: boolean
   waitingForFanConfirmation: boolean
@@ -86,11 +87,10 @@ export function CreatorOrdersList() {
     <div className="space-y-4">
       {message && (
         <div
-          className={`p-4 rounded-md ${
-            message.type === "success"
-              ? "bg-green-50 text-green-800 border border-green-200"
-              : "bg-red-50 text-red-800 border border-red-200"
-          }`}
+          className={`p-4 rounded-md ${message.type === "success"
+            ? "bg-green-50 text-green-800 border border-green-200"
+            : "bg-red-50 text-red-800 border border-red-200"
+            }`}
         >
           {message.text}
         </div>
@@ -147,17 +147,16 @@ function CreatorOrderCard({ order }: { order: Order }) {
         </div>
         <div className="flex flex-col items-end gap-1">
           <span
-            className={`text-xs px-2 py-1 rounded ${
-              order.status === "pending"
-                ? "bg-yellow-100 text-yellow-800"
-                : order.status === "active"
+            className={`text-xs px-2 py-1 rounded ${order.status === "pending"
+              ? "bg-yellow-100 text-yellow-800"
+              : order.status === "active"
                 ? "bg-blue-100 text-blue-800"
                 : order.status === "fulfilled"
-                ? order.waitingForFanConfirmation
-                  ? "bg-orange-100 text-orange-800"
-                  : "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
+                  ? order.waitingForFanConfirmation
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
           >
             {order.status === "fulfilled" && order.waitingForFanConfirmation
               ? "Waiting for Fan"
@@ -165,27 +164,31 @@ function CreatorOrderCard({ order }: { order: Order }) {
           </span>
         </div>
       </div>
-
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Service Type</span>
-        <span className="font-medium">{formatServiceType(order.serviceType)}</span>
-      </div>
-
       {order.serviceDescription && (
         <p className="text-sm text-muted-foreground line-clamp-2">{order.serviceDescription}</p>
       )}
 
+
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Service Type</span>
+          <span className="font-medium">{formatServiceType(order.serviceType)}</span>
+        </div>
+        <div className="flex flex-col items-end gap-1 text-sm">
+          <span className="text-muted-foreground">Amount</span>
+          <span className="font-semibold">₹{order.amount.toFixed(2)}</span>
+        </div>
+      </div>
+
+
       {order.fulfillmentNotes && (
         <div className="p-2 bg-muted rounded text-sm">
-          <p className="font-medium mb-1">Notes:</p>
+          <p className="font-medium mb-1">Notes</p>
           <p className="text-muted-foreground">{order.fulfillmentNotes}</p>
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Amount</span>
-        <span className="font-semibold">₹{order.amount.toFixed(2)}</span>
-      </div>
+
 
       {order.waitingForFanConfirmation && (
         <div className="p-2 bg-orange-50 border border-orange-200 rounded text-sm">
@@ -211,7 +214,7 @@ function CreatorOrderCard({ order }: { order: Order }) {
       <div className="flex gap-2 pt-2">
         <Link href={`/home/orders/${order.id}`} className="flex-1">
           <Button variant="outline" size="sm" className="w-full">
-            View Details
+            View Details <MoveUpRight className="h-2 w-2" />
           </Button>
         </Link>
       </div>

@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
         fulfillmentNotes: order.fulfillmentNotes,
         fulfillmentMediaUrl: order.fulfillmentMediaUrl || null,
         customerFulfilledAt: order.customerFulfilledAt?.toISOString() || null,
+        creatorFulfilledAt: order.creatorFulfilledAt?.toISOString() || null,
         activatedAt: order.activatedAt?.toISOString() || null,
         deadlineDate: deadlineDate?.toISOString() || null,
         isDeadlinePassed,

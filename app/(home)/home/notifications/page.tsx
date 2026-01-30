@@ -5,8 +5,115 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Bell, Check } from "lucide-react"
+import { 
+  Loader2, 
+  Bell, 
+  Check, 
+  ShoppingBag, 
+  CreditCard, 
+  UserPlus, 
+  Video, 
+  FileText, 
+  CheckCircle2, 
+  PlayCircle,
+  MessageSquare,
+  Heart,
+  Megaphone,
+  AlertCircle,
+  type LucideIcon
+} from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date-formatting"
+
+// Notification type configuration with icons and colors
+const notificationTypeConfig: Record<string, { icon: LucideIcon; bgColor: string; iconColor: string }> = {
+  // Service & Order related
+  service_order: { icon: ShoppingBag, bgColor: "bg-blue-100 dark:bg-blue-950", iconColor: "text-blue-600 dark:text-blue-400" },
+  service_order_activated: { icon: PlayCircle, bgColor: "bg-purple-100 dark:bg-purple-950", iconColor: "text-purple-600 dark:text-purple-400" },
+  service_order_fulfilled: { icon: CheckCircle2, bgColor: "bg-green-100 dark:bg-green-950", iconColor: "text-green-600 dark:text-green-400" },
+  
+  // Payment related
+  membership_subscription: { icon: UserPlus, bgColor: "bg-emerald-100 dark:bg-emerald-950", iconColor: "text-emerald-600 dark:text-emerald-400" },
+  post_purchase: { icon: CreditCard, bgColor: "bg-amber-100 dark:bg-amber-950", iconColor: "text-amber-600 dark:text-amber-400" },
+  live_stream_purchase: { icon: Video, bgColor: "bg-pink-100 dark:bg-pink-950", iconColor: "text-pink-600 dark:text-pink-400" },
+  
+  // Content related
+  new_post: { icon: FileText, bgColor: "bg-indigo-100 dark:bg-indigo-950", iconColor: "text-indigo-600 dark:text-indigo-400" },
+  broadcast: { icon: Megaphone, bgColor: "bg-orange-100 dark:bg-orange-950", iconColor: "text-orange-600 dark:text-orange-400" },
+  
+  // Social interactions
+  new_follower: { icon: UserPlus, bgColor: "bg-cyan-100 dark:bg-cyan-950", iconColor: "text-cyan-600 dark:text-cyan-400" },
+  new_message: { icon: MessageSquare, bgColor: "bg-violet-100 dark:bg-violet-950", iconColor: "text-violet-600 dark:text-violet-400" },
+  comment: { icon: MessageSquare, bgColor: "bg-sky-100 dark:bg-sky-950", iconColor: "text-sky-600 dark:text-sky-400" },
+  like: { icon: Heart, bgColor: "bg-rose-100 dark:bg-rose-950", iconColor: "text-rose-600 dark:text-rose-400" },
+  
+  // System/Alert
+  system: { icon: AlertCircle, bgColor: "bg-gray-100 dark:bg-gray-800", iconColor: "text-gray-600 dark:text-gray-400" },
+}
+
+const getNotificationConfig = (type: string) => {
+  return notificationTypeConfig[type] || { icon: Bell, bgColor: "bg-gray-100 dark:bg-gray-800", iconColor: "text-gray-600 dark:text-gray-400" }
+}
+
+function NotificationCard({ 
+  notification, 
+  onMarkAsRead 
+}: { 
+  notification: Notification
+  onMarkAsRead: (id: string) => void 
+}) {
+  const config = getNotificationConfig(notification.type)
+  const NotificationIcon = config.icon
+
+  return (
+    <Card className={!notification.read ? "border-primary" : ""}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div className={`shrink-0 p-2 rounded-full ${config.bgColor}`}>
+            <NotificationIcon className={`h-4 w-4 ${config.iconColor}`} />
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold">{notification.title}</h3>
+              {!notification.read && (
+                <Badge variant="default" className="h-2 w-2 p-0 rounded-full" />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatRelativeTime(notification.createdAt)}
+            </p>
+            {notification.link && (
+              <Link
+                href={notification.link}
+                className="text-sm text-primary hover:underline mt-2 inline-block"
+                onClick={() => onMarkAsRead(notification.id)}
+              >
+                View →
+              </Link>
+            )}
+          </div>
+          
+          {/* Mark as read button */}
+          {!notification.read && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onMarkAsRead(notification.id)}
+              className="shrink-0"
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 interface Notification {
   id: string
@@ -121,48 +228,11 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={!notification.read ? "border-primary" : ""}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{notification.title}</h3>
-                      {!notification.read && (
-                        <Badge variant="default" className="h-2 w-2 p-0 rounded-full" />
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatRelativeTime(notification.createdAt)}
-                    </p>
-                    {notification.link && (
-                      <Link
-                        href={notification.link}
-                        className="text-sm text-primary hover:underline mt-2 inline-block"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        View →
-                      </Link>
-                    )}
-                  </div>
-                  {!notification.read && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => markAsRead(notification.id)}
-                      className="shrink-0"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <NotificationCard 
+              key={notification.id} 
+              notification={notification} 
+              onMarkAsRead={markAsRead} 
+            />
           ))}
         </div>
       )}

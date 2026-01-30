@@ -414,6 +414,7 @@ export const serviceOrder = pgTable("service_order", {
   customerJoinedAt: timestamp("customer_joined_at", { withTimezone: true }),
   creatorJoinedAt: timestamp("creator_joined_at", { withTimezone: true }),
   customerFulfilledAt: timestamp("customer_fulfilled_at", { withTimezone: true }),
+  creatorFulfilledAt: timestamp("creator_fulfilled_at", { withTimezone: true }),
   fulfillmentDeadlineHours: integer("fulfillment_deadline_hours").default(12),
   fulfillmentConfig: jsonb("fulfillment_config").$type<{
     requiresFanConfirmation?: boolean;
