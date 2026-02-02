@@ -10,6 +10,8 @@ import { sendPushNotificationsToUsers } from "@/lib/push/fcm"
 
 const broadcastSchema = z.object({
   followerIds: z.array(z.string()).min(1, "At least one follower must be selected"),
+  title: z.string().optional(),
+  message: z.string().optional(),
 })
 
 // POST - Broadcast post to selected followers
@@ -71,7 +73,7 @@ export async function POST(
       )
     }
 
-    const { followerIds } = validationResult.data
+    const { followerIds, title: customTitle, message: customMessage } = validationResult.data
 
     // Verify all follower IDs belong to this creator
     const validFollowers = await db
@@ -105,9 +107,9 @@ export async function POST(
 
     // Create notifications for selected followers
     const postLink = `${env.NEXT_PUBLIC_APP_URL}/u/${creatorRecord.username || creatorRecord.id}/post/${postId}`
-    const notificationTitle = `New post from ${creatorRecord.displayName}`
-    const notificationMessage = creatorRecord.displayName + " has shared a post with you!"
-    
+    const notificationTitle = customTitle?.trim() || `New post from ${creatorRecord.displayName}`
+    const notificationMessage = customMessage?.trim() || creatorRecord.displayName + " has shared a post with you!"
+
     const notifications = followerIds.map((followerId) => ({
       userId: followerId,
       type: "post",

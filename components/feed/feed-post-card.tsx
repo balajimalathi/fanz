@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Lock, LogIn, Pin } from "lucide-react"
+import { Lock, LogIn, Pin, MoreVertical, Flag, Bell, IndianRupee, EyeOff, BarChart3 } from "lucide-react"
+import toast from "react-hot-toast"
 import { Card, CardContent } from "@/components/ui/card"
 import { PostMediaDisplay } from "@/components/post/post-media-display"
 import { LikeButton } from "@/components/feed/like-button"
@@ -17,11 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreVertical, Flag } from "lucide-react"
 import { formatPostDate } from "@/lib/utils/feed"
 import { PriceDisplay } from "../currency/price-display"
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar"
 import { Badge } from "../ui/badge"
+import { PostNotifyModal } from "@/components/feed/post-notify-modal"
+import { PostEditPriceModal } from "@/components/feed/post-edit-price-modal"
+import { PostAnalyticsModal } from "@/components/feed/post-analytics-modal"
 
 interface PostMedia {
   id: string
@@ -49,6 +52,7 @@ interface FeedPost {
   price: number | null
   priceCurrency?: string // ISO 4217 currency code
   isPinned: boolean
+  isHidden?: boolean
   media: PostMedia[]
   likeCount: number
   commentCount: number
@@ -62,6 +66,9 @@ interface FeedPostCardProps {
   currentUserId: string | null
   onLikeChange?: (postId: string, liked: boolean, count: number) => void
   onCommentCountChange?: (postId: string, count: number) => void
+  onPinChange?: (postId: string, isPinned: boolean) => void
+  onHideChange?: (postId: string, isHidden: boolean) => void
+  onPriceChange?: (postId: string, price: number | null) => void
 }
 
 export function FeedPostCard({
@@ -69,13 +76,61 @@ export function FeedPostCard({
   currentUserId,
   onLikeChange,
   onCommentCountChange,
+  onPinChange,
+  onHideChange,
+  onPriceChange,
 }: FeedPostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount)
   const [showReportDialog, setShowReportDialog] = useState(false)
+  const [notifyOpen, setNotifyOpen] = useState(false)
+  const [editPriceOpen, setEditPriceOpen] = useState(false)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [isPinning, setIsPinning] = useState(false)
+  const [isHiding, setIsHiding] = useState(false)
   const pathname = usePathname()
 
-  // Don't show report button if user is reporting their own content
+  const isCreator = currentUserId != null && currentUserId === post.creator?.id
   const canReport = currentUserId && currentUserId !== post.creator?.id
+
+  const handlePin = async () => {
+    if (isPinning) return
+    setIsPinning(true)
+    try {
+      const response = await fetch(`/api/posts/${post.id}/pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPinned: !post.isPinned }),
+      })
+      if (!response.ok) throw new Error("Failed to pin post")
+      toast.success(post.isPinned ? "Post unpinned" : "Post pinned")
+      onPinChange?.(post.id, !post.isPinned)
+    } catch (error) {
+      console.error("Error pinning post:", error)
+      toast.error("Failed to pin post")
+    } finally {
+      setIsPinning(false)
+    }
+  }
+
+  const handleHide = async () => {
+    if (isHiding) return
+    setIsHiding(true)
+    try {
+      const response = await fetch(`/api/posts/${post.id}/hide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isHidden: !post.isHidden }),
+      })
+      if (!response.ok) throw new Error("Failed to update post visibility")
+      toast.success(post.isHidden ? "Post is now visible" : "Post hidden")
+      onHideChange?.(post.id, !post.isHidden)
+    } catch (error) {
+      console.error("Error hiding post:", error)
+      toast.error("Failed to update post visibility")
+    } finally {
+      setIsHiding(false)
+    }
+  }
 
   const creatorLink = post.creator?.username
     ? `/u/${post.creator.username}`
@@ -111,6 +166,12 @@ export function FeedPostCard({
                   Pinned
                 </Badge>
               )}
+              {post.isHidden && (
+                <Badge variant="secondary" className="gap-1">
+                  <EyeOff className="h-3 w-3" />
+                  Hidden
+                </Badge>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {formatPostDate(post.createdAt)}
@@ -123,6 +184,40 @@ export function FeedPostCard({
                 currency={post.priceCurrency}
               />
             </Badge>
+          )}
+          {isCreator && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={handlePin} disabled={isPinning}>
+                  <Pin className="mr-2 h-4 w-4" />
+                  {post.isPinned ? "Unpin" : "Pin"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notify
+                </DropdownMenuItem>
+                {post.postType === "exclusive" && (
+                  <DropdownMenuItem onClick={() => setEditPriceOpen(true)}>
+                    <IndianRupee className="mr-2 h-4 w-4" />
+                    Edit price
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={handleHide} disabled={isHiding}>
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  {post.isHidden ? "Unhide post" : "Hide post"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAnalyticsOpen(true)}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  See Analytics
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 
@@ -235,6 +330,29 @@ export function FeedPostCard({
           postId={post.id}
           creatorId={post.creator?.id}
         />
+      )}
+      {isCreator && post.creator?.id && (
+        <>
+          <PostNotifyModal
+            open={notifyOpen}
+            onOpenChange={setNotifyOpen}
+            postId={post.id}
+            creatorId={post.creator.id}
+          />
+          <PostEditPriceModal
+            open={editPriceOpen}
+            onOpenChange={setEditPriceOpen}
+            postId={post.id}
+            currentPrice={post.price}
+            currency={post.priceCurrency}
+            onSuccess={(newPrice: number | null) => onPriceChange?.(post.id, newPrice)}
+          />
+          <PostAnalyticsModal
+            open={analyticsOpen}
+            onOpenChange={setAnalyticsOpen}
+            postId={post.id}
+          />
+        </>
       )}
     </Card>
   )

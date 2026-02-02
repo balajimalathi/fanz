@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
         postType: post.postType,
         price: post.price,
         isPinned: post.isPinned,
+        isHidden: post.isHidden,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
       })
@@ -211,6 +212,7 @@ export async function GET(request: NextRequest) {
         price: p.price ?? null,
         priceCurrency,
         isPinned: p.isPinned,
+        isHidden: p.isHidden,
         media: media.map((m) => ({
           id: m.id,
           mediaType: m.mediaType,

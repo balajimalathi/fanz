@@ -194,6 +194,7 @@ export const post = pgTable("post", {
   postType: postTypeEnum("post_type").notNull(),
   price: integer("price"), // For exclusive posts, stored in paise
   isPinned: boolean("is_pinned").notNull().default(false),
+  isHidden: boolean("is_hidden").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

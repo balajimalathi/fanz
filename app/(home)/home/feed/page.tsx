@@ -32,6 +32,7 @@ interface FeedPost {
   price: number | null
   priceCurrency?: string
   isPinned: boolean
+  isHidden?: boolean
   media: PostMedia[]
   likeCount: number
   commentCount: number
@@ -159,6 +160,30 @@ export default function FeedPage() {
     )
   }
 
+  const handlePinChange = (postId: string, isPinned: boolean) => {
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId ? { ...post, isPinned } : post
+      )
+    )
+  }
+
+  const handleHideChange = (postId: string, isHidden: boolean) => {
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId ? { ...post, isHidden } : post
+      )
+    )
+  }
+
+  const handlePriceChange = (postId: string, price: number | null) => {
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId ? { ...post, price } : post
+      )
+    )
+  }
+
   const handleRetry = () => {
     fetchPosts(null)
   }
@@ -218,6 +243,9 @@ export default function FeedPage() {
           currentUserId={currentUserId}
           onLikeChange={handleLikeChange}
           onCommentCountChange={handleCommentCountChange}
+          onPinChange={handlePinChange}
+          onHideChange={handleHideChange}
+          onPriceChange={handlePriceChange}
         />
       ))}
 

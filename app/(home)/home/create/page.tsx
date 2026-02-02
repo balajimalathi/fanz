@@ -126,9 +126,20 @@ export default function CreatePostPage() {
       return
     }
 
-    if (postType === "exclusive" && (!price || parseFloat(price) <= 0)) {
-      toast.error("Please enter a valid price for exclusive posts")
-      return
+    if (postType === "exclusive") {
+      if (!price || price.length === 0) {
+        toast.error("Please enter a price for exclusive posts")
+        return
+      }
+      const num = parseInt(price, 10)
+      if (Number.isNaN(num) || num <= 0) {
+        toast.error("Please enter a valid numeric price")
+        return
+      }
+      if (num > 50000) {
+        toast.error("Price cannot exceed 50,000")
+        return
+      }
     }
 
     // Free posts don't require validation for price or memberships
@@ -145,7 +156,7 @@ export default function CreatePostPage() {
       if (postType === "subscription") {
         postData.membershipIds = Array.from(selectedMemberships)
       } else if (postType === "exclusive") {
-        postData.price = parseFloat(price)
+        postData.price = parseInt(price, 10)
       }
       // Free posts don't need price or membershipIds
 
@@ -462,91 +473,41 @@ export default function CreatePostPage() {
               <Label htmlFor="price">Price ({getCurrencySymbol(creatorCurrency)})</Label>
               <Input
                 id="price"
-                type="number"
-                min="0"
-                step="0.01"
+                inputMode="numeric"
+                type="text"
+                maxLength={5}
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
+                onChange={(e) => {
+                  const raw = e.target.value
+                  const digitsOnly = raw.replace(/\D/g, "")
+                  const trimmed = digitsOnly.slice(0, 5)
+                  setPrice(trimmed)
+                }}
+                placeholder="0"
                 className="mt-2"
                 disabled={isPublishing || !!publishedPostId}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Price in {creatorCurrency}
+                Price in {creatorCurrency}. Max 50,000, numbers only, max 5 digits.
               </p>
             </div>
           )}
 
           {/* Publish Button */}
-          {!publishedPostId ? (
-            <Button
-              onClick={handlePublish}
-              disabled={isPublishing || (images.length === 0 && videos.length === 0)}
-              className="w-full"
-            >
-              {isPublishing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                "Publish Post"
-              )}
-            </Button>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                <p className="text-sm text-green-800 dark:text-green-200">
-                  Post published successfully!
-                </p>
-              </div>
-
-              {/* Post Actions */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Button
-                  variant={isPinned ? "default" : "outline"}
-                  onClick={handlePin}
-                  className="w-full"
-                >
-                  <Pin className="mr-2 h-4 w-4" />
-                  {isPinned ? "Pinned" : "Pin"}
-                </Button>
-
-                <Button variant="outline" onClick={handleNotify} className="w-full">
-                  <Bell className="mr-2 h-4 w-4" />
-                  Notify
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleCopyLink}
-                  className="w-full"
-                >
-                  {linkCopied ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="mr-2 h-4 w-4" />
-                      Copy Link
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => setFollowerSelectorOpen(true)}
-                  className="w-full"
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Broadcast
-                </Button>
-              </div>
-            </div>
-          )}
+          <Button
+            onClick={handlePublish}
+            disabled={isPublishing || (images.length === 0 && videos.length === 0)}
+            className="w-full"
+          >
+            {isPublishing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              "Publish Post"
+            )}
+          </Button>
         </CardContent>
       </Card>
 
