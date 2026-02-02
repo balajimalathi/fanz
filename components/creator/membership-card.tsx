@@ -730,7 +730,7 @@ function MembershipForm({ onSave, onCancel, creatorCurrency }: MembershipFormPro
                 </div>
               ) : cropperImage ? (
                 <div className="w-full h-32 rounded-lg bg-muted border-2 border-primary flex items-center justify-center">
-                  <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                  <p className="text-sm text-muted-foreground">✨ Image ready to upload ✅</p>
                 </div>
               ) : (
                 <div className="w-full h-32 rounded-lg bg-muted border-2 border-dashed border-border flex items-center justify-center">

@@ -58,7 +58,7 @@ function NotificationCardRow({
             <p className="text-xs text-muted-foreground">
               {formatRelativeTime(notification.createdAt)}
             </p>
-            {notification.link && (
+            {/* {notification.link && (
               <Link
                 href={notification.link}
                 className="text-sm text-primary hover:underline mt-2 inline-block"
@@ -66,7 +66,7 @@ function NotificationCardRow({
               >
                 View →
               </Link>
-            )}
+            )} */}
           </div>
           {!notification.read && (
             <Button

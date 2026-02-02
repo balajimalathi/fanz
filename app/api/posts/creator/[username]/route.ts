@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client"
 import { post, postMedia, creator, postLike, postComment, postMembership } from "@/lib/db/schema"
 import { eq, desc, and, sql, lt, or, inArray } from "drizzle-orm"
 import { hasAccessToPost } from "@/lib/utils/subscription-access"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 // GET - Fetch posts for a specific creator by username
 export async function GET(
@@ -170,6 +171,9 @@ export async function GET(
     const likeCountMap = new Map(likeCounts.map((lc) => [lc.postId, lc.count]))
     const commentCountMap = new Map(commentCounts.map((cc) => [cc.postId, cc.count]))
 
+    // Creator currency for price display (subunits + currency for formatCurrency)
+    const priceCurrency = creatorRecord.currency ?? DEFAULT_CURRENCY
+
     // Check access for each post and filter based on rules
     const postsWithAccess: Array<{
       id: string
@@ -182,6 +186,7 @@ export async function GET(
       caption: string | null
       postType: "subscription" | "exclusive" | "free"
       price: number | null
+      priceCurrency?: string
       isPinned: boolean
       media: Array<{
         id: string
@@ -273,7 +278,8 @@ export async function GET(
         },
         caption: p.caption,
         postType: p.postType,
-        price: p.price ? p.price / 100 : null,
+        price: p.price ?? null,
+        priceCurrency,
         isPinned: p.isPinned,
         media: filteredMedia,
         likeCount,

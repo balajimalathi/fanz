@@ -33,18 +33,16 @@ export function ExclusivePostOverlay({
       <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10 backdrop-blur-sm">
         <div className="flex flex-col items-center gap-4 text-white p-6 max-w-md text-center">
           <Lock className="h-12 w-12" />
-          <div>
+          <div className="flex flex-col items-center">
             <h3 className="text-xl font-semibold mb-2">Exclusive Content</h3>
             {caption && (
               <p className="text-sm text-white/80 mb-4 line-clamp-2">{caption}</p>
             )}
-            <p className="text-2xl font-bold mb-4">
-              <PriceDisplay
-                amount={price}
-                currency={currency}
-                className="text-2xl font-bold"
-              />
-            </p>
+            <PriceDisplay
+              amount={price}
+              currency={currency}
+              className="text-2xl font-bold"
+            />
             <Button
               size="lg"
               onClick={() => setShowPaymentModal(true)}

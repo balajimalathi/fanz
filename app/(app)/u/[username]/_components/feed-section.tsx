@@ -29,6 +29,7 @@ interface FeedPost {
   caption: string | null
   postType: "subscription" | "exclusive" | "free"
   price: number | null
+  priceCurrency?: string
   isPinned: boolean
   media: PostMedia[]
   likeCount: number

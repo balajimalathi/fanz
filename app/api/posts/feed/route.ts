@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { post, postMedia, creator, postLike, postComment } from "@/lib/db/schema"
 import { eq, desc, and, sql, lt, or, inArray } from "drizzle-orm"
+import { DEFAULT_CURRENCY } from "@/lib/currency/currency-config"
 
 // GET - Fetch feed posts for authenticated creator (their own posts)
 export async function GET(request: NextRequest) {
@@ -186,6 +187,8 @@ export async function GET(request: NextRequest) {
     const likeCountMap = new Map(likeCounts.map((lc) => [lc.postId, lc.count]))
     const commentCountMap = new Map(commentCounts.map((cc) => [cc.postId, cc.count]))
 
+    const priceCurrency = creatorRecord.currency ?? DEFAULT_CURRENCY
+
     // Build response - creator always has access to their own posts
     const postsWithDetails = postsToReturn.map((p) => {
       const media = mediaMap.get(p.id) || []
@@ -205,7 +208,8 @@ export async function GET(request: NextRequest) {
           : null,
         caption: p.caption,
         postType: p.postType,
-        price: p.price ? p.price / 100 : null, // Convert paise to rupees
+        price: p.price ?? null,
+        priceCurrency,
         isPinned: p.isPinned,
         media: media.map((m) => ({
           id: m.id,
