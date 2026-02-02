@@ -8,6 +8,36 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
+const COIN_PRICE_MIN = 1
+const COIN_PRICE_MAX = 10000
+const COIN_PRICE_MAX_DIGITS = 5
+
+function validateCoinPrice(value: string): { valid: boolean; error?: string } {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return { valid: false, error: "Required" }
+  }
+  if (trimmed.length > COIN_PRICE_MAX_DIGITS) {
+    return { valid: false, error: `Max ${COIN_PRICE_MAX_DIGITS} digits` }
+  }
+  const num = parseInt(trimmed, 10)
+  if (Number.isNaN(num)) {
+    return { valid: false, error: "Must be a number" }
+  }
+  if (num < COIN_PRICE_MIN) {
+    return { valid: false, error: `Min ${COIN_PRICE_MIN} (cannot be 0)` }
+  }
+  if (num > COIN_PRICE_MAX) {
+    return { valid: false, error: `Max ${COIN_PRICE_MAX}` }
+  }
+  return { valid: true }
+}
+
+function sanitizeCoinInput(value: string): string {
+  const digits = value.replace(/\D/g, "")
+  return digits.slice(0, COIN_PRICE_MAX_DIGITS)
+}
+
 interface PricingData {
   dmTextPrice: number
   dmImagePrice: number
@@ -17,6 +47,8 @@ interface PricingData {
   liveStreamEntryPrice: number
 }
 
+type PricingFieldKey = keyof PricingData
+
 export function PricingCard() {
   const [pricing, setPricing] = useState<PricingData | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -24,6 +56,7 @@ export function PricingCard() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<PricingFieldKey, string>>>({})
 
   // Form state
   const [dmTextPrice, setDmTextPrice] = useState("0")
@@ -48,13 +81,12 @@ export function PricingCard() {
       }
       const data = await response.json()
       setPricing(data)
-      // Initialize form with current values
-      setDmTextPrice(data.dmTextPrice?.toString() || "0")
-      setDmImagePrice(data.dmImagePrice?.toString() || "0")
-      setDmVideoPrice(data.dmVideoPrice?.toString() || "0")
-      setAudioCallPricePerMinute(data.audioCallPricePerMinute?.toString() || "0")
-      setVideoCallPricePerMinute(data.videoCallPricePerMinute?.toString() || "0")
-      setLiveStreamEntryPrice(data.liveStreamEntryPrice?.toString() || "0")
+      setDmTextPrice(toValidDefault(data.dmTextPrice))
+      setDmImagePrice(toValidDefault(data.dmImagePrice))
+      setDmVideoPrice(toValidDefault(data.dmVideoPrice))
+      setAudioCallPricePerMinute(toValidDefault(data.audioCallPricePerMinute))
+      setVideoCallPricePerMinute(toValidDefault(data.videoCallPricePerMinute))
+      setLiveStreamEntryPrice(toValidDefault(data.liveStreamEntryPrice))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred"
       setError(errorMessage)
@@ -65,44 +97,79 @@ export function PricingCard() {
     }
   }
 
+  const toValidDefault = (n: number | undefined) => {
+    const v = n?.toString() ?? "0"
+    const num = parseInt(v, 10)
+    return (Number.isNaN(num) || num < COIN_PRICE_MIN) ? String(COIN_PRICE_MIN) : v
+  }
+
   const handleEdit = () => {
     setIsEditing(true)
-    // Reset form to current values
+    setFieldErrors({})
     if (pricing) {
-      setDmTextPrice(pricing.dmTextPrice?.toString() || "0")
-      setDmImagePrice(pricing.dmImagePrice?.toString() || "0")
-      setDmVideoPrice(pricing.dmVideoPrice?.toString() || "0")
-      setAudioCallPricePerMinute(pricing.audioCallPricePerMinute?.toString() || "0")
-      setVideoCallPricePerMinute(pricing.videoCallPricePerMinute?.toString() || "0")
-      setLiveStreamEntryPrice(pricing.liveStreamEntryPrice?.toString() || "0")
+      setDmTextPrice(toValidDefault(pricing.dmTextPrice))
+      setDmImagePrice(toValidDefault(pricing.dmImagePrice))
+      setDmVideoPrice(toValidDefault(pricing.dmVideoPrice))
+      setAudioCallPricePerMinute(toValidDefault(pricing.audioCallPricePerMinute))
+      setVideoCallPricePerMinute(toValidDefault(pricing.videoCallPricePerMinute))
+      setLiveStreamEntryPrice(toValidDefault(pricing.liveStreamEntryPrice))
     }
   }
 
   const handleCancel = () => {
     setIsEditing(false)
-    // Reset form to current values
+    setFieldErrors({})
     if (pricing) {
-      setDmTextPrice(pricing.dmTextPrice?.toString() || "0")
-      setDmImagePrice(pricing.dmImagePrice?.toString() || "0")
-      setDmVideoPrice(pricing.dmVideoPrice?.toString() || "0")
-      setAudioCallPricePerMinute(pricing.audioCallPricePerMinute?.toString() || "0")
-      setVideoCallPricePerMinute(pricing.videoCallPricePerMinute?.toString() || "0")
-      setLiveStreamEntryPrice(pricing.liveStreamEntryPrice?.toString() || "0")
+      setDmTextPrice(toValidDefault(pricing.dmTextPrice))
+      setDmImagePrice(toValidDefault(pricing.dmImagePrice))
+      setDmVideoPrice(toValidDefault(pricing.dmVideoPrice))
+      setAudioCallPricePerMinute(toValidDefault(pricing.audioCallPricePerMinute))
+      setVideoCallPricePerMinute(toValidDefault(pricing.videoCallPricePerMinute))
+      setLiveStreamEntryPrice(toValidDefault(pricing.liveStreamEntryPrice))
     }
   }
 
   const handleSave = async () => {
+    const values = [
+      dmTextPrice,
+      dmImagePrice,
+      dmVideoPrice,
+      audioCallPricePerMinute,
+      videoCallPricePerMinute,
+      liveStreamEntryPrice,
+    ] as const
+    const keys: PricingFieldKey[] = [
+      "dmTextPrice",
+      "dmImagePrice",
+      "dmVideoPrice",
+      "audioCallPricePerMinute",
+      "videoCallPricePerMinute",
+      "liveStreamEntryPrice",
+    ]
+    const errors: Partial<Record<PricingFieldKey, string>> = {}
+    keys.forEach((key, i) => {
+      const result = validateCoinPrice(values[i])
+      if (!result.valid) errors[key] = result.error
+    })
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setMessage({ type: "error", text: "Fix the errors below. Min 1, max 10000, max 5 digits." })
+      setTimeout(() => setMessage(null), 5000)
+      return
+    }
+    setFieldErrors({})
+
     try {
       setIsSaving(true)
       setError(null)
 
       const pricingData: Partial<PricingData> = {
-        dmTextPrice: parseInt(dmTextPrice) || 0,
-        dmImagePrice: parseInt(dmImagePrice) || 0,
-        dmVideoPrice: parseInt(dmVideoPrice) || 0,
-        audioCallPricePerMinute: parseInt(audioCallPricePerMinute) || 0,
-        videoCallPricePerMinute: parseInt(videoCallPricePerMinute) || 0,
-        liveStreamEntryPrice: parseInt(liveStreamEntryPrice) || 0,
+        dmTextPrice: parseInt(dmTextPrice, 10),
+        dmImagePrice: parseInt(dmImagePrice, 10),
+        dmVideoPrice: parseInt(dmVideoPrice, 10),
+        audioCallPricePerMinute: parseInt(audioCallPricePerMinute, 10),
+        videoCallPricePerMinute: parseInt(videoCallPricePerMinute, 10),
+        liveStreamEntryPrice: parseInt(liveStreamEntryPrice, 10),
       }
 
       const response = await fetch("/api/creator/pricing", {
@@ -159,42 +226,64 @@ export function PricingCard() {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium mb-3">Direct Messages (per message)</h3>
+              <p className="text-xs text-muted-foreground mb-2">Min {COIN_PRICE_MIN}, max {COIN_PRICE_MAX} coins (max {COIN_PRICE_MAX_DIGITS} digits). Cannot be 0.</p>
               <div className="space-y-3 pl-4">
                 <div className="space-y-2">
                   <Label htmlFor="dm-text-price">Text Message (coins)</Label>
                   <Input
                     id="dm-text-price"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={dmTextPrice}
-                    onChange={(e) => setDmTextPrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="1"
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, dmTextPrice: undefined }))
+                      setDmTextPrice(sanitizeCoinInput(e.target.value))
+                    }}
+                    placeholder="1"
+                    maxLength={COIN_PRICE_MAX_DIGITS}
+                    className={cn(fieldErrors.dmTextPrice && "border-destructive")}
                   />
+                  {fieldErrors.dmTextPrice && (
+                    <p className="text-sm text-destructive">{fieldErrors.dmTextPrice}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dm-image-price">Image Message (coins)</Label>
                   <Input
                     id="dm-image-price"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={dmImagePrice}
-                    onChange={(e) => setDmImagePrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="1"
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, dmImagePrice: undefined }))
+                      setDmImagePrice(sanitizeCoinInput(e.target.value))
+                    }}
+                    placeholder="1"
+                    maxLength={COIN_PRICE_MAX_DIGITS}
+                    className={cn(fieldErrors.dmImagePrice && "border-destructive")}
                   />
+                  {fieldErrors.dmImagePrice && (
+                    <p className="text-sm text-destructive">{fieldErrors.dmImagePrice}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dm-video-price">Video Message (coins)</Label>
                   <Input
                     id="dm-video-price"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={dmVideoPrice}
-                    onChange={(e) => setDmVideoPrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="1"
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, dmVideoPrice: undefined }))
+                      setDmVideoPrice(sanitizeCoinInput(e.target.value))
+                    }}
+                    placeholder="1"
+                    maxLength={COIN_PRICE_MAX_DIGITS}
+                    className={cn(fieldErrors.dmVideoPrice && "border-destructive")}
                   />
+                  {fieldErrors.dmVideoPrice && (
+                    <p className="text-sm text-destructive">{fieldErrors.dmVideoPrice}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -206,25 +295,39 @@ export function PricingCard() {
                   <Label htmlFor="audio-call-price">Audio Call (coins/min)</Label>
                   <Input
                     id="audio-call-price"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={audioCallPricePerMinute}
-                    onChange={(e) => setAudioCallPricePerMinute(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="1"
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, audioCallPricePerMinute: undefined }))
+                      setAudioCallPricePerMinute(sanitizeCoinInput(e.target.value))
+                    }}
+                    placeholder="1"
+                    maxLength={COIN_PRICE_MAX_DIGITS}
+                    className={cn(fieldErrors.audioCallPricePerMinute && "border-destructive")}
                   />
+                  {fieldErrors.audioCallPricePerMinute && (
+                    <p className="text-sm text-destructive">{fieldErrors.audioCallPricePerMinute}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="video-call-price">Video Call (coins/min)</Label>
                   <Input
                     id="video-call-price"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={videoCallPricePerMinute}
-                    onChange={(e) => setVideoCallPricePerMinute(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="1"
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, videoCallPricePerMinute: undefined }))
+                      setVideoCallPricePerMinute(sanitizeCoinInput(e.target.value))
+                    }}
+                    placeholder="1"
+                    maxLength={COIN_PRICE_MAX_DIGITS}
+                    className={cn(fieldErrors.videoCallPricePerMinute && "border-destructive")}
                   />
+                  {fieldErrors.videoCallPricePerMinute && (
+                    <p className="text-sm text-destructive">{fieldErrors.videoCallPricePerMinute}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -236,13 +339,20 @@ export function PricingCard() {
                   <Label htmlFor="live-stream-price">Entry Price (coins, one-time)</Label>
                   <Input
                     id="live-stream-price"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={liveStreamEntryPrice}
-                    onChange={(e) => setLiveStreamEntryPrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="1"
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, liveStreamEntryPrice: undefined }))
+                      setLiveStreamEntryPrice(sanitizeCoinInput(e.target.value))
+                    }}
+                    placeholder="1"
+                    maxLength={COIN_PRICE_MAX_DIGITS}
+                    className={cn(fieldErrors.liveStreamEntryPrice && "border-destructive")}
                   />
+                  {fieldErrors.liveStreamEntryPrice && (
+                    <p className="text-sm text-destructive">{fieldErrors.liveStreamEntryPrice}</p>
+                  )}
                 </div>
               </div>
             </div>
