@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { serviceSchema } from "@/lib/validations/service"
+import { serviceSchema, SERVICE_NAME_MAX, SERVICE_DESCRIPTION_MAX, SERVICE_PRICE_MAX } from "@/lib/validations/service"
 import { PriceDisplay } from "@/components/currency/price-display"
 import { getCurrencySymbol, getCurrencyDecimals, fromSubunits, toSubunits } from "@/lib/currency/currency-utils"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
@@ -295,13 +295,35 @@ function ServiceSection({
     service.serviceType as "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message"
   )
 
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; description?: string; price?: string }>({})
+
   const handleSave = () => {
-    onSave({
-      name,
-      description,
-      price: parseFloat(price) || 0,
+    const priceNum = parseFloat(price) || 0
+    const payload = {
+      name: name.trim(),
+      description: description.trim(),
+      price: priceNum,
       serviceType,
       visible: service.visible,
+    }
+    const result = serviceSchema.safeParse(payload)
+    if (!result.success) {
+      const errors: { name?: string; description?: string; price?: string } = {}
+      result.error.errors.forEach((err) => {
+        const path = err.path[0] as string
+        if (path in errors) return
+        errors[path as keyof typeof errors] = err.message
+      })
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+    onSave({
+      name: result.data.name,
+      description: result.data.description,
+      price: result.data.price,
+      serviceType: result.data.serviceType,
+      visible: result.data.visible,
     })
   }
 
@@ -309,24 +331,39 @@ function ServiceSection({
     return (
       <Card className="border-2">
         <CardContent className="pt-6 space-y-4">
+          <p className="text-xs text-muted-foreground">Name max {SERVICE_NAME_MAX} chars, description max {SERVICE_DESCRIPTION_MAX} chars, price max {SERVICE_PRICE_MAX}. Only letters, numbers, and ! . , @ allowed.</p>
           <div className="space-y-2">
             <Label htmlFor={`service-name-${service.id}`}>Service Name</Label>
             <Input
               id={`service-name-${service.id}`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, name: undefined }))
+                setName(e.target.value)
+              }}
               placeholder="e.g., Fan Connect - 15 min video call"
+              maxLength={SERVICE_NAME_MAX}
+              className={cn(fieldErrors.name && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{name.length}/{SERVICE_NAME_MAX}</p>
+            {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`service-description-${service.id}`}>Description</Label>
             <Textarea
               id={`service-description-${service.id}`}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, description: undefined }))
+                setDescription(e.target.value)
+              }}
               placeholder="Describe your service..."
               rows={3}
+              maxLength={SERVICE_DESCRIPTION_MAX}
+              className={cn(fieldErrors.description && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{description.length}/{SERVICE_DESCRIPTION_MAX}</p>
+            {fieldErrors.description && <p className="text-sm text-destructive">{fieldErrors.description}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`service-price-${service.id}`}>Price ({creatorCurrency ? getCurrencySymbol(creatorCurrency) : "..."})</Label>
@@ -334,11 +371,17 @@ function ServiceSection({
               id={`service-price-${service.id}`}
               type="number"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, price: undefined }))
+                setPrice(e.target.value)
+              }}
               placeholder="0"
               min="0"
+              max={SERVICE_PRICE_MAX}
               step="0.01"
+              className={cn(fieldErrors.price && "border-destructive")}
             />
+            {fieldErrors.price && <p className="text-sm text-destructive">{fieldErrors.price}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`service-type-${service.id}`}>Service Type</Label>
@@ -392,9 +435,10 @@ function ServiceSection({
                 size="sm"
                 onClick={() => {
                   onCancel()
+                  setFieldErrors({})
                   setName(service.name)
                   setDescription(service.description)
-                  setPrice(service.price.toString())
+                  setPrice(creatorCurrency ? fromSubunits(service.price, creatorCurrency).toString() : "")
                   setServiceType(service.serviceType as "shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message")
                 }}
               >
@@ -481,17 +525,37 @@ function ServiceForm({ onSave, onCancel, creatorCurrency }: ServiceFormProps) {
   const [price, setPrice] = useState("")
   const [serviceType, setServiceType] = useState<"shoutout" | "custom_video" | "custom_photo" | "product_review" | "endorsement" | "collaboration" | "personalized_message">("shoutout")
   const [visible, setVisible] = useState(true)
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; description?: string; price?: string }>({})
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave({
-      name,
-      description,
-      price: parseFloat(price) || 0,
+    const priceNum = parseFloat(price) || 0
+    const payload = {
+      name: name.trim(),
+      description: description.trim(),
+      price: priceNum,
       serviceType,
       visible,
+    }
+    const result = serviceSchema.safeParse(payload)
+    if (!result.success) {
+      const errors: { name?: string; description?: string; price?: string } = {}
+      result.error.errors.forEach((err) => {
+        const path = err.path[0] as string
+        if (path in errors) return
+        errors[path as keyof typeof errors] = err.message
+      })
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+    onSave({
+      name: result.data.name,
+      description: result.data.description,
+      price: result.data.price,
+      serviceType: result.data.serviceType,
+      visible: result.data.visible,
     })
-    // Reset form
     setName("")
     setDescription("")
     setPrice("")
@@ -503,26 +567,39 @@ function ServiceForm({ onSave, onCancel, creatorCurrency }: ServiceFormProps) {
     <Card className="border-2 border-primary">
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-xs text-muted-foreground">Name max {SERVICE_NAME_MAX} chars, description max {SERVICE_DESCRIPTION_MAX} chars, price max {SERVICE_PRICE_MAX}. Only letters, numbers, and ! . , @ allowed.</p>
           <div className="space-y-2">
             <Label htmlFor="new-service-name">Service Name</Label>
             <Input
               id="new-service-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, name: undefined }))
+                setName(e.target.value)
+              }}
               placeholder="e.g., Fan Connect - 15 min video call"
-              required
+              maxLength={SERVICE_NAME_MAX}
+              className={cn(fieldErrors.name && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{name.length}/{SERVICE_NAME_MAX}</p>
+            {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-service-description">Description</Label>
             <Textarea
               id="new-service-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, description: undefined }))
+                setDescription(e.target.value)
+              }}
               placeholder="Describe your service..."
               rows={3}
-              required
+              maxLength={SERVICE_DESCRIPTION_MAX}
+              className={cn(fieldErrors.description && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{description.length}/{SERVICE_DESCRIPTION_MAX}</p>
+            {fieldErrors.description && <p className="text-sm text-destructive">{fieldErrors.description}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-service-price">Price ({creatorCurrency ? getCurrencySymbol(creatorCurrency) : "..."})</Label>
@@ -530,12 +607,17 @@ function ServiceForm({ onSave, onCancel, creatorCurrency }: ServiceFormProps) {
               id="new-service-price"
               type="number"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, price: undefined }))
+                setPrice(e.target.value)
+              }}
               placeholder="0"
               min="0"
+              max={SERVICE_PRICE_MAX}
               step="0.01"
-              required
+              className={cn(fieldErrors.price && "border-destructive")}
             />
+            {fieldErrors.price && <p className="text-sm text-destructive">{fieldErrors.price}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-service-type">Service Type</Label>

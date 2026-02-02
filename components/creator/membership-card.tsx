@@ -5,21 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { validateImageFile } from "@/lib/utils/image-processing"
 import { cn } from "@/lib/utils"
-import { membershipSchema } from "@/lib/validations/membership"
+import { membershipSchema, MEMBERSHIP_TITLE_MAX, MEMBERSHIP_DESCRIPTION_MAX, MEMBERSHIP_PRICE_MAX } from "@/lib/validations/membership"
 import Image from "next/image"
 import toast from "react-hot-toast"
-import { getCurrencySymbol, getCurrencyDecimals, fromSubunits } from "@/lib/currency/currency-utils"
+import { getCurrencySymbol, fromSubunits } from "@/lib/currency/currency-utils"
 import { PriceDisplay } from "@/components/currency/price-display"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -34,25 +27,6 @@ interface Membership {
   createdAt?: string
   updatedAt?: string
 }
-
-// Static monthly recurring fee options (values are currency-agnostic)
-const MONTHLY_FEE_VALUES = [99, 199, 299, 499, 999, 1499, 1999, 2999, 4999]
-
-const getMonthlyFeeOptions = (currency: string) => {
-  const decimals = getCurrencyDecimals(currency)
-  const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })
-
-  return MONTHLY_FEE_VALUES.map((value) => ({
-    value,
-    label: `${formatter.format(value)}/month`,
-  }))
-}
-
 
 export function MembershipCard() {
   const [memberships, setMemberships] = useState<Membership[]>([])
@@ -347,12 +321,34 @@ function MembershipSection({
   const [isUploading, setIsUploading] = useState(false)
   const coverImageInputRef = useRef<HTMLInputElement>(null)
 
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string; description?: string; monthlyRecurringFee?: string }>({})
+
   const handleSave = () => {
-    onSave({
-      title,
-      description,
-      monthlyRecurringFee: parseFloat(monthlyRecurringFee) || 0,
+    const feeNum = parseFloat(monthlyRecurringFee) || 0
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      monthlyRecurringFee: feeNum,
       visible: membership.visible,
+      coverImageUrl: coverImageUrl || undefined,
+    }
+    const result = membershipSchema.safeParse(payload)
+    if (!result.success) {
+      const errors: { title?: string; description?: string; monthlyRecurringFee?: string } = {}
+      result.error.errors.forEach((err) => {
+        const path = err.path[0] as string
+        if (path in errors) return
+        errors[path as keyof typeof errors] = err.message
+      })
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+    onSave({
+      title: result.data.title,
+      description: result.data.description,
+      monthlyRecurringFee: result.data.monthlyRecurringFee,
+      visible: result.data.visible,
       coverImageUrl: coverImageUrl || undefined,
     })
   }
@@ -404,50 +400,61 @@ function MembershipSection({
     }
   }
 
-  const monthlyFeeOptions = creatorCurrency ? getMonthlyFeeOptions(creatorCurrency) : []
-  const displayFee = creatorCurrency ? fromSubunits(membership.monthlyRecurringFee, creatorCurrency) : membership.monthlyRecurringFee
-  const selectedFeeOption = monthlyFeeOptions.find(opt => opt.value === displayFee)
-
   if (isEditing) {
     return (
       <Card className="border-2">
         <CardContent className="pt-6 space-y-4">
+          <p className="text-xs text-muted-foreground">Title max {MEMBERSHIP_TITLE_MAX} chars, description max {MEMBERSHIP_DESCRIPTION_MAX} chars, price max {MEMBERSHIP_PRICE_MAX}. Only letters, numbers, and ! . , @ allowed.</p>
           <div className="space-y-2">
             <Label htmlFor={`membership-title-${membership.id}`}>Title</Label>
             <Input
               id={`membership-title-${membership.id}`}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, title: undefined }))
+                setTitle(e.target.value)
+              }}
               placeholder="e.g., The Superfan Membership"
+              maxLength={MEMBERSHIP_TITLE_MAX}
+              className={cn(fieldErrors.title && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{title.length}/{MEMBERSHIP_TITLE_MAX}</p>
+            {fieldErrors.title && <p className="text-sm text-destructive">{fieldErrors.title}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`membership-description-${membership.id}`}>Description</Label>
             <Textarea
               id={`membership-description-${membership.id}`}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, description: undefined }))
+                setDescription(e.target.value)
+              }}
               placeholder="Describe your membership..."
               rows={3}
+              maxLength={MEMBERSHIP_DESCRIPTION_MAX}
+              className={cn(fieldErrors.description && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{description.length}/{MEMBERSHIP_DESCRIPTION_MAX}</p>
+            {fieldErrors.description && <p className="text-sm text-destructive">{fieldErrors.description}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`membership-fee-${membership.id}`}>Monthly Recurring Fee</Label>
-            <Select
+            <Label htmlFor={`membership-fee-${membership.id}`}>Monthly Recurring Fee ({creatorCurrency ? getCurrencySymbol(creatorCurrency) : "..."})</Label>
+            <Input
+              id={`membership-fee-${membership.id}`}
+              type="number"
               value={monthlyRecurringFee}
-              onValueChange={setMonthlyRecurringFee}
-            >
-              <SelectTrigger id={`membership-fee-${membership.id}`}>
-                <SelectValue placeholder="Select monthly fee" />
-              </SelectTrigger>
-              <SelectContent>
-                {monthlyFeeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value.toString()}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, monthlyRecurringFee: undefined }))
+                setMonthlyRecurringFee(e.target.value)
+              }}
+              placeholder="0"
+              min="0"
+              max={MEMBERSHIP_PRICE_MAX}
+              step="0.01"
+              className={cn(fieldErrors.monthlyRecurringFee && "border-destructive")}
+            />
+            {fieldErrors.monthlyRecurringFee && <p className="text-sm text-destructive">{fieldErrors.monthlyRecurringFee}</p>}
           </div>
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground">
@@ -489,6 +496,7 @@ function MembershipSection({
                 size="sm"
                 onClick={() => {
                   onCancel()
+                  setFieldErrors({})
                   setTitle(membership.title)
                   setDescription(membership.description)
                   setMonthlyRecurringFee(creatorCurrency ? fromSubunits(membership.monthlyRecurringFee, creatorCurrency).toString() : membership.monthlyRecurringFee.toString())
@@ -540,8 +548,6 @@ function MembershipSection({
               <div className="text-primary font-medium">
                 {!creatorCurrency ? (
                   <Skeleton className="h-4 w-24 inline-block" />
-                ) : selectedFeeOption?.label ? (
-                  selectedFeeOption.label
                 ) : (
                   <><PriceDisplay amount={membership.monthlyRecurringFee} currency={creatorCurrency} />/month</>
                 )}
@@ -614,25 +620,45 @@ function MembershipForm({ onSave, onCancel, creatorCurrency }: MembershipFormPro
   const [cropperImage, setCropperImage] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [membershipId, setMembershipId] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string; description?: string; monthlyRecurringFee?: string }>({})
   const coverImageInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // If there's a cropped image, convert it to blob
+    const feeNum = parseFloat(monthlyRecurringFee) || 0
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      monthlyRecurringFee: feeNum,
+      visible,
+      coverImageUrl: coverImageUrl || undefined,
+    }
+    const result = membershipSchema.safeParse(payload)
+    if (!result.success) {
+      const errors: { title?: string; description?: string; monthlyRecurringFee?: string } = {}
+      result.error.errors.forEach((err) => {
+        const path = err.path[0] as string
+        if (path in errors) return
+        errors[path as keyof typeof errors] = err.message
+      })
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+
     let croppedBlob: Blob | undefined
     if (cropperImage) {
       croppedBlob = cropperImage
     }
 
     onSave({
-      title,
-      description,
-      monthlyRecurringFee: parseFloat(monthlyRecurringFee) || 0,
-      visible,
+      title: result.data.title,
+      description: result.data.description,
+      monthlyRecurringFee: result.data.monthlyRecurringFee,
+      visible: result.data.visible,
       coverImageUrl: coverImageUrl || undefined,
     }, croppedBlob)
-    // Reset form
     setTitle("")
     setDescription("")
     setMonthlyRecurringFee("")
@@ -672,49 +698,61 @@ function MembershipForm({ onSave, onCancel, creatorCurrency }: MembershipFormPro
     <Card className="border-2 border-primary">
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-xs text-muted-foreground">Title max {MEMBERSHIP_TITLE_MAX} chars, description max {MEMBERSHIP_DESCRIPTION_MAX} chars, price max {MEMBERSHIP_PRICE_MAX}. Only letters, numbers, and ! . , @ allowed.</p>
           <div className="space-y-2">
             <Label htmlFor="new-membership-title">Title</Label>
             <Input
               id="new-membership-title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, title: undefined }))
+                setTitle(e.target.value)
+              }}
               placeholder="e.g., The Superfan Membership"
-              required
+              maxLength={MEMBERSHIP_TITLE_MAX}
+              className={cn(fieldErrors.title && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{title.length}/{MEMBERSHIP_TITLE_MAX}</p>
+            {fieldErrors.title && <p className="text-sm text-destructive">{fieldErrors.title}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-membership-description">Description</Label>
             <Textarea
               id="new-membership-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((prev) => ({ ...prev, description: undefined }))
+                setDescription(e.target.value)
+              }}
               placeholder="Describe your membership..."
               rows={3}
-              required
+              maxLength={MEMBERSHIP_DESCRIPTION_MAX}
+              className={cn(fieldErrors.description && "border-destructive")}
             />
+            <p className="text-xs text-muted-foreground">{description.length}/{MEMBERSHIP_DESCRIPTION_MAX}</p>
+            {fieldErrors.description && <p className="text-sm text-destructive">{fieldErrors.description}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-membership-fee">Monthly Recurring Fee</Label>
+            <Label htmlFor="new-membership-fee">Monthly Recurring Fee ({creatorCurrency ? getCurrencySymbol(creatorCurrency) : "..."})</Label>
             {!creatorCurrency ? (
               <Skeleton className="h-10 w-full" />
             ) : (
-              <Select
+              <Input
+                id="new-membership-fee"
+                type="number"
                 value={monthlyRecurringFee}
-                onValueChange={setMonthlyRecurringFee}
-                required
-              >
-                <SelectTrigger id="new-membership-fee">
-                  <SelectValue placeholder="Select monthly fee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getMonthlyFeeOptions(creatorCurrency).map((option) => (
-                    <SelectItem key={option.value} value={option.value.toString()}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => {
+                  setFieldErrors((prev) => ({ ...prev, monthlyRecurringFee: undefined }))
+                  setMonthlyRecurringFee(e.target.value)
+                }}
+                placeholder="0"
+                min="0"
+                max={MEMBERSHIP_PRICE_MAX}
+                step="0.01"
+                className={cn(fieldErrors.monthlyRecurringFee && "border-destructive")}
+              />
             )}
+            {fieldErrors.monthlyRecurringFee && <p className="text-sm text-destructive">{fieldErrors.monthlyRecurringFee}</p>}
           </div>
           <div className="pt-4 border-t space-y-2">
             <Label>Cover Image (1200×600px)</Label>

@@ -323,7 +323,7 @@ export default function CreatePostPage() {
   }
 
   const captionLength = caption.length
-  const maxCaptionLength = 5000
+  const maxCaptionLength = 100
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
