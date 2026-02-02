@@ -1,25 +1,32 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { Edit2, Eye, EyeOff, Save, Upload, X, Loader2, ExternalLink, Link2, Check, User } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { validateImageFile } from "@/lib/utils/image-processing"
-import { validateUsernameFormat, isReservedSubdomain } from "@/lib/onboarding/validation-client"
+import { profileFormSchema, type ProfileFormValues, PROFILE_DISPLAY_NAME_MAX, PROFILE_BIO_MAX } from "@/lib/validations/creator"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import toast from "react-hot-toast"
 
 export function ProfileCard({ initialDisplayName, initialBio, initialUsername }: { initialDisplayName: string, initialBio?: string, initialUsername?: string }) {
 
-  const [username, setUsername] = useState(initialUsername || "")
-  const [displayName, setDisplayName] = useState(initialDisplayName)
-  const [bio, setBio] = useState(initialBio || "")
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isProfileVisible, setIsProfileVisible] = useState(true)
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
@@ -28,9 +35,22 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
   const [isUploading, setIsUploading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [usernameLocked, setUsernameLocked] = useState(false)
-  const [usernameError, setUsernameError] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+
+  const savedFormValuesRef = useRef<ProfileFormValues>({
+    username: initialUsername || "",
+    displayName: initialDisplayName,
+    bio: initialBio || "",
+  })
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    mode: "onChange",
+    defaultValues: savedFormValuesRef.current,
+  })
+
+  const { watch, reset } = form
 
   // Image cropping states
   const [showCropper, setShowCropper] = useState(false)
@@ -39,6 +59,10 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
 
   const profileImageInputRef = useRef<HTMLInputElement>(null)
   const coverImageInputRef = useRef<HTMLInputElement>(null)
+
+  const watchedUsername = watch("username")
+  const watchedDisplayName = watch("displayName")
+  const watchedBio = watch("bio")
 
   // Fetch creator profile data and images on mount
   useEffect(() => {
@@ -55,14 +79,17 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
       }
 
       const data = await response.json()
-      setUsername(data.username || "")
-      setDisplayName(data.displayName || initialDisplayName)
-      setBio(data.bio || "")
+      const values: ProfileFormValues = {
+        username: data.username || "",
+        displayName: data.displayName || initialDisplayName,
+        bio: data.bio ?? "",
+      }
+      savedFormValuesRef.current = values
+      reset(values)
       setUsernameLocked(data.usernameLocked || false)
       setIsProfileVisible(!(data.profileHidden ?? false))
     } catch (error) {
       console.error("Error fetching profile:", error)
-      // Use initial values if fetch fails
     }
   }
 
@@ -106,64 +133,18 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
     }
   }
 
-  const handleUsernameChange = (value: string) => {
-    setUsername(value)
-    setUsernameError(null)
-
-    // Client-side validation
-    if (value) {
-      const formatCheck = validateUsernameFormat(value)
-      if (!formatCheck.valid) {
-        setUsernameError(formatCheck.error || "Invalid username")
-        return
-      }
-
-      if (isReservedSubdomain(value)) {
-        setUsernameError("This username is reserved and cannot be used")
-        return
-      }
-    }
-  }
-
-  const handleSaveProfile = async () => {
-    // Validate displayName
-    if (!displayName || displayName.trim().length === 0) {
-      setMessage({ type: "error", text: "Display name is required" })
-      setTimeout(() => setMessage(null), 5000)
-      return
-    }
-
-    // Validate username if provided and not locked
-    if (!usernameLocked && username) {
-      const formatCheck = validateUsernameFormat(username)
-      if (!formatCheck.valid) {
-        setUsernameError(formatCheck.error || "Invalid username")
-        setMessage({ type: "error", text: formatCheck.error || "Invalid username" })
-        setTimeout(() => setMessage(null), 5000)
-        return
-      }
-
-      if (isReservedSubdomain(username)) {
-        setUsernameError("This username is reserved and cannot be used")
-        setMessage({ type: "error", text: "This username is reserved and cannot be used" })
-        setTimeout(() => setMessage(null), 5000)
-        return
-      }
-    }
-
+  const onSubmit = async (values: ProfileFormValues) => {
     setIsSaving(true)
     setMessage(null)
 
     try {
       const response = await fetch("/api/creator/profile", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: usernameLocked ? undefined : username,
-          displayName: displayName.trim(),
-          bio: bio.trim() || null,
+          username: usernameLocked ? undefined : (values.username?.trim() || undefined),
+          displayName: values.displayName.trim(),
+          bio: values.bio?.trim() || null,
         }),
       })
 
@@ -173,21 +154,24 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
       }
 
       const data = await response.json()
-
-      // Update state with saved values
-      setUsername(data.username || "")
-      setDisplayName(data.displayName)
-      setBio(data.bio || "")
-      setUsernameLocked(data.usernameLocked || false)
-      setUsernameError(null)
+      const nextValues: ProfileFormValues = {
+        username: data.username || "",
+        displayName: data.displayName,
+        bio: data.bio ?? "",
+      }
+      savedFormValuesRef.current = nextValues
+      reset(nextValues)
+      setUsernameLocked(data.usernameLocked ?? false)
 
       setIsEditingProfile(false)
       setMessage({ type: "success", text: "Profile updated successfully" })
       setTimeout(() => setMessage(null), 5000)
+      toast.success("Profile updated successfully")
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to update profile"
       setMessage({ type: "error", text: errorMessage })
       setTimeout(() => setMessage(null), 5000)
+      toast.error(errorMessage)
     } finally {
       setIsSaving(false)
     }
@@ -299,103 +283,130 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
         )}
 
         {isEditingProfile ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">
-                Username {usernameLocked && <span className="text-xs text-muted-foreground">(Locked)</span>}
-              </Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => handleUsernameChange(e.target.value)}
-                placeholder="Enter your username"
-                disabled={usernameLocked}
-                className={cn(usernameError && "border-destructive")}
-              />
-              {usernameError && (
-                <p className="text-sm text-destructive">{usernameError}</p>
-              )}
-              {usernameLocked && (
-                <p className="text-xs text-muted-foreground">
-                  Your username is locked and cannot be changed
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter your display name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Tell your fans about yourself..."
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">
-                {bio.length}/500 characters
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditingProfile(false)
-                  setUsernameError(null)
-                  setMessage(null)
-                  // Reset to saved values
-                  fetchCreatorProfile()
-                }}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSaveProfile} disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Username {usernameLocked && <span className="text-xs text-muted-foreground">(Locked)</span>}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter your username"
+                        disabled={usernameLocked}
+                        maxLength={30}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    {usernameLocked && (
+                      <p className="text-xs text-muted-foreground">
+                        Your username is locked and cannot be changed
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </div>
-          </div>
+              />
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter your display name"
+                        maxLength={PROFILE_DISPLAY_NAME_MAX}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {(field.value ?? "").trim().length}/{PROFILE_DISPLAY_NAME_MAX} characters
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Tell your fans about yourself..."
+                        rows={4}
+                        maxLength={PROFILE_BIO_MAX}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {(field.value ?? "").trim().length}/{PROFILE_BIO_MAX} characters
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditingProfile(false)
+                    setMessage(null)
+                    reset(savedFormValuesRef.current)
+                  }}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
               <div>
-                <h3 className="font-medium">{displayName}</h3>
+                <h3 className="font-medium">{watchedDisplayName}</h3>
               </div>
-              {username && (
+              {watchedUsername && (
                 <div>
-                  <p className="text-sm text-muted-foreground">@{username}</p>
+                  <p className="text-sm text-muted-foreground">@{watchedUsername}</p>
                 </div>
               )}
-              {bio && (
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{bio}</p>
+              {watchedBio && (
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{watchedBio}</p>
               )}
             </div>
 
             {/* Preview and Share Buttons */}
-            {username && (
+            {watchedUsername && (
               <div className="flex flex-wrap gap-2 pt-2 border-t">
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    window.open(`/u/${username}`, "_blank")
+                    window.open(`/u/${watchedUsername}`, "_blank")
                   }}
                   className="flex items-center gap-2"
                 >
@@ -426,7 +437,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
                           domain = "localhost:3000"
                         }
                       }
-                      const shareLink = `${username}.${domain}`
+                      const shareLink = `${watchedUsername}.${domain}`
 
                       await navigator.clipboard.writeText(shareLink)
                       setLinkCopied(true)

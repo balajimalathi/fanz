@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isReservedSubdomain } from "@/lib/onboarding/validation-client";
+import { isReservedSubdomain, validateUsernameFormat } from "@/lib/onboarding/validation-client";
 import { ONBOARDING_CURRENCIES } from "@/lib/currency/currency-config";
 
 // Regex for alphanumeric, hyphens, and underscores
@@ -8,6 +8,52 @@ const usernameRegex = /^[a-zA-Z0-9_-]+$/;
 // Regex for social media handles (alphanumeric, dots, hyphens, underscores)
 // Handles can start with @ or without it
 const socialMediaHandleRegex = /^@?[a-zA-Z0-9._-]+$/;
+
+// Profile display name and bio: only A-Za-z0-9_- and emojis (Extended_Pictographic)
+const profileTextRegex = /^(?:[ a-zA-Z0-9.,_@#-]|\p{Extended_Pictographic})*$/u;
+const bioTextRegex = /^(?:[ a-zA-Z0-9.,_@#\r\n\-]|\p{Extended_Pictographic})*$/u;
+
+export const PROFILE_DISPLAY_NAME_MAX = 30;
+export const PROFILE_BIO_MAX = 100;
+
+export function validateProfileDisplayName(
+  value: string
+): { valid: boolean; error?: string } {
+  const trimmed = value.trim();
+  if (!trimmed.length) {
+    return { valid: false, error: "Display name is required" };
+  }
+  if (trimmed.length > PROFILE_DISPLAY_NAME_MAX) {
+    return {
+      valid: false,
+      error: `Display name must be at most ${PROFILE_DISPLAY_NAME_MAX} characters`,
+    };
+  }
+  if (!profileTextRegex.test(trimmed)) {
+    return {
+      valid: false,
+      error: "Only letters, numbers, hyphens, underscores and emojis allowed",
+    };
+  }
+  return { valid: true };
+}
+
+export function validateProfileBio(value: string): { valid: boolean; error?: string } {
+  const trimmed = value.trim();
+  if (trimmed.length > PROFILE_BIO_MAX) {
+    return {
+      valid: false,
+      error: `Bio must be at most ${PROFILE_BIO_MAX} characters`,
+    };
+  }
+  if (trimmed.length > 0 && !bioTextRegex.test(value)) {
+    return {
+      valid: false,
+      error: "Only letters, numbers, hyphens, underscores, newlines and emojis allowed",
+    };
+  }
+  return { valid: true };
+}
 
 // Helper function to normalize social media handles (remove @ if present)
 export function normalizeSocialMediaHandle(handle: string): string {
@@ -54,10 +100,21 @@ export const updateCreatorProfileSchema = z.object({
     .optional(),
   displayName: z
     .string()
+    .trim()
     .min(1, "Display name is required")
-    .max(100, "Display name must be less than 100 characters")
+    .max(PROFILE_DISPLAY_NAME_MAX, `Display name must be at most ${PROFILE_DISPLAY_NAME_MAX} characters`)
+    .refine((val) => profileTextRegex.test(val), {
+      message: "Only letters, numbers, hyphens, underscores and emojis allowed",
+    })
     .optional(),
-  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
+  bio: z
+    .string()
+    .trim()
+    .max(PROFILE_BIO_MAX, `Bio must be at most ${PROFILE_BIO_MAX} characters`)
+    .refine((val) => val === "" || bioTextRegex.test(val), {
+      message: "Only letters, numbers, hyphens, underscores, newlines and emojis allowed",
+    })
+    .optional(),
   socialMediaLinks: z.object({
     instagram: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
     twitter: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
@@ -72,6 +129,44 @@ export const updateCreatorProfileSchema = z.object({
 });
 
 export type UpdateCreatorProfileInput = z.infer<typeof updateCreatorProfileSchema>;
+
+/**
+ * Schema for the profile edit form (react-hook-form + zodResolver).
+ * Same rules as updateCreatorProfileSchema for username, displayName, bio.
+ */
+export const profileFormSchema = z.object({
+  username: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val.trim().length === 0 || validateUsernameFormat(val.trim()).valid,
+      (val) => ({
+        message: (val && validateUsernameFormat((val ?? "").trim()).error) ?? "Invalid username",
+      })
+    )
+    .refine((val) => !val || val.trim().length === 0 || !isReservedSubdomain((val ?? "").trim()), {
+      message: "This username is reserved and cannot be used",
+    }),
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Display name is required")
+    .max(PROFILE_DISPLAY_NAME_MAX, `Display name must be at most ${PROFILE_DISPLAY_NAME_MAX} characters`)
+    .refine((val) => profileTextRegex.test(val), {
+      message: "Only letters, numbers, hyphens, underscores and emojis allowed",
+    }),
+  bio: z
+    .string()
+    .trim()
+    .max(PROFILE_BIO_MAX, `Bio must be at most ${PROFILE_BIO_MAX} characters`)
+    .refine((val) => val === "" || bioTextRegex.test(val), {
+      message: "Only letters, numbers, hyphens, underscores, newlines and emojis allowed",
+    })
+    .optional()
+    .transform((val) => val ?? ""),
+});
+
+export type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export const bankDetailsSchema = z.object({
   pan: z.string().min(1, "PAN is required"),
