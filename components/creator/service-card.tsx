@@ -175,7 +175,7 @@ export function ServiceCard() {
       setServices(services.map(s =>
         s.id === id ? updatedService : s
       ))
-      setMessage({ type: "success", text: `Service ${updatedService.visible ? "shown" : "hidden"}` })
+      setMessage({ type: "success", text: `Service ${updatedService.visible ? "is now visible" : "is now hidden"}` })
       setTimeout(() => setMessage(null), 5000)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred"

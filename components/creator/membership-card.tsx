@@ -225,7 +225,7 @@ export function MembershipCard() {
       setMemberships(memberships.map(m =>
         m.id === id ? updatedMembership : m
       ))
-      setMessage({ type: "success", text: `Membership ${updatedMembership.visible ? "shown" : "hidden"}` })
+      setMessage({ type: "success", text: `Membership ${updatedMembership.visible ? "is now visible" : "is now hidden"}` })
       setTimeout(() => setMessage(null), 5000)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred"

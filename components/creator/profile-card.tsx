@@ -59,6 +59,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
       setDisplayName(data.displayName || initialDisplayName)
       setBio(data.bio || "")
       setUsernameLocked(data.usernameLocked || false)
+      setIsProfileVisible(!(data.profileHidden ?? false))
     } catch (error) {
       console.error("Error fetching profile:", error)
       // Use initial values if fetch fails
@@ -82,6 +83,26 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
       // Don't show error to user, just leave images as null
     } finally {
       setIsLoadingImages(false)
+    }
+  }
+
+  const handleToggleVisibility = async () => {
+    const newHidden = isProfileVisible
+    setIsProfileVisible(!newHidden)
+    try {
+      const response = await fetch("/api/creator/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileHidden: newHidden }),
+      })
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || "Failed to update visibility")
+      }
+      toast.success(newHidden ? "Profile is now hidden" : "Profile is now visible")
+    } catch (error) {
+      setIsProfileVisible(newHidden)
+      toast.error(error instanceof Error ? error.message : "Failed to update visibility")
     }
   }
 
@@ -246,7 +267,7 @@ export function ProfileCard({ initialDisplayName, initialBio, initialUsername }:
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsProfileVisible(!isProfileVisible)}
+            onClick={handleToggleVisibility}
           >
             {isProfileVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>

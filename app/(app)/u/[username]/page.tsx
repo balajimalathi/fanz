@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth/auth"
 import { db } from "@/lib/db/client"
 import { ProfileHeader } from "@/components/creator/profile-header"
 import { PaymentStatusHandler } from "./_components/payment-status-handler"
 import { CreatorPageClient } from "./_components/creator-page-client"
 import { CreatorProfileTabs } from "./_components/creator-profile-tabs"
+import { HiddenProfileView } from "./_components/hidden-profile-view"
 
 async function getCreatorProfile(username: string) {
   try {
@@ -70,6 +73,7 @@ async function getCreatorProfile(username: string) {
         chatEnabled: creatorRecord.chatEnabled ?? true,
         callEnabled: creatorRecord.callEnabled ?? true,
         socialMediaLinks: creatorRecord.socialMediaLinks,
+        profileHidden: creatorRecord.profileHidden ?? false,
       },
       services: servicesWithDisplay,
       memberships: membershipsWithDisplay,
@@ -93,6 +97,30 @@ export default async function Page({
   }
 
   const { creator, services, memberships, creatorCurrency } = data
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  // If profile is hidden, enforce visibility: creator can always see own; others need to be logged in + follower
+  if (data.creator.profileHidden) {
+    const isCreator = session?.user?.id === creator.id
+    if (isCreator) {
+      // Creator viewing own profile: show full profile
+    } else if (!session?.user) {
+      return <HiddenProfileView variant="login" />
+    } else {
+      const followRecord = await db.query.follower.findFirst({
+        where: (f, { eq: eqOp, and: andOp }) =>
+          andOp(
+            eqOp(f.creatorId, creator.id),
+            eqOp(f.followerId, session.user.id)
+          ),
+      })
+      if (!followRecord) {
+        return <HiddenProfileView variant="hidden" />
+      }
+    }
+  }
 
   // Get creator user details for chat window
   const creatorUser = await db.query.user.findFirst({

@@ -130,6 +130,7 @@ export const creator = pgTable("creator", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   chatEnabled: boolean("chat_enabled").notNull().default(true),
   callEnabled: boolean("call_enabled").notNull().default(true),
+  profileHidden: boolean("profile_hidden").notNull().default(false),
   chatAvailabilitySchedule: jsonb("chat_availability_schedule").$type<{
     enabled: boolean;
     timezone: string; // Creator's timezone (e.g., "Asia/Kolkata", "America/New_York")

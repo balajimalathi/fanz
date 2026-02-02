@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
       bio: creatorRecord.bio || "",
       usernameLocked: creatorRecord.usernameLocked,
       socialMediaLinks: creatorRecord.socialMediaLinks || {},
+      profileHidden: creatorRecord.profileHidden ?? false,
     })
   } catch (error) {
     console.error("Error fetching creator profile:", error)
@@ -120,7 +121,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const { username, displayName, bio, socialMediaLinks } = validationResult.data
+    const { username, displayName, bio, socialMediaLinks, profileHidden } = validationResult.data
 
     // Fetch current creator record
     const creatorRecord = await db.query.creator.findFirst({
@@ -138,6 +139,7 @@ export async function PATCH(request: NextRequest) {
       username?: string
       displayName?: string
       bio?: string | null
+      profileHidden?: boolean
       socialMediaLinks?: {
         instagram?: string;
         twitter?: string;
@@ -174,6 +176,10 @@ export async function PATCH(request: NextRequest) {
       })
       // Store empty object if no links, or the normalized links
       updateData.socialMediaLinks = normalizedLinks
+    }
+
+    if (profileHidden !== undefined) {
+      updateData.profileHidden = profileHidden
     }
 
     // Validate and update username (only if provided and not locked)
@@ -220,6 +226,7 @@ export async function PATCH(request: NextRequest) {
       bio: updatedCreator?.bio || "",
       usernameLocked: updatedCreator?.usernameLocked || false,
       socialMediaLinks: updatedCreator?.socialMediaLinks || {},
+      profileHidden: updatedCreator?.profileHidden ?? false,
     })
   } catch (error) {
     console.error("Error updating creator profile:", error)

@@ -68,6 +68,7 @@ export const updateCreatorProfileSchema = z.object({
     youtube: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
     linkedin: z.string().max(50, "Handle must be less than 50 characters").optional().or(z.literal("")),
   }).optional(),
+  profileHidden: z.boolean().optional(),
 });
 
 export type UpdateCreatorProfileInput = z.infer<typeof updateCreatorProfileSchema>;

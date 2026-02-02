@@ -1,0 +1,1 @@
+ALTER TABLE "creator" ADD COLUMN "profile_hidden" boolean DEFAULT false NOT NULL;
