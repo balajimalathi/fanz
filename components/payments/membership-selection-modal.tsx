@@ -297,6 +297,7 @@ export function MembershipSelectionModal({
             }
           }}
           type="membership"
+          currency={selectedMembership.currency}
           entityId={selectedMembership.id}
           amount={bundlePrice}
           duration={selectedDuration}

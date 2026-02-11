@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { PushInit } from "@/components/push/push-init";
 import NextTopLoader from 'nextjs-toploader';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import { DevIndicator } from '@/components/dev/dev-indicator';
 
 import type { Metadata } from "next";
 import Metrics from "./(metrics)";
@@ -110,6 +111,7 @@ export default function RootLayout({
           />
           </NuqsAdapter>
         </ThemeProvider>
+        {/* {process.env.NODE_ENV !== 'production' && <DevIndicator />} */}
       </body>
     </html>
   );
