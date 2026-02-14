@@ -15,7 +15,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "worker:video": "tsx scripts/workers/video-processor.ts"
+    "worker:video": "tsx scripts/workers/video-processor.ts",
+    "load": "node scripts/load/run-load-test.js",
+    "stress": "k6 run scripts/load/stress.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.36",
@@ -104,6 +106,7 @@
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
     "@types/ws": "^8.5.13",
+    "autocannon": "^7.15.0",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.1",
     "eslint-config-next": "^15.5.6",
