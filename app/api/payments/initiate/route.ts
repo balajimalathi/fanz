@@ -14,7 +14,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, entityId, returnUrl, duration, originUrl, currency, customerDescription } = body;
+    const {
+      type,
+      entityId,
+      returnUrl,
+      duration,
+      originUrl,
+      currency,
+      customerDescription,
+      creatorId,
+      metadata,
+    } = body;
 
     if (!type || !entityId) {
       return NextResponse.json(
@@ -61,15 +71,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (type === "wallet_credit" && (!creatorId || typeof creatorId !== "string")) {
+      return NextResponse.json(
+        { error: "creatorId is required for wallet credit purchases" },
+        { status: 400 }
+      );
+    }
+
     const result = await PaymentService.initiatePayment({
       userId: session.user.id,
-      type: type as "membership" | "exclusive_post" | "service" | "live_stream",
+      type: type as
+        | "membership"
+        | "exclusive_post"
+        | "service"
+        | "live_stream"
+        | "wallet_credit",
       entityId,
       returnUrl,
       duration,
       originUrl,
       currency,
       customerDescription: type === "service" ? customerDescription : undefined,
+      creatorId: type === "wallet_credit" ? creatorId : undefined,
+      metadata: metadata && typeof metadata === "object" ? metadata : undefined,
     });
 
     if (!result.success) {

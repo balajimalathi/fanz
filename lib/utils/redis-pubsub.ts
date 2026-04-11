@@ -28,6 +28,11 @@ function getPublisherClient(): Redis {
   return publisherClient;
 }
 
+/** Shared Redis client for SET/GET (circuit breaker cache, webhook dedup, etc.) */
+export function getCommandsRedis(): Redis {
+  return getPublisherClient();
+}
+
 // Subscriber client (for receiving messages)
 // Note: Each SSE connection should have its own subscriber client
 export function createSubscriberClient(): Redis {

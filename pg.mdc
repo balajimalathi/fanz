@@ -1,0 +1,42 @@
+Here’s what was implemented:
+
+### Database ([`lib/db/schema.ts`](lib/db/schema.ts) + [`drizzle/0049_payment_orchestrator.sql`](drizzle/0049_payment_orchestrator.sql))
+- New tables: `payment_gateway_config`, `gateway_credentials`, `gateway_health`, `payment_attempt`
+- `payment_transaction`: `gateway_name`, `idempotency_key` (unique), `attempt_count`
+- `creator`: `stripe_connect_account_id` (optional Stripe Connect destination)
+
+### Core payment stack
+- **[`lib/payments/gateway/adapters/base-gateway.ts`](lib/payments/gateway/adapters/base-gateway.ts)** — `GatewayConfig`, `RefundRequest`/`RefundResponse`, `idempotencyKey` on initiation, `webhookEventId` on webhooks, abstract `refund()` + `getSupportedCurrencies()`
+- **Adapters:** [`stripe-adapter.ts`](lib/payments/gateway/adapters/stripe-adapter.ts), [`razorpay-adapter.ts`](lib/payments/gateway/adapters/razorpay-adapter.ts) (payment links), [`paypal-adapter.ts`](lib/payments/gateway/adapters/paypal-adapter.ts) (REST + `captureApprovedOrder`), [`paytm-adapter.ts`](lib/payments/gateway/adapters/paytm-adapter.ts) (initiate + status + `paytmchecksum`), [`dodo-adapter.ts`](lib/payments/gateway/adapters/dodo-adapter.ts) (configurable `POST /v1/checkouts` — confirm URL against Dodo’s docs)
+- **[`gateway-registry.ts`](lib/payments/gateway/gateway-registry.ts)** — DB + env merged credentials; builds adapters
+- **[`route-resolver.ts`](lib/payments/gateway/route-resolver.ts)** — DB routing or default order `stripe → razorpay → paytm → paypal → dodo`, filtered by currency + config
+- **[`circuit-breaker.ts`](lib/payments/gateway/circuit-breaker.ts)** — DB + Redis (`payment:gw:circuit:*`) after 5 failures / 60s open
+- **[`payment-orchestrator.ts`](lib/payments/gateway/payment-orchestrator.ts)** — Failover chain, `payment_attempt` audit rows, updates `gateway_name` + `gateway_transaction_id`
+- **[`gateway-service.ts`](lib/payments/gateway/gateway-service.ts)** — `checkPaymentStatus(id, gatewayName?)` for callbacks
+
+### [`lib/payments/payment-service.ts`](lib/payments/payment-service.ts)
+- Live mode: **`PaymentOrchestrator`**; test mode: existing **`createGateway()`** mock
+- Inserts real **`type`** enum, **`idempotency_key`**, **`creatorCurrency`** on amounts, **`stripeConnectAccountId`** in gateway metadata when set
+- **`processPaymentCompletion`** — skip if already completed; optional **`webhookEventId`** + **[`webhook-dedup.ts`](lib/payments/webhook-dedup.ts)** (Redis `SET NX`)
+
+### HTTP
+- Webhooks: [`/api/payments/webhook/stripe`](app/api/payments/webhook/stripe/route.ts), [`razorpay`](app/api/payments/webhook/razorpay/route.ts), [`paypal`](app/api/payments/webhook/paypal/route.ts), [`paytm`](app/api/payments/webhook/paytm/route.ts), [`dodo`](app/api/payments/webhook/dodo/route.ts)
+- **[`app/api/payments/callback/route.ts`](app/api/payments/callback/route.ts)** — PayPal capture when `token` + `gateway_name === paypal"`; **`checkPaymentStatus`** passes **`gateway_name`**
+- **[`app/api/payments/initiate/route.ts`](app/api/payments/initiate/route.ts)** — **`wallet_credit`** + **`creatorId`** + optional **`metadata`**
+
+### Config & money split
+- **[`env.ts`](env.ts)** — Stripe, Razorpay, PayPal, Paytm, Dodo env vars (+ optional `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`)
+- **[`split-calculator.ts`](lib/payments/split-calculator.ts)** — **0% platform / 100% creator**
+
+### Admin
+- APIs: [`/api/admin/payment-gateways`](app/api/admin/payment-gateways/route.ts), [`/routing`](app/api/admin/payment-gateways/routing/route.ts), [`/test`](app/api/admin/payment-gateways/test/route.ts), [`/[gateway]/health`](app/api/admin/payment-gateways/[gateway]/health/route.ts)
+- UI: [`/admin/payment-gateways`](app/admin/payment-gateways/page.tsx) + [`payment-gateway-manager.tsx`](components/admin/payment-gateway-manager.tsx); sidebar link in [`admin-sidebar.tsx`](components/admin-sidebar.tsx)
+
+### Dependencies ([`package.json`](package.json))
+- **`stripe`**, **`razorpay`**, **`paytmchecksum`** — installed with **pnpm** (`pnpm install`).
+
+### What you should do locally
+1. **Apply DB migration:** `pnpm db:migrate` (or your usual Drizzle migrate) so `0049_payment_orchestrator.sql` runs.
+2. **Set PSP env vars** (or use admin UI + DB `gateway_credentials`) and point each provider’s dashboard webhooks to the new **`/api/payments/webhook/{provider}`** URLs.
+3. **Dodo:** confirm their real checkout path and body against [`dodo-adapter.ts`](lib/payments/gateway/adapters/dodo-adapter.ts); adjust `additionalConfig.apiBaseUrl` / payload if needed.
+4. **PayPal webhooks** in code are parsed without full PayPal signature verification — tighten for production using PayPal’s verify API.

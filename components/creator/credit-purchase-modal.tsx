@@ -14,7 +14,6 @@ import { Loader2, Coins, Sparkles } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { PriceDisplay } from "@/components/currency/price-display"
 import { useCreatorCurrency } from "@/lib/hooks/use-creator-currency"
-import { WalletService } from "@/lib/wallet/wallet-service"
 
 interface CreditPlan {
   id: "starter" | "favorite" | "vip"
@@ -109,13 +108,15 @@ export function CreditPurchaseModal({
     setSelectedPlan(plan)
 
     try {
-      const response = await fetch("/api/wallet/purchase", {
+      // Single integration path: same handler as other monetization (orchestrator in live mode).
+      const response = await fetch("/api/payments/initiate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          planType: plan.id,
+          type: "wallet_credit",
+          entityId: plan.id,
           creatorId,
           originUrl: currentOriginUrl,
         }),

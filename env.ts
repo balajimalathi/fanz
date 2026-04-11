@@ -25,14 +25,25 @@ export const env = createEnv({
     FIREBASE_PROJECT_ID: z.string().min(1).optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
-    // Payment Gateway configuration
+    // Payment orchestrator — kill switch + sandbox vs production PSP credentials
+    // - PAYMENT_GATEWAY_ENABLED=false → all checkouts use in-app MockGateway (no external PSP calls).
+    // - PAYMENT_GATEWAY_ENABLED=true → PaymentOrchestrator only; PAYMENT_GATEWAY_MODE selects test vs live adapter config; per-PSP keys STRIPE_*, RAZORPAY_*, PAYTM_*, PAYPAL_*, DODO_* plus optional gateway_credentials rows.
     PAYMENT_GATEWAY_ENABLED: z.string().transform((val) => val === "true").default("false"),
-    PAYMENT_GATEWAY_TYPE: z.enum(["paytm", "ccbill", "epoch", "segpay"]).optional().default("paytm"),
-    PAYMENT_GATEWAY_API_KEY: z.string().optional(),
-    PAYMENT_GATEWAY_SECRET_KEY: z.string().optional(),
-    PAYMENT_GATEWAY_MERCHANT_ID: z.string().optional(),
-    PAYMENT_GATEWAY_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_GATEWAY_MODE: z.enum(["live", "test"]).default("test"),
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+    PAYPAL_CLIENT_ID: z.string().optional(),
+    PAYPAL_CLIENT_SECRET: z.string().optional(),
+    PAYPAL_WEBHOOK_ID: z.string().optional(),
+    PAYPAL_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
+    PAYTM_MID: z.string().optional(),
+    PAYTM_MERCHANT_KEY: z.string().optional(),
+    PAYTM_WEBSITE: z.string().optional(),
+    DODO_API_KEY: z.string().optional(),
+    DODO_WEBHOOK_SECRET: z.string().optional(),
     // Exchange Rate API (optional, for currency conversion)
     EXCHANGE_RATE_API_KEY: z.string().optional(),
     // LiveKit Cloud
@@ -61,6 +72,7 @@ export const env = createEnv({
     NEXT_PUBLIC_FIREBASE_VAPID_KEY: z.string().min(1).optional(),
     // LiveKit Cloud
     NEXT_PUBLIC_LIVEKIT_URL: z.string().url(),
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   },
   // If you're using Next.js < 13.4.4, you'll need to specify the runtimeEnv manually
   runtimeEnv: {
@@ -83,12 +95,21 @@ export const env = createEnv({
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
     FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
     PAYMENT_GATEWAY_ENABLED: process.env.PAYMENT_GATEWAY_ENABLED,
-    PAYMENT_GATEWAY_TYPE: process.env.PAYMENT_GATEWAY_TYPE,
-    PAYMENT_GATEWAY_API_KEY: process.env.PAYMENT_GATEWAY_API_KEY,
-    PAYMENT_GATEWAY_SECRET_KEY: process.env.PAYMENT_GATEWAY_SECRET_KEY,
-    PAYMENT_GATEWAY_MERCHANT_ID: process.env.PAYMENT_GATEWAY_MERCHANT_ID,
-    PAYMENT_GATEWAY_WEBHOOK_SECRET: process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
     PAYMENT_GATEWAY_MODE: process.env.PAYMENT_GATEWAY_MODE,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+    RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID,
+    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET,
+    PAYPAL_WEBHOOK_ID: process.env.PAYPAL_WEBHOOK_ID,
+    PAYPAL_MODE: process.env.PAYPAL_MODE,
+    PAYTM_MID: process.env.PAYTM_MID,
+    PAYTM_MERCHANT_KEY: process.env.PAYTM_MERCHANT_KEY,
+    PAYTM_WEBSITE: process.env.PAYTM_WEBSITE,
+    DODO_API_KEY: process.env.DODO_API_KEY,
+    DODO_WEBHOOK_SECRET: process.env.DODO_WEBHOOK_SECRET,
     EXCHANGE_RATE_API_KEY: process.env.EXCHANGE_RATE_API_KEY,
     LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
     LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
@@ -109,5 +130,6 @@ export const env = createEnv({
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
     NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   },
 });

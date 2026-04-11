@@ -1,7 +1,7 @@
 /**
  * Calculate split payments between platform and creator
- * Platform fee: 10%
- * Creator amount: 90%
+ * Platform fee: 0%
+ * Creator amount: 100%
  */
 
 export interface SplitPaymentResult {
@@ -11,7 +11,7 @@ export interface SplitPaymentResult {
 }
 
 /**
- * Calculate split payment (90% creator, 10% platform)
+ * Split payment: 100% to creator, no platform commission.
  * @param amount - Amount in paise (smallest currency unit)
  * @returns Split payment result
  */
@@ -20,11 +20,8 @@ export function calculateSplitPayment(amount: number): SplitPaymentResult {
     throw new Error("Amount cannot be negative");
   }
 
-  // Calculate platform fee (10%)
-  const platformFee = Math.round(amount * 0.1);
-
-  // Calculate creator amount (90%)
-  const creatorAmount = amount - platformFee;
+  const platformFee = 0;
+  const creatorAmount = amount;
 
   return {
     totalAmount: amount,

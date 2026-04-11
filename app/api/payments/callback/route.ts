@@ -4,6 +4,8 @@ import { db } from "@/lib/db/client";
 import { paymentTransaction } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { GatewayService } from "@/lib/payments/gateway/gateway-service";
+import { GatewayRegistry } from "@/lib/payments/gateway/gateway-registry";
+import { PayPalAdapter } from "@/lib/payments/gateway/adapters/paypal-adapter";
 
 /**
  * Builds a redirect URL preserving the original subdomain/origin.
@@ -52,6 +54,47 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/payment-failed", request.url));
     }
 
+    const paypalToken = searchParams.get("token");
+    if (
+      transaction.gatewayName === "paypal" &&
+      paypalToken &&
+      transaction.gatewayTransactionId
+    ) {
+      const adapter = await GatewayRegistry.getGateway("paypal");
+      if (adapter instanceof PayPalAdapter) {
+        const cap = await adapter.captureApprovedOrder(transaction.gatewayTransactionId);
+        if (cap.success && cap.status === "completed") {
+          await PaymentService.processPaymentCompletion(transaction.id, "completed");
+          const originUrl = transaction.metadata?.originUrl as string | undefined;
+          const duration = transaction.metadata?.duration as number | undefined;
+          const actualType = (transaction.metadata?.type as string) || transaction.type;
+          if (originUrl) {
+            const redirectUrl = buildRedirectUrl(originUrl, request);
+            redirectUrl.searchParams.set("status", "success");
+            if (actualType === "membership") {
+              redirectUrl.searchParams.set("membershipId", transaction.entityId);
+              if (duration) redirectUrl.searchParams.set("duration", duration.toString());
+            } else if (actualType === "service") {
+              redirectUrl.searchParams.set("serviceId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (actualType === "exclusive_post") {
+              redirectUrl.searchParams.set("postId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (actualType === "live_stream") {
+              redirectUrl.searchParams.set("streamId", transaction.entityId);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            } else if (actualType === "wallet_credit") {
+              const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+              if (planMetadata?.planType) redirectUrl.searchParams.set("planType", planMetadata.planType);
+              redirectUrl.searchParams.set("transactionId", transaction.id);
+            }
+            return NextResponse.redirect(redirectUrl);
+          }
+          return NextResponse.redirect(new URL("/payment-success", request.url));
+        }
+      }
+    }
+
     // Extract originUrl and duration from transaction metadata
     const originUrl = transaction.metadata?.originUrl as string | undefined;
     const duration = transaction.metadata?.duration as number | undefined;
@@ -59,31 +102,33 @@ export async function GET(request: NextRequest) {
     // If status is provided in query params and is success/completed, process immediately
     if (status === "success" || status === "completed") {
       await PaymentService.processPaymentCompletion(transaction.id, "completed");
-      
-      // Redirect to originUrl with query params if available, otherwise default success page
+
+      const actualTypeEarly = (transaction.metadata?.type as string) || transaction.type;
       if (originUrl) {
         const redirectUrl = buildRedirectUrl(originUrl, request);
         redirectUrl.searchParams.set("status", "success");
-        if (transaction.type === "membership") {
+        if (actualTypeEarly === "membership") {
           redirectUrl.searchParams.set("membershipId", transaction.entityId);
           if (duration) {
             redirectUrl.searchParams.set("duration", duration.toString());
           }
-        } else if (transaction.type === "service") {
+        } else if (actualTypeEarly === "service") {
           redirectUrl.searchParams.set("serviceId", transaction.entityId);
           redirectUrl.searchParams.set("transactionId", transaction.id);
-            } else if (transaction.type === "exclusive_post") {
-              redirectUrl.searchParams.set("postId", transaction.entityId);
-              redirectUrl.searchParams.set("transactionId", transaction.id);
-            } else if (transaction.type === "wallet_credit") {
-              // Get plan type from metadata instead of entityId
-              const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
-              if (planMetadata?.planType) {
-                redirectUrl.searchParams.set("planType", planMetadata.planType);
-              }
-              redirectUrl.searchParams.set("transactionId", transaction.id);
-            }
-            return NextResponse.redirect(redirectUrl);
+        } else if (actualTypeEarly === "exclusive_post") {
+          redirectUrl.searchParams.set("postId", transaction.entityId);
+          redirectUrl.searchParams.set("transactionId", transaction.id);
+        } else if (actualTypeEarly === "live_stream") {
+          redirectUrl.searchParams.set("streamId", transaction.entityId);
+          redirectUrl.searchParams.set("transactionId", transaction.id);
+        } else if (actualTypeEarly === "wallet_credit") {
+          const planMetadata = transaction.metadata?.planMetadata as { planType?: string } | undefined;
+          if (planMetadata?.planType) {
+            redirectUrl.searchParams.set("planType", planMetadata.planType);
+          }
+          redirectUrl.searchParams.set("transactionId", transaction.id);
+        }
+        return NextResponse.redirect(redirectUrl);
       }
       return NextResponse.redirect(new URL("/payment-success", request.url));
     }
@@ -91,7 +136,8 @@ export async function GET(request: NextRequest) {
     // Check payment status with gateway
     if (transaction.gatewayTransactionId) {
       const statusResponse = await GatewayService.checkPaymentStatus(
-        transaction.gatewayTransactionId
+        transaction.gatewayTransactionId,
+        transaction.gatewayName
       );
 
       if (statusResponse.success) {
@@ -154,7 +200,8 @@ export async function GET(request: NextRequest) {
       // Wait a bit for mock gateway to update status
       await new Promise(resolve => setTimeout(resolve, 1500));
       const statusResponse = await GatewayService.checkPaymentStatus(
-        transaction.gatewayTransactionId
+        transaction.gatewayTransactionId,
+        transaction.gatewayName
       );
       
       if (statusResponse.success && statusResponse.status === "completed") {

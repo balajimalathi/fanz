@@ -15,7 +15,7 @@ import { NavUser } from "./nav-user"
 import { useSession } from "@/lib/auth/auth-client"
 import { useIsMobileOrTablet } from "@/hooks/use-mobile-tablet"
 import { sidebarData } from "@/lib/sidebar-data"
-import { Shield, Users, FileText, AlertTriangle, DollarSign } from "lucide-react"
+import { Shield, Users, FileText, AlertTriangle, DollarSign, CreditCard } from "lucide-react"
 
 export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession()
@@ -64,6 +64,11 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
       title: "Transactions",
       url: "/admin/transactions",
       icon: DollarSign,
+    },
+    {
+      title: "Payment gateways",
+      url: "/admin/payment-gateways",
+      icon: CreditCard,
     },
   ]
 
