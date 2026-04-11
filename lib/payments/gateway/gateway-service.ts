@@ -1,3 +1,4 @@
+import { env } from "@/env";
 import { isGatewayEnabled, createGateway } from "./gateway-factory";
 import {
   PaymentInitiationRequest,
@@ -5,25 +6,21 @@ import {
   PaymentStatusResponse,
   WebhookPayload,
 } from "./adapters/base-gateway";
+import { GatewayRegistry } from "./gateway-registry";
 
 /**
  * Payment Gateway Service
  * Main service for interacting with payment gateway
  */
 export class GatewayService {
-  /**
-   * Check if payment gateway is active and enabled
-   */
   static isActive(): boolean {
     return isGatewayEnabled();
   }
 
   /**
-   * Initialize a payment
+   * Initialize a payment (legacy single-gateway path; prefer PaymentOrchestrator from PaymentService).
    */
-  static async initiatePayment(
-    request: PaymentInitiationRequest
-  ): Promise<PaymentInitiationResponse> {
+  static async initiatePayment(request: PaymentInitiationRequest): Promise<PaymentInitiationResponse> {
     if (!this.isActive()) {
       return {
         success: false,
@@ -44,9 +41,14 @@ export class GatewayService {
   }
 
   /**
-   * Check payment status
+   * Check payment status at the PSP.
+   * @param gatewayTransactionId — PSP reference (e.g. Stripe session id, Paytm order id)
+   * @param gatewayName — when set, uses that adapter; otherwise legacy factory gateway
    */
-  static async checkPaymentStatus(transactionId: string): Promise<PaymentStatusResponse> {
+  static async checkPaymentStatus(
+    gatewayTransactionId: string,
+    gatewayName?: string | null
+  ): Promise<PaymentStatusResponse> {
     if (!this.isActive()) {
       return {
         success: false,
@@ -56,8 +58,20 @@ export class GatewayService {
     }
 
     try {
+      if (env.PAYMENT_GATEWAY_MODE === "test") {
+        const gateway = createGateway();
+        return await gateway.checkPaymentStatus(gatewayTransactionId);
+      }
+
+      if (gatewayName) {
+        const adapter = await GatewayRegistry.getGateway(gatewayName);
+        if (adapter) {
+          return await adapter.checkPaymentStatus(gatewayTransactionId);
+        }
+      }
+
       const gateway = createGateway();
-      return await gateway.checkPaymentStatus(transactionId);
+      return await gateway.checkPaymentStatus(gatewayTransactionId);
     } catch (error) {
       console.error("Error checking payment status:", error);
       return {
@@ -68,13 +82,7 @@ export class GatewayService {
     }
   }
 
-  /**
-   * Verify and parse webhook
-   */
-  static async processWebhook(
-    payload: unknown,
-    signature: string
-  ): Promise<WebhookPayload | null> {
+  static async processWebhook(payload: unknown, signature: string): Promise<WebhookPayload | null> {
     if (!this.isActive()) {
       console.warn("Payment gateway is not enabled, ignoring webhook");
       return null;
@@ -89,7 +97,6 @@ export class GatewayService {
         return null;
       }
 
-      // Verify webhook signature
       if (!gateway.verifyWebhook(parsedPayload, signature)) {
         console.error("Webhook signature verification failed");
         return null;
@@ -102,4 +109,3 @@ export class GatewayService {
     }
   }
 }
-

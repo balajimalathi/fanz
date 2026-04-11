@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "payment_gateway_config_gateway_payment_unique" ON "payment_gateway_config" USING btree ("gateway_name","payment_type");

@@ -13,10 +13,13 @@ import {
   liveStreamPurchase,
   creator,
 } from "@/lib/db/schema";
+import { createHash, randomUUID } from "node:crypto";
 import { eq, and } from "drizzle-orm";
-import { GatewayService } from "./gateway/gateway-service";
-import { calculateSplitPayment } from "./split-calculator";
 import { env } from "@/env";
+import { createGateway } from "./gateway/gateway-factory";
+import { GatewayService } from "./gateway/gateway-service";
+import { PaymentOrchestrator } from "./gateway/payment-orchestrator";
+import { calculateSplitPayment } from "./split-calculator";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
 import { getCurrencyDecimals } from "@/lib/currency/currency-utils";
 
@@ -32,6 +35,7 @@ export interface InitiatePaymentRequest {
   currency?: string; // User's preferred currency (ISO 4217). If not provided, will be detected.
   creatorId?: string; // Creator ID (required for wallet_credit type)
   customerDescription?: string; // Customer description/requirements (required for service type)
+  metadata?: { streamId?: string; isTip?: boolean };
 }
 
 export interface PaymentResult {
@@ -85,6 +89,10 @@ export class PaymentService {
       let creatorId: string;
       let creatorCurrency: string;
       let orderId: string;
+      let walletPlanMetadata:
+        | { planType: string; coins: number; bonus: number; totalCoins: number }
+        | undefined;
+      let walletPlaceholderEntityId: string | undefined;
 
       switch (request.type) {
         case "membership": {
@@ -283,19 +291,15 @@ export class PaymentService {
           // The actual plan type is stored in metadata and fanWalletTransaction
           // Using a deterministic UUID based on "wallet_credit" prefix
           const { randomUUID } = await import("crypto");
-          const placeholderEntityId = randomUUID(); // Generate a UUID for the entityId field
+          walletPlaceholderEntityId = randomUUID();
           orderId = `wallet_credit_${planType}_${Date.now()}`;
 
-          // Store plan details in metadata for later use
-          (request as any).planMetadata = {
+          walletPlanMetadata = {
             planType,
             coins: planCoins,
             bonus: planBonus,
             totalCoins: planCoins + planBonus,
           };
-          
-          // Store the placeholder entityId so we can use it in the insert
-          (request as any).placeholderEntityId = placeholderEntityId;
           break;
         }
 
@@ -335,31 +339,31 @@ export class PaymentService {
       }
 
       // Store plan metadata for wallet credit purchases
-      if (request.type === "wallet_credit" && (request as any).planMetadata) {
-        metadata.planMetadata = (request as any).planMetadata;
+      if (request.type === "wallet_credit" && walletPlanMetadata) {
+        metadata.planMetadata = walletPlanMetadata;
       }
 
-      // Store tip metadata (streamId, isTip) if present
-      if ((request as any).metadata) {
-        if ((request as any).metadata.streamId) {
-          metadata.streamId = (request as any).metadata.streamId;
+      if (request.metadata) {
+        if (request.metadata.streamId) {
+          metadata.streamId = request.metadata.streamId;
         }
-        if ((request as any).metadata.isTip !== undefined) {
-          metadata.isTip = (request as any).metadata.isTip;
+        if (request.metadata.isTip !== undefined) {
+          metadata.isTip = request.metadata.isTip;
         }
       }
 
       // For wallet_credit, use placeholder entityId; for others, use the actual entityId
-      const entityIdForInsert = 
-        request.type === "wallet_credit" 
-          ? (request as any).placeholderEntityId || request.entityId
+      const entityIdForInsert =
+        request.type === "wallet_credit"
+          ? walletPlaceholderEntityId || request.entityId
           : request.entityId;
 
-      // Map PaymentType to database enum value
-      // The database enum only supports "membership" and "service"
-      // The actual type is stored in metadata for reference
-      const dbType: "membership" | "service" = 
-        request.type === "membership" ? "membership" : "service";
+      const creatorRow = await db.query.creator.findFirst({
+        where: (c, { eq: eqOp }) => eqOp(c.id, creatorId),
+      });
+      const idempotencyKey = createHash("sha256")
+        .update(`${request.userId}:${request.type}:${entityIdForInsert}:${randomUUID()}`)
+        .digest("hex");
 
       // Create payment transaction
       const [transaction] = await db
@@ -367,17 +371,18 @@ export class PaymentService {
         .values({
           userId: request.userId,
           creatorId,
-          type: dbType,
+          type: request.type,
           entityId: entityIdForInsert,
-          amount: paymentAmount, // Amount in INR subunits
-          originalCurrency: "INR",
-          baseCurrency: "INR", // All transactions use INR
-          convertedAmount: paymentAmount, // Same as amount (no conversion)
-          exchangeRate: "1.0", // No conversion
+          amount: paymentAmount,
+          originalCurrency: creatorCurrency,
+          baseCurrency: creatorCurrency,
+          convertedAmount: paymentAmount,
+          exchangeRate: "1.0",
           platformFee: split.platformFee,
           creatorAmount: split.creatorAmount,
           status: "pending",
           metadata,
+          idempotencyKey,
         })
         .returning();
 
@@ -387,27 +392,57 @@ export class PaymentService {
         request.returnUrl || `${baseUrl}/api/payments/callback?transactionId=${transaction.id}`;
       const webhookUrl = `${baseUrl}/api/payments/webhook`;
 
-      // Add transactionId to metadata for gateway
-      const gatewayMetadata = {
+      const gatewayMetadata: Record<string, unknown> = {
         ...metadata,
         transactionId: transaction.id,
       };
+      if (creatorRow?.stripeConnectAccountId) {
+        gatewayMetadata.stripeConnectedAccountId = creatorRow.stripeConnectAccountId;
+      }
 
-      // Initiate payment with gateway
-      const gatewayResponse = await GatewayService.initiatePayment({
-        amount: paymentAmount, // Amount in INR subunits
-        currency: "INR",
+      const payCurrency = creatorCurrency;
+      const gatewayRequest = {
+        amount: paymentAmount,
+        currency: payCurrency,
         orderId,
         customerId: request.userId,
         customerEmail: user.email,
-        customerName: user.name,
+        customerName: user.name || undefined,
         returnUrl,
         webhookUrl,
         metadata: gatewayMetadata,
-      });
+        idempotencyKey,
+      };
+
+      let gatewayResponse: {
+        success: boolean;
+        paymentUrl?: string;
+        transactionId?: string;
+        error?: string;
+      };
+
+      if (env.PAYMENT_GATEWAY_MODE === "test") {
+        const gateway = createGateway();
+        gatewayResponse = await gateway.initiatePayment(gatewayRequest);
+        if (gatewayResponse.success && gatewayResponse.transactionId) {
+          await db
+            .update(paymentTransaction)
+            .set({
+              gatewayName: "mock",
+              gatewayTransactionId: gatewayResponse.transactionId,
+              updatedAt: new Date(),
+            })
+            .where(eq(paymentTransaction.id, transaction.id));
+        }
+      } else {
+        gatewayResponse = await PaymentOrchestrator.initiatePayment(
+          gatewayRequest,
+          request.type,
+          transaction.id
+        );
+      }
 
       if (!gatewayResponse.success || !gatewayResponse.paymentUrl) {
-        // Update transaction status to failed
         await db
           .update(paymentTransaction)
           .set({
@@ -421,15 +456,6 @@ export class PaymentService {
           error: gatewayResponse.error || "Failed to initiate payment",
         };
       }
-
-      // Update transaction with gateway transaction ID
-      await db
-        .update(paymentTransaction)
-        .set({
-          gatewayTransactionId: gatewayResponse.transactionId,
-          updatedAt: new Date(),
-        })
-        .where(eq(paymentTransaction.id, transaction.id));
 
       return {
         success: true,
@@ -450,10 +476,10 @@ export class PaymentService {
    */
   static async processPaymentCompletion(
     transactionId: string,
-    status: "completed" | "failed" | "cancelled"
+    status: "completed" | "failed" | "cancelled",
+    options?: { webhookEventId?: string }
   ): Promise<void> {
     try {
-      // Get transaction
       const transaction = await db.query.paymentTransaction.findFirst({
         where: (pt, { eq: eqOp }) => eqOp(pt.id, transactionId),
       });
@@ -463,7 +489,18 @@ export class PaymentService {
         return;
       }
 
-      // Update transaction status
+      if (transaction.status === "completed") {
+        return;
+      }
+
+      if (options?.webhookEventId) {
+        const { claimWebhookEvent } = await import("@/lib/payments/webhook-dedup");
+        const claimed = await claimWebhookEvent(options.webhookEventId);
+        if (!claimed) {
+          return;
+        }
+      }
+
       await db
         .update(paymentTransaction)
         .set({
@@ -472,9 +509,13 @@ export class PaymentService {
         })
         .where(eq(paymentTransaction.id, transactionId));
 
-      // If payment is completed, grant access
+      const updated = await db.query.paymentTransaction.findFirst({
+        where: (pt, { eq: eqOp }) => eqOp(pt.id, transactionId),
+      });
+      if (!updated) return;
+
       if (status === "completed") {
-        await this.grantAccess(transaction);
+        await this.grantAccess(updated);
       }
     } catch (error) {
       console.error("Error processing payment completion:", error);

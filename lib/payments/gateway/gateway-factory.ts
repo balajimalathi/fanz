@@ -19,6 +19,9 @@ export function createGateway(): BaseGateway {
     merchantId: env.PAYMENT_GATEWAY_MERCHANT_ID,
     webhookSecret: env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
     mode: mode as "live" | "test",
+    additionalConfig: {
+      website: env.PAYTM_WEBSITE || "DEFAULT",
+    },
   };
 
   // In test mode, always use mock gateway

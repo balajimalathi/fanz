@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -153,6 +154,8 @@ export const creator = pgTable("creator", {
       };
     };
   }>(),
+  /** Stripe Connect Express / Standard connected account for direct charges */
+  stripeConnectAccountId: varchar("stripe_connect_account_id", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -372,9 +375,75 @@ export const paymentTransaction = pgTable("payment_transaction", {
   creatorAmount: integer("creator_amount").notNull(), // 90% in base currency subunits
   status: paymentTransactionStatusEnum("status").notNull().default("pending"),
   gatewayTransactionId: text("gateway_transaction_id"),
+  gatewayName: varchar("gateway_name", { length: 50 }),
+  idempotencyKey: text("idempotency_key").unique(),
+  attemptCount: integer("attempt_count").notNull().default(0),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Per payment-type gateway routing (priority order). */
+export const paymentGatewayConfig = pgTable(
+  "payment_gateway_config",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    gatewayName: varchar("gateway_name", { length: 50 }).notNull(),
+    paymentType: varchar("payment_type", { length: 50 }).notNull(),
+    priority: integer("priority").notNull().default(0),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+    config: jsonb("config").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueGatewayPaymentType: uniqueIndex("payment_gateway_config_gateway_payment_unique").on(
+      table.gatewayName,
+      table.paymentType
+    ),
+  })
+);
+
+/** Gateway API credentials and mode (admin-managed). */
+export const gatewayCredentials = pgTable("gateway_credentials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gatewayName: varchar("gateway_name", { length: 50 }).notNull().unique(),
+  isActive: boolean("is_active").notNull().default(false),
+  credentials: jsonb("credentials").notNull().$type<Record<string, unknown>>(),
+  mode: varchar("mode", { length: 10 }).notNull().default("test"),
+  webhookSecret: text("webhook_secret"),
+  supportedCurrencies: jsonb("supported_currencies").$type<string[]>().default(["INR"]),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Circuit breaker / health per gateway. */
+export const gatewayHealth = pgTable("gateway_health", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gatewayName: varchar("gateway_name", { length: 50 }).notNull().unique(),
+  status: varchar("status", { length: 20 }).notNull().default("healthy"),
+  failureCount: integer("failure_count").notNull().default(0),
+  lastFailureAt: timestamp("last_failure_at", { withTimezone: true }),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  circuitOpenUntil: timestamp("circuit_open_until", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Audit trail for each gateway attempt (failover). */
+export const paymentAttempt = pgTable("payment_attempt", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  transactionId: uuid("transaction_id")
+    .notNull()
+    .references(() => paymentTransaction.id, { onDelete: "cascade" }),
+  gatewayName: varchar("gateway_name", { length: 50 }).notNull(),
+  attemptNumber: integer("attempt_number").notNull().default(1),
+  status: varchar("status", { length: 20 }).notNull().default("initiated"),
+  gatewayTransactionId: text("gateway_transaction_id"),
+  gatewayResponse: jsonb("gateway_response").$type<Record<string, unknown>>(),
+  errorMessage: text("error_message"),
+  latencyMs: integer("latency_ms"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const postPurchase = pgTable("post_purchase", {

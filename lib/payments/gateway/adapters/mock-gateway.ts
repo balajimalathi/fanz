@@ -1,8 +1,11 @@
 import {
   BaseGateway,
+  GatewayConfig,
   PaymentInitiationRequest,
   PaymentInitiationResponse,
   PaymentStatusResponse,
+  RefundRequest,
+  RefundResponse,
   WebhookPayload,
 } from "./base-gateway";
 
@@ -23,18 +26,23 @@ export class MockGateway extends BaseGateway {
     }
   >();
 
+  constructor(config: GatewayConfig) {
+    super(config);
+  }
+
   getName(): string {
     return "mock";
   }
 
+  getSupportedCurrencies(): string[] {
+    return ["INR", "USD", "EUR", "GBP"];
+  }
+
   async initiatePayment(request: PaymentInitiationRequest): Promise<PaymentInitiationResponse> {
-    // Generate mock transaction ID
     const transactionId = `mock_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // In test mode, immediately mark as completed
     const initialStatus = this.config.mode === "test" ? "completed" : "pending";
 
-    // Store transaction
     MockGateway.transactions.set(transactionId, {
       orderId: request.orderId,
       status: initialStatus,
@@ -43,7 +51,6 @@ export class MockGateway extends BaseGateway {
       createdAt: new Date(),
     });
 
-    // Build payment URL - append gatewayTransactionId and status to existing returnUrl
     const separator = request.returnUrl.includes("?") ? "&" : "?";
     const paymentUrl = `${request.returnUrl}${separator}gatewayTransactionId=${transactionId}&status=${initialStatus}`;
 
@@ -74,9 +81,7 @@ export class MockGateway extends BaseGateway {
     };
   }
 
-  verifyWebhook(payload: WebhookPayload, signature: string): boolean {
-    // In mock mode, always return true for testing
-    // In production, this would verify the signature
+  verifyWebhook(_payload: WebhookPayload, _signature: string): boolean {
     return true;
   }
 
@@ -96,6 +101,7 @@ export class MockGateway extends BaseGateway {
         currency: String(data.currency || "INR"),
         signature: data.signature as string | undefined,
         metadata: data.metadata as Record<string, unknown> | undefined,
+        webhookEventId: data.webhookEventId as string | undefined,
       };
     } catch (error) {
       console.error("Error parsing webhook payload:", error);
@@ -103,9 +109,10 @@ export class MockGateway extends BaseGateway {
     }
   }
 
-  /**
-   * Helper method to manually update transaction status (for testing)
-   */
+  async refund(_request: RefundRequest): Promise<RefundResponse> {
+    return { success: false, error: "Mock gateway does not support refunds" };
+  }
+
   static updateTransactionStatus(
     transactionId: string,
     status: "pending" | "processing" | "completed" | "failed" | "cancelled"
@@ -118,11 +125,7 @@ export class MockGateway extends BaseGateway {
     return false;
   }
 
-  /**
-   * Helper method to clear all transactions (for testing)
-   */
   static clearTransactions(): void {
     MockGateway.transactions.clear();
   }
 }
-
