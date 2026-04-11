@@ -1,4 +1,4 @@
-import { Gabarito, Instrument_Sans, Instrument_Serif, Libre_Baskerville } from "next/font/google";
+import { Gabarito, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/lib/utils";
@@ -78,7 +78,7 @@ export default function RootLayout({
         <Metrics />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased ")}>
-        <NextTopLoader showSpinner={false} color="#1447e6" />
+        <NextTopLoader showSpinner={false} color="#fb713c" />
         <Metrics />
         <ThemeProvider
           attribute="class"
@@ -90,24 +90,24 @@ export default function RootLayout({
             <PushInit />
             {children}
             <Toaster
-            position="top-center"
-            containerStyle={{ zIndex: 99999 }}
-            toastOptions={{
-              duration: 5000,
-              success: {
-                iconTheme: {
-                  primary: "hsl(142.1 76.2% 36.3%)",
-                  secondary: "white",
+              position="top-center"
+              containerStyle={{ zIndex: 99999 }}
+              toastOptions={{
+                duration: 5000,
+                success: {
+                  iconTheme: {
+                    primary: "hsl(142.1 76.2% 36.3%)",
+                    secondary: "white",
+                  },
                 },
-              },
-              error: {
-                iconTheme: {
-                  primary: "hsl(0 84.2% 60.2%)",
-                  secondary: "white",
+                error: {
+                  iconTheme: {
+                    primary: "hsl(0 84.2% 60.2%)",
+                    secondary: "white",
+                  },
                 },
-              },
-            }}
-          />
+              }}
+            />
           </NuqsAdapter>
         </ThemeProvider>
         {/* {process.env.NODE_ENV !== 'production' && <DevIndicator />} */}

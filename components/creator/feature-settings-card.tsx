@@ -41,9 +41,9 @@ export function FeatureSettingsCard() {
         chatEnabled !== originalSettings.chatEnabled ||
         callEnabled !== originalSettings.callEnabled ||
         JSON.stringify(chatAvailabilitySchedule) !==
-          JSON.stringify(originalSettings.chatAvailabilitySchedule) ||
+        JSON.stringify(originalSettings.chatAvailabilitySchedule) ||
         JSON.stringify(callAvailabilitySchedule) !==
-          JSON.stringify(originalSettings.callAvailabilitySchedule)
+        JSON.stringify(originalSettings.callAvailabilitySchedule)
       setHasChanges(changed)
     }
   }, [
@@ -126,10 +126,10 @@ export function FeatureSettingsCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Feature Settings
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold text-primary">Feature Settings</h2>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
@@ -143,10 +143,10 @@ export function FeatureSettingsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          Feature Settings
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Settings className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold text-primary">Feature Settings</h2>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">

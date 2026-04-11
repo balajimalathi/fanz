@@ -49,7 +49,7 @@ export function BentoGrid() {
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-xl md:text-2xl lg:text-3xl font-semibold text-foreground">{item.title}</h2>
                   </div>
-                  <p className="text-sm md:text-base text-muted-foreground/60 leading-relaxed">{item.description}</p>
+                  <p className="text-sm md:text-base text-muted-foreground/60 leading-relaxed pb-2">{item.description}</p>
                   <div className="relative w-full h-32 md:h-40 mt-auto rounded-lg overflow-hidden bg-muted group-hover:scale-[1.02] transition-transform duration-300">
                     <FeaturePreviewWidget widgetType={item.widgetType} />
                   </div>
