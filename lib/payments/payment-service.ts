@@ -16,8 +16,7 @@ import {
 import { createHash, randomUUID } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import { env } from "@/env";
-import { createGateway } from "./gateway/gateway-factory";
-import { GatewayService } from "./gateway/gateway-service";
+import { areRealPaymentGatewaysEnabled, createMockGateway } from "./gateway/gateway-factory";
 import { PaymentOrchestrator } from "./gateway/payment-orchestrator";
 import { calculateSplitPayment } from "./split-calculator";
 import { calculateBundlePrice, type BundleDuration } from "@/lib/utils/membership-pricing";
@@ -51,24 +50,9 @@ export interface PaymentResult {
  */
 export class PaymentService {
   /**
-   * Check if payment gateway is active
-   */
-  static isGatewayActive(): boolean {
-    return GatewayService.isActive();
-  }
-
-  /**
    * Initiate a payment
    */
   static async initiatePayment(request: InitiatePaymentRequest): Promise<PaymentResult> {
-    // Check if gateway is active
-    if (!this.isGatewayActive()) {
-      return {
-        success: false,
-        error: "Payment gateway is not available. Please try again later.",
-      };
-    }
-
     try {
       // Get user details
       const user = await db.query.user.findFirst({
@@ -421,8 +405,8 @@ export class PaymentService {
         error?: string;
       };
 
-      if (env.PAYMENT_GATEWAY_MODE === "test") {
-        const gateway = createGateway();
+      if (!areRealPaymentGatewaysEnabled()) {
+        const gateway = createMockGateway();
         gatewayResponse = await gateway.initiatePayment(gatewayRequest);
         if (gatewayResponse.success && gatewayResponse.transactionId) {
           await db

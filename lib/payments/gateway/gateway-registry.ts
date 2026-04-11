@@ -3,26 +3,14 @@ import { db } from "@/lib/db/client";
 import { gatewayCredentials } from "@/lib/db/schema";
 import type { BaseGateway } from "./adapters/base-gateway";
 import type { GatewayConfig } from "./adapters/base-gateway";
-import { CCBillAdapter } from "./adapters/ccbill-adapter";
 import { DodoPaymentsAdapter } from "./adapters/dodo-adapter";
-import { EpochAdapter } from "./adapters/epoch-adapter";
 import { MockGateway } from "./adapters/mock-gateway";
 import { PayPalAdapter } from "./adapters/paypal-adapter";
 import { PaytmAdapter } from "./adapters/paytm-adapter";
 import { RazorpayAdapter } from "./adapters/razorpay-adapter";
-import { SegPayAdapter } from "./adapters/segpay-adapter";
 import { StripeAdapter } from "./adapters/stripe-adapter";
 
-export type KnownGatewayName =
-  | "stripe"
-  | "razorpay"
-  | "paytm"
-  | "paypal"
-  | "dodo"
-  | "mock"
-  | "ccbill"
-  | "epoch"
-  | "segpay";
+export type KnownGatewayName = "stripe" | "razorpay" | "paytm" | "paypal" | "dodo" | "mock";
 
 function modeFromEnv(): "live" | "test" {
   return env.PAYMENT_GATEWAY_MODE === "live" ? "live" : "test";
@@ -97,22 +85,6 @@ function mergeConfigFromRow(
     }
     case "mock":
       return { mode: "test", additionalConfig: {} };
-    case "ccbill":
-      return {
-        apiKey: env.PAYMENT_GATEWAY_API_KEY,
-        secretKey: env.PAYMENT_GATEWAY_SECRET_KEY,
-        merchantId: env.PAYMENT_GATEWAY_MERCHANT_ID,
-        mode,
-        additionalConfig: creds,
-      };
-    case "epoch":
-    case "segpay":
-      return {
-        apiKey: env.PAYMENT_GATEWAY_API_KEY,
-        secretKey: env.PAYMENT_GATEWAY_SECRET_KEY,
-        mode,
-        additionalConfig: creds,
-      };
     default:
       return null;
   }
@@ -132,12 +104,6 @@ function instantiate(name: KnownGatewayName, config: GatewayConfig): BaseGateway
       return new DodoPaymentsAdapter(config);
     case "mock":
       return new MockGateway(config);
-    case "ccbill":
-      return new CCBillAdapter(config);
-    case "epoch":
-      return new EpochAdapter(config);
-    case "segpay":
-      return new SegPayAdapter(config);
     default:
       throw new Error(`Unknown gateway: ${name}`);
   }
@@ -176,12 +142,5 @@ export class GatewayRegistry {
     }
     if (!config) return null;
     return instantiate(n, config);
-  }
-
-  /** Synchronous path for legacy factory (single gateway). */
-  static getGatewaySyncFromEnv(name: KnownGatewayName): BaseGateway | null {
-    const config = mergeConfigFromRow(name, undefined);
-    if (!config) return null;
-    return instantiate(name, config);
   }
 }

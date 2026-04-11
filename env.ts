@@ -25,16 +25,10 @@ export const env = createEnv({
     FIREBASE_PROJECT_ID: z.string().min(1).optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
-    // Payment Gateway — global kill switch & legacy single-gateway factory (NOT overridden at runtime)
-    // - PAYMENT_GATEWAY_ENABLED: must be "true" or PaymentService / wallet APIs refuse to charge.
-    // - PAYMENT_GATEWAY_MODE: "test" → mock gateway only in PaymentService; "live" → PaymentOrchestrator + Stripe/Razorpay/Paytm/PayPal/Dodo from env + DB gateway_credentials.
-    // - PAYMENT_GATEWAY_TYPE + PAYMENT_GATEWAY_* keys: used only by createGateway() in gateway-factory.ts (live legacy path: paytm/ccbill/epoch/segpay) and by GatewayRegistry for ccbill/epoch/segpay env fallbacks. Orchestrator primary PSPs use STRIPE_*, RAZORPAY_*, PAYTM_*, PAYPAL_*, DODO_* below.
+    // Payment orchestrator — kill switch + sandbox vs production PSP credentials
+    // - PAYMENT_GATEWAY_ENABLED=false → all checkouts use in-app MockGateway (no external PSP calls).
+    // - PAYMENT_GATEWAY_ENABLED=true → PaymentOrchestrator only; PAYMENT_GATEWAY_MODE selects test vs live adapter config; per-PSP keys STRIPE_*, RAZORPAY_*, PAYTM_*, PAYPAL_*, DODO_* plus optional gateway_credentials rows.
     PAYMENT_GATEWAY_ENABLED: z.string().transform((val) => val === "true").default("false"),
-    PAYMENT_GATEWAY_TYPE: z.enum(["paytm", "ccbill", "epoch", "segpay"]).optional().default("paytm"),
-    PAYMENT_GATEWAY_API_KEY: z.string().optional(),
-    PAYMENT_GATEWAY_SECRET_KEY: z.string().optional(),
-    PAYMENT_GATEWAY_MERCHANT_ID: z.string().optional(),
-    PAYMENT_GATEWAY_WEBHOOK_SECRET: z.string().optional(),
     PAYMENT_GATEWAY_MODE: z.enum(["live", "test"]).default("test"),
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
@@ -101,11 +95,6 @@ export const env = createEnv({
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
     FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
     PAYMENT_GATEWAY_ENABLED: process.env.PAYMENT_GATEWAY_ENABLED,
-    PAYMENT_GATEWAY_TYPE: process.env.PAYMENT_GATEWAY_TYPE,
-    PAYMENT_GATEWAY_API_KEY: process.env.PAYMENT_GATEWAY_API_KEY,
-    PAYMENT_GATEWAY_SECRET_KEY: process.env.PAYMENT_GATEWAY_SECRET_KEY,
-    PAYMENT_GATEWAY_MERCHANT_ID: process.env.PAYMENT_GATEWAY_MERCHANT_ID,
-    PAYMENT_GATEWAY_WEBHOOK_SECRET: process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET,
     PAYMENT_GATEWAY_MODE: process.env.PAYMENT_GATEWAY_MODE,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
